@@ -17,6 +17,7 @@ from ui.console_shared import (
     get_execution_mode_modules,
     get_source_target_rows,
     get_report_output_path,
+    get_report_download_paths,
     get_report_type_artifacts,
     get_report_type_description,
     get_report_type_options,
@@ -418,9 +419,7 @@ def render_builder_tab() -> None:
         unsafe_allow_html=True,
     )
 
-    if report_type == "통합 검증 보고서":
-        st.info("통합 검증 보고서는 현재 개별 HTML 1장이 아니라 요약 JSON/검증 산출물 묶음 기준입니다.")
-    elif report_output_path and os.path.exists(report_output_path):
+    if report_output_path and os.path.exists(report_output_path):
         effective_report_path = _materialize_periodized_report(report_output_path, report_period, report_filters)
         base_name, ext = os.path.splitext(os.path.basename(report_output_path))
         safe_period = (
@@ -448,5 +447,24 @@ def render_builder_tab() -> None:
                     disabled=not builder_eligible,
                     use_container_width=True,
                 )
+
+        raw_downloads = [(label, path) for label, path in get_report_download_paths(report_type) if os.path.exists(path)]
+        if raw_downloads:
+            st.markdown(
+                "<div class='action-note'><b>원본 다운로드</b><br>미리보기는 가볍게 보고, 전체 처방 원본은 아래 엑셀로 확인합니다.</div>",
+                unsafe_allow_html=True,
+            )
+            raw_cols = st.columns(min(3, len(raw_downloads)))
+            for idx, (label, path) in enumerate(raw_downloads):
+                with raw_cols[idx % len(raw_cols)]:
+                    with open(path, "rb") as f:
+                        st.download_button(
+                            label=f"⬇️ {label}",
+                            data=f.read(),
+                            file_name=os.path.basename(path),
+                            mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+                            use_container_width=True,
+                            key=f"raw_download_{report_type}_{idx}",
+                        )
     else:
         st.warning("선택한 보고서 HTML 파일을 아직 찾지 못했습니다. 먼저 관련 검증을 실행해 주세요.")

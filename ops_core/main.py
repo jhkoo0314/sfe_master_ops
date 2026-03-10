@@ -52,7 +52,7 @@ app.include_router(prescription_router)
 app.include_router(sandbox_router)
 app.include_router(territory_router)
 app.include_router(pipeline_router)
-# Phase 6 Builder는 UI 레이어로 제공 (ui/html_builder.html)
+# Phase 6 Builder는 UI 레이어로 제공 (templates/total_valid_templates.html)
 # Phase 8 Streamlit 콘솔 도입 예정
 
 
@@ -68,7 +68,7 @@ async def root():
         "status": "running",
         "principle": "원천데이터 → Adapter → Module → Result Asset → OPS",
         "active_modules": ["crm", "prescription", "sandbox", "territory", "pipeline"],
-        "ui_modules": ["builder (html_builder.html)"],
+        "ui_modules": ["builder (total_valid_templates.html)"],
         "planned_modules": ["streamlit_console"],
         "pipeline": {
             "endpoint": "POST /ops/pipeline/run",
@@ -87,7 +87,7 @@ async def get_pipeline_diagram():
             {"step": 2, "module": "prescription",  "asset": "prescription_result_asset",  "eval": "POST /ops/prescription/evaluate", "optional": True},
             {"step": 3, "module": "sandbox",       "asset": "sandbox_result_asset",       "eval": "POST /ops/sandbox/evaluate"},
             {"step": 4, "module": "territory",     "asset": "territory_result_asset",     "eval": "POST /ops/territory/evaluate"},
-            {"step": 5, "module": "builder",       "asset": "html_builder_result_asset",  "eval": "UI: ui/html_builder.html"},
+            {"step": 5, "module": "builder",       "asset": "html_builder_result_asset",  "eval": "UI: templates/total_valid_templates.html"},
         ],
         "orchestrator": "POST /ops/pipeline/run",
         "principle": "원천데이터 → Adapter → Module → Result Asset → OPS 평가 → Handoff",

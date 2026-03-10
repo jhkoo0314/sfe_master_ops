@@ -384,7 +384,7 @@
         const gaps = data.gaps || [];
         const traces = data.hospital_traces || [];
         const overview = data.overview || {};
-        const flowRecords = data.flow_records || [];
+        const downloadFiles = data.download_files || {};
 
         const fmtCurrency = (value) => {
             const amount = Number(value || 0);
@@ -411,7 +411,7 @@
         const traceTableBody = document.getElementById("traceTableBody");
         const gapTableBody = document.getElementById("gapTableBody");
         let claimPage = 1;
-        const claimPageSize = 50;
+        const claimPageSize = 20;
 
         function getCurrentFilters() {
             return {
@@ -551,57 +551,29 @@
                 traceTableBody.innerHTML = `<tr><td colspan="7" class="empty">선택한 조건의 REVIEW / SUSPECT 건이 없습니다.</td></tr>`;
                 return;
             }
-            const connectedFlows = flowRecords.filter((row) => row.flow_status === "connected");
-            const filtered = connectedFlows.filter((row) => {
+            const filtered = traces.filter((row) => {
+                if ((row.period_type || "quarter") !== periodType) return false;
                 if (year && String(row.year || "") !== year) return false;
-                if (periodType === "month" && month && row.month !== month) return false;
-                if (periodType === "quarter" && quarter && row.year_quarter !== quarter) return false;
+                if (periodType === "month" && month && row.period_value !== month) return false;
+                if (periodType === "quarter" && quarter && row.period_value !== quarter) return false;
+                if (periodType === "year" && year && row.period_value !== year) return false;
                 if (rep && row.rep_name !== rep) return false;
                 const supportKey = [row.rep_name, row.hospital_id, row.product_name].join("||");
                 if (!supportKeys.has(supportKey)) return false;
                 return true;
             });
-            const grouped = new Map();
-            filtered.forEach((row) => {
-                const periodLabel = periodType === "month"
-                    ? row.month
-                    : periodType === "year"
-                        ? row.year
-                        : row.year_quarter;
-                const key = [
-                    periodLabel,
-                    row.rep_name,
-                    row.hospital_name,
-                    row.product_name
-                ].join("||");
-                if (!grouped.has(key)) {
-                    grouped.set(key, {
-                        period_label: periodLabel,
-                        rep_name: row.rep_name,
-                        hospital_name: row.hospital_name,
-                        product_name: row.product_name,
-                        total_amount: 0,
-                        pharmacy_ids: new Set(),
-                        wholesaler_ids: new Set(),
-                    });
-                }
-                const item = grouped.get(key);
-                item.total_amount += Number(row.total_amount || 0);
-                item.pharmacy_ids.add(row.pharmacy_id);
-                item.wholesaler_ids.add(row.wholesaler_id);
-            });
-            const rows = [...grouped.values()]
+            const rows = [...filtered]
                 .sort((a, b) => b.total_amount - a.total_amount)
                 .slice(0, 20);
             traceTableBody.innerHTML = rows.map((row) => `
                 <tr>
-                    <td>${row.period_label}</td>
+                    <td>${row.period_label || row.period_value}</td>
                     <td>${row.rep_name}</td>
                     <td>${row.hospital_name}</td>
                     <td>${row.product_name}</td>
                     <td>${fmtCurrency(row.total_amount)}</td>
-                    <td>${Number(row.pharmacy_ids.size || 0).toLocaleString("ko-KR")}</td>
-                    <td>${Number(row.wholesaler_ids.size || 0).toLocaleString("ko-KR")}</td>
+                    <td>${Number(row.pharmacy_count || 0).toLocaleString("ko-KR")}</td>
+                    <td>${Number(row.wholesaler_count || 0).toLocaleString("ko-KR")}</td>
                 </tr>
             `).join("") || `<tr><td colspan="7" class="empty">추적 데이터가 없습니다.</td></tr>`;
         }
@@ -667,9 +639,14 @@
         }
 
         function initFilters() {
-            const years = [...new Set(flowRecords.map((row) => String(row.year || "")).filter(Boolean))].sort();
-            const months = [...new Set(flowRecords.map((row) => row.month).filter(Boolean))].sort();
-            const quarters = [...new Set(flowRecords.map((row) => row.year_quarter).filter(Boolean))].sort();
+            const years = [...new Set(claims.map((row) => String(row.year || "")).filter(Boolean))].sort();
+            const months = [...new Set(claims.flatMap((row) => row.active_months || []).filter(Boolean))].sort();
+            const quarters = [...new Set(
+                claims
+                    .filter((row) => (row.period_type || "quarter") === "quarter")
+                    .map((row) => row.year_quarter || row.period_value)
+                    .filter(Boolean)
+            )].sort();
             const reps = [...new Set(claims.map((row) => row.rep_name).filter(Boolean))].sort((a, b) => a.localeCompare(b, "ko"));
             const verdicts = [...new Set(claims.map((row) => row.verdict).filter(Boolean))];
             periodTypeFilter.innerHTML = `
@@ -701,6 +678,10 @@
         initFilters();
         applyDefaultFilters();
         applyFilters();
+
+        if (Object.keys(downloadFiles).length) {
+            console.info("원본 다운로드 파일", downloadFiles);
+        }
     </script>
 </body>
 </html>

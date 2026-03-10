@@ -379,7 +379,7 @@ def get_report_type_description(report_type: str) -> str:
         "Sandbox 성과 보고서": "실적, 목표, CRM을 묶어 성과 분석 결과를 보여주는 HTML 보고서입니다.",
         "Territory 권역 지도 보고서": "권역별 커버리지와 이동 흐름을 지도 중심으로 보는 HTML 보고서입니다.",
         "PDF 처방흐름 보고서": "Prescription Data Flow 비교표와 추적 보조표를 중심으로 보는 HTML 보고서입니다.",
-        "통합 검증 보고서": "현재 검증 단계에서 생성된 주요 결과를 한 번에 묶어 보는 통합 보고서입니다.",
+        "통합 검증 보고서": "HTML Builder 화면을 열어 Sandbox, CRM, Territory, Prescription 결과를 한 곳에서 미리보는 통합 진입 보고서입니다.",
     }
     return descriptions.get(report_type, "")
 
@@ -390,7 +390,7 @@ def get_report_type_artifacts(report_type: str) -> str:
         "Sandbox 성과 보고서": "연결 파일: sandbox_report_preview.html / sandbox_result_asset.json",
         "Territory 권역 지도 보고서": "연결 파일: territory_map_preview.html / territory_result_asset.json",
         "PDF 처방흐름 보고서": "연결 파일: prescription_flow_preview.html / prescription_claim_validation.xlsx",
-        "통합 검증 보고서": "연결 파일: builder_validation_summary.json / pipeline_validation_summary.json",
+        "통합 검증 보고서": "연결 파일: data/ops_validation/{company}/builder/total_valid_preview.html",
     }
     return artifacts.get(report_type, "")
 
@@ -403,9 +403,24 @@ def get_report_output_path(report_type: str) -> str | None:
         "Sandbox 성과 보고서": os.path.join(builder_root, "sandbox_report_preview.html"),
         "Territory 권역 지도 보고서": os.path.join(builder_root, "territory_map_preview.html"),
         "PDF 처방흐름 보고서": os.path.join(builder_root, "prescription_flow_preview.html"),
-        "통합 검증 보고서": None,
+        "통합 검증 보고서": os.path.join(builder_root, "total_valid_preview.html"),
     }
     return mapping.get(report_type)
+
+
+def get_report_download_paths(report_type: str) -> list[tuple[str, str]]:
+    root = get_project_root()
+    company = get_active_company_key()
+    prescription_root = os.path.join(root, "data", "ops_validation", company, "prescription")
+    if report_type != "PDF 처방흐름 보고서":
+        return []
+    return [
+        ("비교표 원본", os.path.join(prescription_root, "prescription_claim_validation.xlsx")),
+        ("흐름 원본", os.path.join(prescription_root, "prescription_flow_records.xlsx")),
+        ("미연결 원본", os.path.join(prescription_root, "prescription_gap_records.xlsx")),
+        ("병원 추적 요약", os.path.join(prescription_root, "prescription_hospital_trace_quarter.xlsx")),
+        ("담당자 KPI 요약", os.path.join(prescription_root, "prescription_rep_kpi_quarter.xlsx")),
+    ]
 
 
 def get_crm_package_status(uploaded: dict) -> dict:
@@ -604,7 +619,7 @@ def _build_step_result(module: str, label: str, duration_ms: int) -> dict:
     if module == "builder":
         if summary_path and os.path.exists(summary_path):
             summary = _read_json(summary_path)
-            built_count = sum(1 for key in ["sandbox_report", "territory_map", "prescription_flow"] if key in summary)
+            built_count = sum(1 for key in ["crm_coaching", "sandbox_report", "territory_map", "prescription_flow", "total_valid"] if key in summary)
             return {
                 "module": module,
                 "status": "PASS",

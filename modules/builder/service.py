@@ -292,6 +292,34 @@ def build_prescription_template_input(
         quarter = str(row.get("year_quarter", ""))
         row["year"] = quarter.split("-")[0] if "-" in quarter else str(row.get("year") or "")
 
+    connected_flow_df = flow_df[flow_df["flow_status"] == "connected"].copy()
+    connected_flow_df["month"] = connected_flow_df["month"].astype(str)
+    connected_flow_df["year"] = connected_flow_df["year"].astype(str)
+    trace_group_keys = ["rep_name", "hospital_id", "hospital_name", "product_name"]
+
+    def _build_trace_summary(period_type: str, period_column: str) -> list[dict]:
+        grouped = (
+            connected_flow_df.groupby([period_column, *trace_group_keys], dropna=False)
+            .agg(
+                total_amount=("total_amount", "sum"),
+                pharmacy_count=("pharmacy_id", "nunique"),
+                wholesaler_count=("wholesaler_id", "nunique"),
+            )
+            .reset_index()
+        )
+        if grouped.empty:
+            return []
+        grouped = grouped.rename(columns={period_column: "period_value"})
+        grouped["period_type"] = period_type
+        grouped["year"] = grouped["period_value"].astype(str).str[:4]
+        grouped["period_label"] = grouped["period_value"].astype(str)
+        return grouped.to_dict(orient="records")
+
+    trace_summary_records = []
+    trace_summary_records.extend(_build_trace_summary("month", "month"))
+    trace_summary_records.extend(_build_trace_summary("quarter", "year_quarter"))
+    trace_summary_records.extend(_build_trace_summary("year", "year"))
+
     overview = {
         "standard_record_count": summary.get("standard_record_count", 0),
         "flow_record_count": summary.get("flow_record_count", 0),
@@ -305,10 +333,16 @@ def build_prescription_template_input(
         "company": get_active_company_name(),
         "overview": overview,
         "claims": claim_records,
-        "flow_records": flow_df.to_dict(orient="records"),
         "gaps": gap_df.to_dict(orient="records"),
-        "hospital_traces": trace_records,
+        "hospital_traces": trace_summary_records,
         "rep_kpis": rep_kpi_records,
+        "download_files": {
+            "claim_validation": Path(claim_validation_path).name,
+            "flow_records": Path(flow_records_path).name,
+            "gap_records": Path(gap_report_path).name,
+            "hospital_traces": Path(hospital_trace_path).name,
+            "rep_kpis": Path(rep_kpi_path).name,
+        },
     }
     reference = BuilderInputReference(
         template_key="prescription_flow",

@@ -1,0 +1,401 @@
+<!doctype html>
+<html lang="ko">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>SFE OPS HTML Builder</title>
+    <link
+      rel="stylesheet"
+      href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
+    />
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+    <style>
+      :root {
+        --bg: #0d1117;
+        --surface: #161b22;
+        --surface2: #21262d;
+        --border: #30363d;
+        --text: #e6edf3;
+        --muted: #8b949e;
+        --primary: #58a6ff;
+        --primary2: #1f6feb;
+        --font: "Segoe UI", system-ui, sans-serif;
+        --radius: 8px;
+      }
+      * {
+        box-sizing: border-box;
+        margin: 0;
+        padding: 0;
+      }
+      body {
+        background: var(--bg);
+        color: var(--text);
+        font-family: var(--font);
+        height: 100vh;
+        overflow: hidden;
+        display: flex;
+        flex-direction: column;
+      }
+      .header {
+        background: var(--surface);
+        border-bottom: 1px solid var(--border);
+        padding: 12px 24px;
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 16px;
+        flex-shrink: 0;
+      }
+      .logo {
+        font-size: 16px;
+        font-weight: 700;
+        color: var(--primary);
+        letter-spacing: -0.3px;
+      }
+      .logo span {
+        color: var(--muted);
+        font-weight: 400;
+      }
+      .header-meta {
+        text-align: right;
+        font-size: 12px;
+        color: var(--muted);
+        line-height: 1.5;
+      }
+      .layers {
+        flex: 1;
+        overflow: hidden;
+        position: relative;
+      }
+      .layer {
+        position: absolute;
+        inset: 0;
+        display: flex;
+        overflow: hidden;
+      }
+      .ops-sidebar {
+        width: 280px;
+        background: var(--surface);
+        border-right: 1px solid var(--border);
+        display: flex;
+        flex-direction: column;
+        overflow: hidden;
+      }
+      .sidebar-header {
+        padding: 16px;
+        border-bottom: 1px solid var(--border);
+      }
+      .sidebar-header h3 {
+        font-size: 13px;
+        color: var(--muted);
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+        margin-bottom: 8px;
+      }
+      .sidebar-header p {
+        font-size: 12px;
+        color: var(--muted);
+        line-height: 1.6;
+      }
+      .module-list {
+        padding: 12px;
+        display: flex;
+        flex-direction: column;
+        gap: 6px;
+        overflow-y: auto;
+        flex: 1;
+      }
+      .module-card {
+        background: var(--surface2);
+        border: 1px solid var(--border);
+        border-radius: var(--radius);
+        padding: 10px 12px;
+        cursor: pointer;
+        transition: all 0.2s;
+      }
+      .module-card:hover {
+        border-color: var(--primary);
+      }
+      .module-card.active {
+        border-color: var(--primary);
+        background: rgba(88, 166, 255, 0.08);
+      }
+      .module-card.disabled {
+        opacity: 0.45;
+        cursor: not-allowed;
+        border-color: var(--border);
+      }
+      .module-card.disabled:hover {
+        border-color: var(--border);
+        background: var(--surface2);
+      }
+      .module-card .mc-title {
+        font-size: 13px;
+        font-weight: 600;
+      }
+      .module-card .mc-desc {
+        font-size: 11px;
+        color: var(--muted);
+        margin-top: 3px;
+      }
+      .module-card .mc-state {
+        display: inline-flex;
+        margin-top: 8px;
+        padding: 4px 8px;
+        border-radius: 999px;
+        font-size: 10px;
+        font-weight: 700;
+        letter-spacing: 0.02em;
+      }
+      .module-card .mc-state.ready {
+        color: #7ee787;
+        background: rgba(63, 185, 80, 0.12);
+      }
+      .module-card .mc-state.pending {
+        color: #8b949e;
+        background: rgba(139, 148, 158, 0.16);
+      }
+      .upload-zone {
+        margin: 12px;
+        border: 2px dashed var(--border);
+        border-radius: var(--radius);
+        padding: 16px;
+        text-align: center;
+        transition: all 0.2s;
+      }
+      .upload-zone p {
+        font-size: 12px;
+        color: var(--muted);
+        margin-top: 6px;
+      }
+      .ops-main {
+        flex: 1;
+        overflow-y: auto;
+        padding: 24px;
+      }
+      .actions {
+        display: flex;
+        gap: 10px;
+        margin-bottom: 20px;
+      }
+      .btn {
+        padding: 8px 16px;
+        border-radius: var(--radius);
+        border: none;
+        cursor: pointer;
+        font-size: 13px;
+        font-weight: 500;
+        transition: all 0.2s;
+        text-decoration: none;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+      }
+      .btn-primary {
+        background: var(--primary2);
+        color: #fff;
+      }
+      .btn-primary:hover {
+        background: var(--primary);
+      }
+      .report-section {
+        margin-bottom: 24px;
+      }
+      .report-section h3 {
+        font-size: 13px;
+        font-weight: 600;
+        color: var(--muted);
+        text-transform: uppercase;
+        letter-spacing: 0.4px;
+        margin-bottom: 12px;
+        padding-bottom: 8px;
+        border-bottom: 1px solid var(--border);
+      }
+      .ops-placeholder {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        height: 100%;
+        gap: 12px;
+        color: var(--muted);
+      }
+      .ops-placeholder .icon {
+        font-size: 48px;
+        opacity: 0.4;
+      }
+      .ops-placeholder p {
+        font-size: 14px;
+      }
+      .frame-shell {
+        width: 100%;
+        min-height: 780px;
+        border: 1px solid var(--border);
+        border-radius: 12px;
+        overflow: hidden;
+        background: #fff;
+      }
+      .frame-shell iframe {
+        width: 100%;
+        height: 780px;
+        border: none;
+        background: #fff;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="header">
+      <div class="logo">SFE OPS <span>HTML Builder</span></div>
+      <div class="header-meta">
+        <div id="companyName">회사: -</div>
+        <div id="generatedAt">생성 시각: -</div>
+      </div>
+    </div>
+
+    <div class="layers">
+      <div class="layer" id="layer-ops">
+        <div class="ops-sidebar">
+          <div class="sidebar-header">
+            <h3>Total Validation</h3>
+            <p>통합 실행으로 생성된 4개 결과 보고서를 한 화면에서 확인하는 보고서 허브입니다.</p>
+          </div>
+          <div id="moduleList" class="module-list"></div>
+          <div class="upload-zone">
+            <div>📂</div>
+            <p>개별 결과 HTML을<br />통합 미리보기로 확인합니다</p>
+          </div>
+        </div>
+
+        <div class="ops-main" id="ops-main">
+          <div class="ops-placeholder" id="ops-placeholder">
+            <div class="icon">📊</div>
+            <p>
+              왼쪽에서 보고서를 선택하면<br />여기에서 바로 미리보기 됩니다
+            </p>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <script>
+      window.SFE_TEMPLATE_STORE = {};
+    </script>
+    <script>
+      const state = {
+        selectedModule: "sandbox",
+      };
+
+      function getIntegratedManifest() {
+        return window.__OPS_TOTAL_VALID_DATA__ || {};
+      }
+
+      function getIntegratedReport(mod) {
+        const manifest = getIntegratedManifest();
+        return (manifest.reports || {})[mod] || null;
+      }
+
+      function buildTemplatePreviewShell(title, subtitle, badge, src) {
+        const openLink = src
+          ? `<a class="btn btn-primary" href="${src}" download>⬇️ HTML 다운로드</a>`
+          : "";
+        return `
+          <div class="actions">
+            ${openLink}
+          </div>
+          <div class="report-section">
+            <h3>Template Builder</h3>
+            <div style="display:flex;justify-content:space-between;align-items:center;gap:12px;margin-bottom:12px">
+              <div>
+                <div style="font-size:18px;font-weight:700">${title}</div>
+                <div style="font-size:12px;color:var(--muted);margin-top:4px">${subtitle}</div>
+              </div>
+              <div style="font-size:11px;color:var(--primary);border:1px solid rgba(88,166,255,.25);background:rgba(88,166,255,.08);padding:6px 10px;border-radius:999px">${badge}</div>
+            </div>
+            <div class="frame-shell">
+              <iframe src="${src || ""}" title="${title}"></iframe>
+            </div>
+            <p style="font-size:12px;color:var(--muted);margin-top:10px">통합 실행으로 생성된 실제 HTML 결과를 그대로 불러온 화면입니다.</p>
+          </div>
+        `;
+      }
+
+      function renderOpsReport(mod) {
+        const main = document.getElementById("ops-main");
+        const integratedReport = getIntegratedReport(mod);
+        if (!integratedReport || !integratedReport.src) {
+          main.innerHTML = `
+            <div class="ops-placeholder">
+              <div class="icon">⚠️</div>
+              <p>생성된 보고서를 찾지 못했습니다.</p>
+            </div>
+          `;
+          return;
+        }
+
+        main.innerHTML = buildTemplatePreviewShell(
+          integratedReport.title || `${mod} report`,
+          integratedReport.subtitle || "통합 실행 결과로 생성된 보고서입니다.",
+          integratedReport.badge || "TOTAL VALID",
+          integratedReport.src,
+        );
+      }
+
+      function selectModule(mod, el) {
+        if (el && el.classList.contains("disabled")) {
+          return;
+        }
+        state.selectedModule = mod;
+        document.querySelectorAll(".module-card").forEach((card) => {
+          card.classList.remove("active");
+        });
+        if (el) el.classList.add("active");
+        renderOpsReport(mod);
+      }
+
+      function renderModuleCards() {
+        const manifest = getIntegratedManifest();
+        const reports = manifest.reports || {};
+        const companyName = document.getElementById("companyName");
+        const generatedAt = document.getElementById("generatedAt");
+        const moduleList = document.getElementById("moduleList");
+
+        companyName.textContent = `회사: ${manifest.company || "-"}`;
+        generatedAt.textContent = `생성 시각: ${manifest.generated_at || "-"}`;
+
+        const moduleDefs = [
+          ["sandbox", "Sandbox 성과 보고서", "실적·목표·CRM 통합 보고서"],
+          ["crm", "CRM 행동 코칭 보고서", "담당자 행동 패턴과 코칭 포인트"],
+          ["territory", "Territory 권역 지도 보고서", "권역별 마커와 동선 보고서"],
+          ["prescription", "PDF 처방흐름 보고서", "도매→약국→병원 추적 보고서"],
+        ];
+
+        moduleList.innerHTML = moduleDefs
+          .map(([key, title, desc]) => {
+            const ready = Boolean(reports[key] && reports[key].src);
+            return `
+              <div class="module-card ${ready ? "" : "disabled"}" data-key="${key}">
+                <div class="mc-title">${title}</div>
+                <div class="mc-desc">${desc}</div>
+                <div class="mc-state ${ready ? "ready" : "pending"}">${ready ? "생성됨" : "미생성"}</div>
+              </div>
+            `;
+          })
+          .join("");
+
+        document.querySelectorAll(".module-card").forEach((card) => {
+          card.addEventListener("click", () => selectModule(card.dataset.key, card));
+        });
+
+        const first = document.querySelector(".module-card:not(.disabled)");
+        if (first) {
+          selectModule(first.dataset.key, first);
+        } else {
+          moduleList.insertAdjacentHTML("beforeend", '<div class="mc-desc">생성된 보고서가 없습니다.</div>');
+        }
+      }
+
+      renderModuleCards();
+    </script>
+  </body>
+</html>

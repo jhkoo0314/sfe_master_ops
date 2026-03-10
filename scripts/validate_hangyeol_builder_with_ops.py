@@ -3,6 +3,7 @@ from __future__ import annotations
 import json
 from pathlib import Path
 import sys
+from datetime import datetime
 
 ROOT = Path(__file__).resolve().parents[1]
 if str(ROOT) not in sys.path:
@@ -43,6 +44,7 @@ PRESCRIPTION_REP_KPI_PATH = get_company_root(ROOT, "ops_validation", COMPANY_KEY
 CRM_ACTIVITY_PATH = get_company_root(ROOT, "company_source", COMPANY_KEY) / "crm" / "hangyeol_crm_activity_raw.xlsx"
 COMPANY_MASTER_PATH = get_company_root(ROOT, "company_source", COMPANY_KEY) / "company" / "hangyeol_company_assignment_raw.xlsx"
 OUTPUT_ROOT = get_company_root(ROOT, "ops_validation", COMPANY_KEY) / "builder"
+TOTAL_VALID_TEMPLATE_PATH = ROOT / "templates" / "total_valid_templates.html"
 
 
 def load_json(path: Path) -> dict:
@@ -65,6 +67,52 @@ def write_builder_output(name: str, builder_input, builder_payload, html: str, a
         "input_standard": str(input_path),
         "payload_standard": str(payload_path),
         "result_asset": str(asset_path),
+    }
+
+
+def write_total_valid_output(summary: dict) -> dict | None:
+    if not TOTAL_VALID_TEMPLATE_PATH.exists():
+        return None
+
+    template_html = TOTAL_VALID_TEMPLATE_PATH.read_text(encoding="utf-8")
+
+    report_map = {
+        "sandbox": ("sandbox_report", "Sandbox 성과 보고서", "Sandbox 결과 HTML"),
+        "crm": ("crm_coaching", "CRM 행동 코칭 보고서", "CRM 행동 코칭 HTML"),
+        "territory": ("territory_map", "Territory 권역 지도 보고서", "Territory 지도 HTML"),
+        "prescription": ("prescription_flow", "PDF 처방흐름 보고서", "Prescription 흐름 HTML"),
+    }
+    reports_payload: dict[str, dict] = {}
+    for module_key, (summary_key, title, subtitle) in report_map.items():
+        item = summary.get(summary_key)
+        if not item:
+            continue
+        html_path = Path(item["html"])
+        if not html_path.exists():
+            continue
+        reports_payload[module_key] = {
+            "title": title,
+            "subtitle": subtitle,
+            "badge": "TOTAL VALID",
+            "src": html_path.name,
+        }
+
+    manifest = {
+        "company": COMPANY_NAME,
+        "generated_at": datetime.now().isoformat(),
+        "reports": reports_payload,
+    }
+    manifest_script = f"<script>window.__OPS_TOTAL_VALID_DATA__ = {json.dumps(manifest, ensure_ascii=False)};</script>"
+    if "</head>" in template_html:
+        injected_html = template_html.replace("</head>", f"  {manifest_script}\n  </head>", 1)
+    elif "</body>" in template_html:
+        injected_html = template_html.replace("</body>", f"    {manifest_script}\n  </body>", 1)
+    else:
+        injected_html = template_html + "\n" + manifest_script
+    output_path = OUTPUT_ROOT / "total_valid_preview.html"
+    output_path.write_text(injected_html, encoding="utf-8")
+    return {
+        "html": str(output_path),
     }
 
 
@@ -180,8 +228,15 @@ def main() -> None:
     else:
         summary["skipped_reports"].append("prescription_flow")
 
+    total_valid_output = write_total_valid_output(summary)
+    if total_valid_output is not None:
+        summary["total_valid"] = total_valid_output
+        summary["templates_validated"].append(str(TOTAL_VALID_TEMPLATE_PATH))
+    else:
+        summary["skipped_reports"].append("total_valid")
+
     summary["built_report_count"] = sum(
-        1 for key in ["crm_coaching", "sandbox_report", "territory_map", "prescription_flow"] if key in summary
+        1 for key in ["crm_coaching", "sandbox_report", "territory_map", "prescription_flow", "total_valid"] if key in summary
     )
     (OUTPUT_ROOT / "builder_validation_summary.json").write_text(
         json.dumps(summary, ensure_ascii=False, indent=2),

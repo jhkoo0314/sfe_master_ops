@@ -1,150 +1,177 @@
-# SFE OPS 실행 가이드 (RUNBOOK)
+# SFE OPS RUNBOOK
 
 작성일: 2026-03-10
 
----
+## 1. 기본 원칙
 
-## 0. 핵심 원칙 한 줄 확인
-
-```
-원천데이터 -> Adapter -> Module -> Result Asset -> OPS
+```text
+원천데이터 -> Adapter -> Module -> Result Asset -> OPS -> Builder
 ```
 
----
+운영 점검 단계에서는 `실행모드`를 고르고 필요한 raw만 넣어 검증합니다.
 
-## 1. 사전 준비
+## 2. 실행 전 준비
 
-### 1-1. uv 설치 확인
+### 2-1. 의존성 설치
 
 ```bash
-uv --version
-# 설치 안 된 경우: pip install uv 또는 https://docs.astral.sh/uv/
-```
-
-### 1-2. 의존성 설치
-
-```bash
-# 프로젝트 루트에서 실행
 uv sync
-
-# dev 의존성 포함
-uv sync --extra dev
 ```
 
-### 1-3. 환경 변수 설정
+### 2-2. API 실행
 
 ```bash
-# .env.example 복사
-copy .env.example .env
-
-# .env 파일을 열어 Supabase 정보 입력
-# SUPABASE_URL, SUPABASE_ANON_KEY, SUPABASE_SERVICE_ROLE_KEY
-```
-
----
-
-## 2. OPS Core API 실행
-
-```bash
-# 개발 서버 실행 (자동 리로드)
 uv run uvicorn ops_core.main:app --reload --host 0.0.0.0 --port 8000
-
-# API 문서 확인
-# http://localhost:8000/docs
 ```
 
----
-
-## 3. Streamlit 운영 콘솔 실행
+### 2-3. 운영 콘솔 실행
 
 ```bash
-uv run streamlit run ui/app.py --server.port 8501
-# http://localhost:8501
+uv run streamlit run ui/ops_console.py --server.port 8501
 ```
 
----
+## 3. 운영 콘솔 사용 순서
 
-## 4. 테스트 실행
+1. 사이드바에서 `회사 코드` 입력
+2. 필요하면 `회사 이름` 입력
+3. `실행모드` 선택
+4. 데이터 어댑터 탭에서 raw 파일 업로드
+5. 파이프라인 탭에서 `실행 전 반영 파일 확인`
+6. `파이프라인 실행`
+7. 분석 인텔리전스 탭에서 산출물 확인
+8. 결과물 빌더 탭에서 HTML 열기/다운로드
 
-```bash
-# 전체 테스트
-uv run pytest
+## 4. 실행모드 설명
 
-# 특정 모듈 테스트
-uv run pytest tests/test_crm/
-uv run pytest tests/test_prescription/
+### `CRM -> Sandbox`
 
-# 결과 상세 출력
-uv run pytest -v
+- CRM과 실적/목표를 묶어 Sandbox 분석까지 확인
 
-# 커버리지 확인
-uv run pytest --cov=.
+### `Sandbox -> HTML`
+
+- Sandbox 결과를 기준으로 HTML 보고서 생성 확인
+
+### `Sandbox -> Territory`
+
+- Sandbox 결과를 Territory로 넘겨 지도 결과 확인
+
+### `CRM -> PDF`
+
+- CRM과 Prescription 흐름 추적 결과 확인
+
+### `CRM -> Sandbox -> Territory`
+
+- CRM부터 Territory까지 연결 흐름 점검
+
+### `통합 실행`
+
+- CRM
+- Prescription
+- Sandbox
+- Territory
+- Builder
+
+를 한 번에 실행합니다.
+
+## 5. 업로드 파일 기준
+
+### CRM 패키지
+
+- `CRM 활동 원본`
+- `담당자 / 조직 마스터`
+- `거래처 / 병원 담당 배정`
+- `CRM 규칙 / KPI 설정`
+
+### 기타
+
+- `실적(매출) 데이터`
+- `목표 데이터`
+- `Prescription 데이터`
+
+중요:
+
+- 같은 파일을 여러 항목에 올려도 허용됩니다.
+- 업로드만 했을 때는 세션에만 있고, 실행 시 실제 회사 폴더에 반영됩니다.
+
+## 6. 회사별 저장 구조
+
+모든 결과는 회사 코드 기준으로 분리됩니다.
+
+```text
+data/company_source/{company_key}/
+data/ops_standard/{company_key}/
+data/ops_validation/{company_key}/
 ```
 
----
+예:
 
-## 5. Supabase 스키마 적용
-
-### 초기 스키마 적용 (처음 한 번만)
-
-1. Supabase 대시보드 접속: https://app.supabase.com
-2. 해당 프로젝트 선택
-3. 좌측 메뉴 → SQL Editor
-4. `migrations/001_initial_schema.sql` 내용 붙여넣기 후 실행
-
-### 스키마 변경 시
-
-- 새 마이그레이션 파일을 `migrations/` 아래 순번으로 추가
-- 예: `002_add_crm_tables.sql`
-
----
-
-## 6. 데이터 디렉토리 구조
-
-```
-data/
-├── hospital_master/      # 공공 병원 기준 데이터
-├── company_master/       # 회사 마스터 데이터
-└── raw/                  # 원천 데이터 임시 보관
+```text
+data/company_source/daon_pharma/
+data/ops_standard/daon_pharma/
+data/ops_validation/daon_pharma/
 ```
 
----
+## 7. 주요 산출물
 
-## 7. 모듈별 실행 흐름 요약
+### 정규화 결과
 
-### CRM 모듈 실행 순서
+- `data/ops_standard/{company_key}/...`
 
-1. `data/hospital_master/` 에 공공 병원 파일 준비
-2. `data/company_master/` 에 회사 마스터 파일 준비
-3. CRM raw 파일 업로드 (UI 또는 API)
-4. Adapter 실행 → `crm_standard_activity` 생성
-5. Result Asset 생성 → `crm_result_asset`
-6. OPS 평가 요청 → `POST /ops/crm/evaluate`
+### 검증 결과
 
-### Prescription 모듈 실행 순서 (CRM 완료 후)
+- `data/ops_validation/{company_key}/crm/...`
+- `data/ops_validation/{company_key}/prescription/...`
+- `data/ops_validation/{company_key}/sandbox/...`
+- `data/ops_validation/{company_key}/territory/...`
 
-1. 범용 키 규칙 확인 (pharmacy_id, wholesaler_id)
-2. Prescription raw 파일 업로드
-3. Adapter 실행 → `prescription_standard_flow` 생성
-4. Result Asset 생성 → `prescription_result_asset`
-5. OPS 평가 요청 → `POST /ops/prescription/evaluate`
+### Builder 결과
 
----
+- `crm_coaching_preview.html`
+- `sandbox_report_preview.html`
+- `territory_map_preview.html`
+- `prescription_flow_preview.html`
+- `total_valid_preview.html`
 
-## 8. 문제 해결
+## 8. 처방 보고서 운영 메모
 
-| 증상                      | 원인                                    | 해결                                      |
-| ------------------------- | --------------------------------------- | ----------------------------------------- |
-| `hospital_id` 매핑 실패   | 회사 마스터의 병원명이 공공 기준과 다름 | Adapter 매핑 규칙 확인                    |
-| OPS quality_status = fail | Result Asset 필수 항목 누락             | 해당 모듈 로그 확인 후 Adapter부터 재실행 |
-| Supabase 연결 실패        | .env 설정 오류                          | SUPABASE_URL, KEY 재확인                  |
-| 테스트 실패               | fixture 데이터 없음                     | `tests/fixtures/` 에 샘플 데이터 추가     |
+- 미리보기 HTML은 경량화된 버전입니다.
+- 전체 원본은 엑셀 다운로드로 확인합니다.
+- 빌더 탭에서 처방 보고서를 고르면 원본 다운로드 버튼도 같이 보입니다.
 
----
+## 9. 실행 이력
 
-## 9. 금지 사항 (AGENTS.md 요약)
+운영 콘솔 실행 이력은 여기에 저장됩니다.
 
-- raw 데이터를 OPS로 직접 보내지 않는다.
-- Sandbox를 전체 허브처럼 설계하지 않는다.
-- Adapter 없이 Module부터 키우지 않는다.
-- 회사 맞춤 규칙을 범용 규칙보다 먼저 만들지 않는다.
+```text
+data/ops_validation/{company_key}/pipeline/console_run_history.jsonl
+```
+
+여기에는 들어갑니다.
+
+- 실행 시각
+- 실행모드
+- 단계별 결과
+- 어떤 업로드 파일을 사용했는지
+- 실제 어느 경로에 반영했는지
+
+## 10. 문제 해결
+
+### 사이드바 카드가 안 뜰 때
+
+- 통합 실행을 다시 한 번 돌립니다.
+- `total_valid_preview.html`이 최신인지 확인합니다.
+
+### 보고서가 비활성일 때
+
+- 해당 HTML이 아직 생성되지 않은 상태입니다.
+- 관련 실행모드를 먼저 돌립니다.
+
+### Territory가 WARN일 때
+
+- 현실 raw 데이터에서 일부 연결 누락이나 좌표 품질 이슈가 있을 수 있습니다.
+- 전체 파이프라인 실패와는 별도로 해석해야 합니다.
+
+### Prescription HTML이 느릴 때
+
+- 미리보기는 줄였지만 여전히 데이터량이 큽니다.
+- 원본 분석은 다운로드 파일로 보는 것이 더 안전합니다.
