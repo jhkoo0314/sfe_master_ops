@@ -1,0 +1,965 @@
+<!doctype html>
+<html lang="ko">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>SFE OPS HTML Builder</title>
+    <link
+      rel="stylesheet"
+      href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
+    />
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+    <style>
+      :root {
+        --bg: #0d1117;
+        --surface: #161b22;
+        --surface2: #21262d;
+        --border: #30363d;
+        --text: #e6edf3;
+        --muted: #8b949e;
+        --primary: #58a6ff;
+        --primary2: #1f6feb;
+        --success: #3fb950;
+        --warning: #d29922;
+        --danger: #f85149;
+        --font: "Segoe UI", system-ui, sans-serif;
+        --radius: 8px;
+        --gap: 16px;
+      }
+      * {
+        box-sizing: border-box;
+        margin: 0;
+        padding: 0;
+      }
+      body {
+        background: var(--bg);
+        color: var(--text);
+        font-family: var(--font);
+        height: 100vh;
+        overflow: hidden;
+        display: flex;
+        flex-direction: column;
+      }
+
+      /* ── 상단 헤더 ── */
+      .header {
+        background: var(--surface);
+        border-bottom: 1px solid var(--border);
+        padding: 12px 24px;
+        display: flex;
+        align-items: center;
+        gap: 16px;
+        flex-shrink: 0;
+      }
+      .logo {
+        font-size: 16px;
+        font-weight: 700;
+        color: var(--primary);
+        letter-spacing: -0.3px;
+      }
+      .logo span {
+        color: var(--muted);
+        font-weight: 400;
+      }
+
+      /* ── 탭 전환 ── */
+      .tab-bar {
+        display: flex;
+        gap: 4px;
+        background: var(--bg);
+        padding: 4px;
+        border-radius: var(--radius);
+        border: 1px solid var(--border);
+      }
+      .tab-btn {
+        padding: 6px 18px;
+        border-radius: 6px;
+        border: none;
+        cursor: pointer;
+        font-size: 13px;
+        font-weight: 500;
+        transition: all 0.2s;
+        background: transparent;
+        color: var(--muted);
+      }
+      .tab-btn.active {
+        background: var(--surface2);
+        color: var(--text);
+      }
+      .tab-btn:hover:not(.active) {
+        color: var(--text);
+      }
+
+      /* ── 레이어 컨테이너 ── */
+      .layers {
+        flex: 1;
+        overflow: hidden;
+        position: relative;
+      }
+      .layer {
+        position: absolute;
+        inset: 0;
+        display: none;
+        overflow: hidden;
+      }
+      .layer.active {
+        display: flex;
+      }
+
+      /* ════════════════════════════════════════
+   LAYER 1: OPS Report Builder
+════════════════════════════════════════ */
+      #layer-ops {
+        flex-direction: row;
+      }
+
+      .ops-sidebar {
+        width: 280px;
+        background: var(--surface);
+        border-right: 1px solid var(--border);
+        display: flex;
+        flex-direction: column;
+        overflow: hidden;
+      }
+      .sidebar-header {
+        padding: 16px;
+        border-bottom: 1px solid var(--border);
+      }
+      .sidebar-header h3 {
+        font-size: 13px;
+        color: var(--muted);
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+        margin-bottom: 8px;
+      }
+
+      .module-list {
+        padding: 12px;
+        display: flex;
+        flex-direction: column;
+        gap: 6px;
+        overflow-y: auto;
+        flex: 1;
+      }
+      .module-card {
+        background: var(--surface2);
+        border: 1px solid var(--border);
+        border-radius: var(--radius);
+        padding: 10px 12px;
+        cursor: pointer;
+        transition: all 0.2s;
+      }
+      .module-card:hover {
+        border-color: var(--primary);
+      }
+      .module-card.active {
+        border-color: var(--primary);
+        background: rgba(88, 166, 255, 0.08);
+      }
+      .module-card .mc-title {
+        font-size: 13px;
+        font-weight: 600;
+      }
+      .module-card .mc-desc {
+        font-size: 11px;
+        color: var(--muted);
+        margin-top: 3px;
+      }
+
+      .upload-zone {
+        margin: 12px;
+        border: 2px dashed var(--border);
+        border-radius: var(--radius);
+        padding: 16px;
+        text-align: center;
+        cursor: pointer;
+        transition: all 0.2s;
+      }
+      .upload-zone:hover {
+        border-color: var(--primary);
+      }
+      .upload-zone p {
+        font-size: 12px;
+        color: var(--muted);
+        margin-top: 6px;
+      }
+
+      .ops-main {
+        flex: 1;
+        overflow-y: auto;
+        padding: 24px;
+      }
+
+      .ops-placeholder {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        height: 100%;
+        gap: 12px;
+        color: var(--muted);
+      }
+      .ops-placeholder .icon {
+        font-size: 48px;
+        opacity: 0.4;
+      }
+      .ops-placeholder p {
+        font-size: 14px;
+      }
+
+      /* KPI 카드 */
+      .kpi-row {
+        display: grid;
+        grid-template-columns: repeat(4, 1fr);
+        gap: 12px;
+        margin-bottom: 20px;
+      }
+      .kpi-card {
+        background: var(--surface);
+        border: 1px solid var(--border);
+        border-radius: var(--radius);
+        padding: 16px;
+      }
+      .kpi-card .kv {
+        font-size: 22px;
+        font-weight: 700;
+        color: var(--primary);
+      }
+      .kpi-card .kl {
+        font-size: 11px;
+        color: var(--muted);
+        margin-top: 4px;
+      }
+
+      /* 섹션 */
+      .report-section {
+        margin-bottom: 24px;
+      }
+      .report-section h3 {
+        font-size: 13px;
+        font-weight: 600;
+        color: var(--muted);
+        text-transform: uppercase;
+        letter-spacing: 0.4px;
+        margin-bottom: 12px;
+        padding-bottom: 8px;
+        border-bottom: 1px solid var(--border);
+      }
+
+      /* 테이블 */
+      .data-table {
+        width: 100%;
+        border-collapse: collapse;
+        font-size: 13px;
+      }
+      .data-table th {
+        background: var(--surface2);
+        color: var(--muted);
+        font-weight: 500;
+        padding: 8px 12px;
+        text-align: left;
+      }
+      .data-table td {
+        padding: 8px 12px;
+        border-bottom: 1px solid var(--border);
+      }
+      .data-table tr:hover td {
+        background: rgba(255, 255, 255, 0.03);
+      }
+
+      /* 지도 컨테이너 */
+      #ops-map {
+        height: 420px;
+        border-radius: var(--radius);
+        overflow: hidden;
+        border: 1px solid var(--border);
+      }
+
+      /* 인사이트 */
+      .insight-list {
+        display: flex;
+        flex-direction: column;
+        gap: 8px;
+      }
+      .insight-item {
+        background: var(--surface2);
+        border-left: 3px solid var(--primary);
+        border-radius: 0 var(--radius) var(--radius) 0;
+        padding: 10px 14px;
+        font-size: 13px;
+      }
+
+      /* 다운로드 버튼 */
+      .btn {
+        padding: 8px 16px;
+        border-radius: var(--radius);
+        border: none;
+        cursor: pointer;
+        font-size: 13px;
+        font-weight: 500;
+        transition: all 0.2s;
+      }
+      .btn-primary {
+        background: var(--primary2);
+        color: #fff;
+      }
+      .btn-primary:hover {
+        background: var(--primary);
+      }
+      .btn-outline {
+        background: transparent;
+        color: var(--text);
+        border: 1px solid var(--border);
+      }
+      .btn-outline:hover {
+        border-color: var(--primary);
+        color: var(--primary);
+      }
+      .actions {
+        display: flex;
+        gap: 8px;
+        margin-bottom: 20px;
+      }
+
+      /* ════════════════════════════════════════
+   LAYER 2: WebSlide Studio
+════════════════════════════════════════ */
+      #layer-slide {
+        flex-direction: row;
+      }
+
+      .slide-sidebar {
+        width: 320px;
+        background: var(--surface);
+        border-right: 1px solid var(--border);
+        display: flex;
+        flex-direction: column;
+        overflow: hidden;
+      }
+      .slide-sidebar-header {
+        padding: 16px;
+        border-bottom: 1px solid var(--border);
+      }
+      .slide-sidebar-header h3 {
+        font-size: 13px;
+        color: var(--muted);
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+        margin-bottom: 4px;
+      }
+      .persona-badge {
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+        background: rgba(88, 166, 255, 0.12);
+        border: 1px solid rgba(88, 166, 255, 0.3);
+        border-radius: 20px;
+        padding: 3px 10px;
+        font-size: 11px;
+        color: var(--primary);
+      }
+
+      .phase-tracker {
+        padding: 12px 16px;
+        border-bottom: 1px solid var(--border);
+      }
+      .phase-tracker h4 {
+        font-size: 11px;
+        color: var(--muted);
+        text-transform: uppercase;
+        letter-spacing: 0.4px;
+        margin-bottom: 10px;
+      }
+      .phases {
+        display: flex;
+        flex-direction: column;
+        gap: 4px;
+      }
+      .phase-item {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        padding: 6px 8px;
+        border-radius: 6px;
+        font-size: 12px;
+        color: var(--muted);
+      }
+      .phase-item.done {
+        color: var(--success);
+      }
+      .phase-item.current {
+        color: var(--primary);
+        background: rgba(88, 166, 255, 0.08);
+        font-weight: 600;
+      }
+      .phase-dot {
+        width: 8px;
+        height: 8px;
+        border-radius: 50%;
+        background: var(--border);
+        flex-shrink: 0;
+      }
+      .phase-item.done .phase-dot {
+        background: var(--success);
+      }
+      .phase-item.current .phase-dot {
+        background: var(--primary);
+        box-shadow: 0 0 6px var(--primary);
+      }
+
+      .content-input-area {
+        flex: 1;
+        display: flex;
+        flex-direction: column;
+        gap: 0;
+        overflow: hidden;
+      }
+      .input-tabs {
+        display: flex;
+        border-bottom: 1px solid var(--border);
+      }
+      .input-tab {
+        padding: 8px 16px;
+        font-size: 12px;
+        cursor: pointer;
+        border-bottom: 2px solid transparent;
+        color: var(--muted);
+        transition: all 0.15s;
+      }
+      .input-tab.active {
+        color: var(--primary);
+        border-bottom-color: var(--primary);
+      }
+
+      .input-panel {
+        flex: 1;
+        overflow: hidden;
+        display: none;
+        padding: 12px;
+      }
+      .input-panel.active {
+        display: flex;
+        flex-direction: column;
+      }
+
+      textarea.content-textarea {
+        flex: 1;
+        background: var(--surface2);
+        border: 1px solid var(--border);
+        border-radius: var(--radius);
+        color: var(--text);
+        font-family: var(--font);
+        font-size: 12px;
+        padding: 10px;
+        resize: none;
+        outline: none;
+        line-height: 1.6;
+      }
+      textarea.content-textarea:focus {
+        border-color: var(--primary);
+      }
+      textarea.content-textarea::placeholder {
+        color: var(--muted);
+      }
+
+      .drop-zone {
+        flex: 1;
+        border: 2px dashed var(--border);
+        border-radius: var(--radius);
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        cursor: pointer;
+        transition: all 0.2s;
+        text-align: center;
+        padding: 20px;
+      }
+      .drop-zone.over {
+        border-color: var(--primary);
+        background: rgba(88, 166, 255, 0.05);
+      }
+      .drop-zone .dz-icon {
+        font-size: 32px;
+        margin-bottom: 8px;
+        opacity: 0.5;
+      }
+      .drop-zone p {
+        font-size: 12px;
+        color: var(--muted);
+        line-height: 1.5;
+      }
+      .drop-zone input[type="file"] {
+        display: none;
+      }
+
+      /* 테마 선택 */
+      .theme-section {
+        padding: 12px;
+        border-bottom: 1px solid var(--border);
+      }
+      .theme-section h4 {
+        font-size: 11px;
+        color: var(--muted);
+        text-transform: uppercase;
+        letter-spacing: 0.4px;
+        margin-bottom: 8px;
+      }
+      .theme-grid {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 6px;
+      }
+      .theme-chip {
+        padding: 6px 8px;
+        border-radius: 6px;
+        border: 1px solid var(--border);
+        font-size: 11px;
+        cursor: pointer;
+        text-align: center;
+        transition: all 0.15s;
+        color: var(--muted);
+      }
+      .theme-chip:hover {
+        border-color: var(--primary);
+        color: var(--text);
+      }
+      .theme-chip.selected {
+        border-color: var(--primary);
+        background: rgba(88, 166, 255, 0.1);
+        color: var(--primary);
+        font-weight: 600;
+      }
+
+      /* 사이드바 하단 액션 */
+      .slide-actions {
+        padding: 12px;
+        border-top: 1px solid var(--border);
+        display: flex;
+        flex-direction: column;
+        gap: 6px;
+      }
+      .slide-actions .btn {
+        width: 100%;
+        text-align: center;
+      }
+
+      /* 슬라이드 메인 영역 */
+      .slide-main {
+        flex: 1;
+        display: flex;
+        flex-direction: column;
+        overflow: hidden;
+      }
+      .slide-toolbar {
+        padding: 10px 16px;
+        border-bottom: 1px solid var(--border);
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        background: var(--surface);
+        flex-shrink: 0;
+      }
+      .slide-toolbar span {
+        font-size: 12px;
+        color: var(--muted);
+      }
+
+      .slide-preview {
+        flex: 1;
+        overflow-y: auto;
+        padding: 24px;
+        background: #1a1a2e;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        gap: 16px;
+      }
+      .preview-placeholder {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        height: 100%;
+        gap: 12px;
+        color: var(--muted);
+      }
+      .preview-placeholder .icon {
+        font-size: 48px;
+        opacity: 0.3;
+      }
+
+      /* ── 채팅/로그 패널 ── */
+      .slide-log {
+        height: 200px;
+        background: var(--surface);
+        border-top: 1px solid var(--border);
+        overflow-y: auto;
+        flex-shrink: 0;
+      }
+      .log-header {
+        padding: 8px 16px;
+        font-size: 11px;
+        color: var(--muted);
+        text-transform: uppercase;
+        letter-spacing: 0.4px;
+        border-bottom: 1px solid var(--border);
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+      }
+      .log-entries {
+        padding: 8px 16px;
+        display: flex;
+        flex-direction: column;
+        gap: 6px;
+      }
+      .log-entry {
+        font-size: 12px;
+        line-height: 1.5;
+      }
+      .log-entry.system {
+        color: var(--muted);
+      }
+      .log-entry.analyst {
+        color: var(--primary);
+      }
+      .log-entry.architect {
+        color: var(--success);
+      }
+      .log-entry.builder {
+        color: var(--warning);
+      }
+      .log-entry .log-role {
+        font-weight: 600;
+        margin-right: 6px;
+      }
+
+      /* 블루프린트 뷰 */
+      .blueprint-view {
+        width: 100%;
+        max-width: 800px;
+      }
+      .bp-slide {
+        background: var(--surface);
+        border: 1px solid var(--border);
+        border-radius: var(--radius);
+        padding: 16px;
+        margin-bottom: 12px;
+      }
+      .bp-num {
+        font-size: 11px;
+        color: var(--primary);
+        font-weight: 600;
+        text-transform: uppercase;
+        margin-bottom: 6px;
+      }
+      .bp-headline {
+        font-size: 15px;
+        font-weight: 700;
+        margin-bottom: 8px;
+      }
+      .bp-meta {
+        display: flex;
+        gap: 8px;
+        flex-wrap: wrap;
+      }
+      .bp-tag {
+        font-size: 10px;
+        padding: 2px 8px;
+        border-radius: 10px;
+        border: 1px solid var(--border);
+        color: var(--muted);
+      }
+      .bp-tag.type-message {
+        border-color: rgba(88, 166, 255, 0.4);
+        color: var(--primary);
+      }
+      .bp-tag.type-data {
+        border-color: rgba(63, 185, 80, 0.4);
+        color: var(--success);
+      }
+      .bp-tag.type-structure {
+        border-color: rgba(210, 153, 34, 0.4);
+        color: var(--warning);
+      }
+    </style>
+  </head>
+  <body>
+    <!-- 상단 헤더 -->
+    <div class="header">
+      <div class="logo">SFE OPS <span>HTML Builder</span></div>
+      <div class="tab-bar">
+        <button class="tab-btn active" onclick="switchLayer('ops', this)">
+          📊 OPS 분석 보고서
+        </button>
+        <button class="tab-btn" onclick="switchLayer('slide', this)">
+          🎨 WebSlide Studio
+        </button>
+      </div>
+    </div>
+
+    <!-- 레이어 컨테이너 -->
+    <div class="layers">
+      <!-- ══════════════════════════════════════
+       LAYER 1: OPS Report Builder
+  ══════════════════════════════════════ -->
+      <div class="layer active" id="layer-ops">
+        <!-- 사이드바 -->
+        <div class="ops-sidebar">
+          <div class="sidebar-header">
+            <h3>분석 모듈 선택</h3>
+          </div>
+          <div class="module-list">
+            <div
+              class="module-card active"
+              onclick="selectModule('sandbox', this)"
+            >
+              <div class="mc-title">📈 Sandbox 분석</div>
+              <div class="mc-desc">매출·달성률·CRM 통합 분석 보고서</div>
+            </div>
+            <div class="module-card" onclick="selectModule('territory', this)">
+              <div class="mc-title">🗺️ Territory 지도</div>
+              <div class="mc-desc">권역별 마커·동선·히트맵 지도 보고서</div>
+            </div>
+            <div class="module-card" onclick="selectModule('crm', this)">
+              <div class="mc-title">🏥 CRM 활동 분석</div>
+              <div class="mc-desc">병원·담당자·CRM 활동 집계 보고서</div>
+            </div>
+            <div
+              class="module-card"
+              onclick="selectModule('prescription', this)"
+            >
+              <div class="mc-title">💊 Prescription 흐름</div>
+              <div class="mc-desc">도매→약국→병원 흐름 분석 보고서</div>
+            </div>
+          </div>
+          <div
+            class="upload-zone"
+            onclick="document.getElementById('ops-file').click()"
+          >
+            <div>📂</div>
+            <p>Result Asset JSON 업로드<br />또는 여기에 파일을 끌어놓기</p>
+            <input
+              type="file"
+              id="ops-file"
+              accept=".json"
+              onchange="loadOpsAsset(event)"
+              style="display: none"
+            />
+          </div>
+        </div>
+
+        <!-- 메인 보고서 영역 -->
+        <div class="ops-main" id="ops-main">
+          <div class="ops-placeholder" id="ops-placeholder">
+            <div class="icon">📊</div>
+            <p>
+              왼쪽에서 모듈을 선택하거나<br />Result Asset JSON을 업로드하세요
+            </p>
+          </div>
+        </div>
+      </div>
+
+      <!-- ══════════════════════════════════════
+       LAYER 2: WebSlide Studio
+  ══════════════════════════════════════ -->
+      <div class="layer" id="layer-slide">
+        <!-- 슬라이드 사이드바 -->
+        <div class="slide-sidebar">
+          <div class="slide-sidebar-header">
+            <h3>WebSlide Studio</h3>
+            <span class="persona-badge">🤖 WebSlide Architect v3.5</span>
+          </div>
+
+          <!-- 단계 추적기 -->
+          <div class="phase-tracker">
+            <h4>제작 단계</h4>
+            <div class="phases" id="phase-list">
+              <div class="phase-item current" data-phase="intake">
+                <div class="phase-dot"></div>
+                PHASE 0 — Intake (분석)
+              </div>
+              <div class="phase-item" data-phase="strategy">
+                <div class="phase-dot"></div>
+                PHASE 1 — Strategy (기획)
+              </div>
+              <div class="phase-item" data-phase="blueprint">
+                <div class="phase-dot"></div>
+                PHASE 2 — Blueprint (청사진)
+              </div>
+              <div class="phase-item" data-phase="build">
+                <div class="phase-dot"></div>
+                PHASE 3 — Build (HTML 생성)
+              </div>
+            </div>
+          </div>
+
+          <!-- 테마 선택 -->
+          <div class="theme-section">
+            <h4>테마 선택</h4>
+            <div class="theme-grid">
+              <div class="theme-chip" onclick="selectTheme('A', this)">
+                A | Premium
+              </div>
+              <div class="theme-chip selected" onclick="selectTheme('B', this)">
+                B | Swiss
+              </div>
+              <div class="theme-chip" onclick="selectTheme('C', this)">
+                C | Keynote
+              </div>
+              <div class="theme-chip" onclick="selectTheme('D', this)">
+                D | Dashboard
+              </div>
+              <div class="theme-chip" onclick="selectTheme('E', this)">
+                E | Dark Tech
+              </div>
+            </div>
+          </div>
+
+          <!-- 콘텐츠 입력 -->
+          <div class="content-input-area">
+            <div class="input-tabs">
+              <div
+                class="input-tab active"
+                onclick="switchInputTab('text', this)"
+              >
+                ✏️ 텍스트 입력
+              </div>
+              <div class="input-tab" onclick="switchInputTab('file', this)">
+                📁 파일 업로드
+              </div>
+              <div class="input-tab" onclick="switchInputTab('ops', this)">
+                ⚡ OPS 연동
+              </div>
+            </div>
+            <div class="input-panel active" id="panel-text">
+              <textarea
+                class="content-textarea"
+                id="slide-content-text"
+                placeholder="슬라이드로 만들 내용을 입력하거나 붙여넣기 하세요.
+
+예시:
+- 기획서, 보고서, 메모
+- 분석 결과 텍스트
+- 핵심 메시지와 데이터
+
+WebSlide Architect가 자동으로 분석하고
+최적의 슬라이드 구조를 설계합니다."
+              ></textarea>
+            </div>
+            <div class="input-panel" id="panel-file">
+              <div
+                class="drop-zone"
+                id="drop-zone"
+                onclick="document.getElementById('slide-file').click()"
+              >
+                <div class="dz-icon">📂</div>
+                <p>
+                  파일을 여기에 끌어다 놓거나<br />클릭하여 선택하세요<br /><br />지원:
+                  TXT, MD, CSV, JSON, XLSX
+                </p>
+                <input
+                  type="file"
+                  id="slide-file"
+                  accept=".txt,.md,.csv,.json,.xlsx"
+                  onchange="loadSlideFile(event)"
+                />
+              </div>
+            </div>
+            <div class="input-panel" id="panel-ops">
+              <div
+                style="
+                  padding: 12px;
+                  font-size: 12px;
+                  color: var(--muted);
+                  line-height: 1.7;
+                "
+              >
+                <p>
+                  OPS Layer1에서 생성된 분석 결과를<br />슬라이드 콘텐츠로 바로
+                  사용합니다.
+                </p>
+                <br />
+                <button
+                  class="btn btn-outline"
+                  style="width: 100%; font-size: 12px"
+                  onclick="importFromOps()"
+                >
+                  📊 OPS 분석 결과 가져오기
+                </button>
+              </div>
+            </div>
+          </div>
+
+          <!-- 액션 버튼 -->
+          <div class="slide-actions">
+            <button class="btn btn-primary" onclick="runAnalysis()">
+              🚀 분석 시작 (PHASE 0)
+            </button>
+            <button
+              class="btn btn-outline"
+              onclick="runBuild()"
+              id="btn-build"
+              disabled
+            >
+              ⚡ HTML 슬라이드 생성
+            </button>
+          </div>
+        </div>
+
+        <!-- 슬라이드 메인 영역 -->
+        <div class="slide-main">
+          <div class="slide-toolbar">
+            <span id="slide-status">콘텐츠를 입력하고 분석을 시작하세요</span>
+            <div style="flex: 1"></div>
+            <button
+              class="btn btn-outline"
+              style="font-size: 12px; padding: 5px 12px"
+              onclick="downloadSlide()"
+              id="btn-download"
+              disabled
+            >
+              ⬇️ HTML 다운로드
+            </button>
+          </div>
+
+          <!-- 미리보기 영역 -->
+          <div class="slide-preview" id="slide-preview">
+            <div class="preview-placeholder">
+              <div class="icon">🎨</div>
+              <p>
+                WebSlide Architect v3.5가 대기 중입니다.<br />콘텐츠를 입력하고
+                분석을 시작하세요.
+              </p>
+            </div>
+          </div>
+
+          <!-- 페르소나 로그 패널 -->
+          <div class="slide-log">
+            <div class="log-header">
+              <span>Architect Log</span>
+              <button
+                class="btn btn-outline"
+                style="font-size: 11px; padding: 3px 8px"
+                onclick="clearLog()"
+              >
+                지우기
+              </button>
+            </div>
+            <div class="log-entries" id="log-entries">
+              <div class="log-entry system">
+                WebSlide Architect v3.5 Hybrid 대기 중...
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>    <script src="./html_builder_templates.js"></script>
+    <script src="./html_builder.js"></script>
+  </body>
+</html>
+
+
+

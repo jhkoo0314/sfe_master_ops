@@ -1,0 +1,44 @@
+# Python
+__pycache__/
+*.py[cod]
+*.pyo
+*.pyd
+.Python
+*.egg
+*.egg-info/
+dist/
+build/
+.eggs/
+*.so
+
+# 환경 변수 (절대 커밋 금지)
+.env
+
+# 가상환경
+.venv/
+venv/
+env/
+
+# uv
+.uv/
+
+# 로컬 데이터 (원천 데이터, 회사 데이터 등)
+data/
+
+# pytest
+.pytest_cache/
+.coverage
+htmlcov/
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Streamlit
+.streamlit/secrets.toml
