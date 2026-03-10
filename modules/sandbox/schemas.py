@@ -19,7 +19,7 @@ Sandbox는 데이터를 결정하지 않는다. OPS가 결정한다.
 
 from __future__ import annotations
 from datetime import date
-from typing import Optional, Literal
+from typing import Any, Optional, Literal
 from pydantic import BaseModel, Field
 
 

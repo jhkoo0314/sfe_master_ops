@@ -20,7 +20,7 @@ from modules.crm.service import build_crm_result_asset
 from ops_core.api.crm_router import evaluate_crm_asset
 
 
-SOURCE_ROOT = ROOT / "data" / "raw" / "company_source" / "hangyeol_pharma"
+SOURCE_ROOT = ROOT / "data" / "company_source" / "hangyeol_pharma"
 OUTPUT_ROOT = ROOT / "data" / "ops_validation" / "hangyeol_pharma" / "crm"
 
 

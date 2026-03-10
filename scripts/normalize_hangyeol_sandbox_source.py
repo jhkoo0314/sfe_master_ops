@@ -14,7 +14,7 @@ from adapters.sandbox.adapter_config import SalesAdapterConfig, TargetAdapterCon
 from adapters.sandbox.domain_adapter import load_sales_from_records, load_target_from_records
 
 
-SOURCE_ROOT = ROOT / "data" / "raw" / "company_source" / "hangyeol_pharma"
+SOURCE_ROOT = ROOT / "data" / "company_source" / "hangyeol_pharma"
 OUTPUT_ROOT = ROOT / "data" / "ops_standard" / "hangyeol_pharma" / "sandbox"
 
 

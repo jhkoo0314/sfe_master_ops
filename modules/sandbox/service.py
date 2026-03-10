@@ -392,7 +392,8 @@ def _build_report_template_payload(
 
         product_rows = []
         for product_id, prod in sorted(rep_product.get(rep_id, {}).items(), key=lambda item: float(item[1]["sales"]), reverse=True):
-            products.add(product_id)
+            product_name = str(prod["product_name"] or product_id)
+            products.add(product_name)
             prod_monthly_actual = month_series(prod["monthly_sales"])
             prod_monthly_target = month_series(prod["monthly_target"])
             prod_total_actual = sum(prod_monthly_actual)
@@ -400,11 +401,11 @@ def _build_report_template_payload(
             cur_prod = prod_monthly_actual[max(len(months) - 1, 0)] if months else 0.0
             growth = round(((cur_prod - prev_prod) / prev_prod) * 100.0, 1) if prev_prod > 0 else 0.0
             product_rows.append({
-                "name": str(prod["product_name"] or product_id),
+                "name": product_name,
                 "ms": round((prod_total_actual / max(total_actual, 1)) * 100.0, 1) if total_actual > 0 else 0.0,
                 "growth": growth,
             })
-            total_row = total_prod_analysis.setdefault(product_id, {
+            total_row = total_prod_analysis.setdefault(product_name, {
                 "achieve": 0.0,
                 "avg": {},
                 "monthly_actual": [0.0] * 12,

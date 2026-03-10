@@ -17,7 +17,7 @@ from modules.sandbox.schemas import HospitalAnalysisRecord
 
 
 SANDBOX_VALIDATION_ROOT = ROOT / "data" / "ops_validation" / "hangyeol_pharma" / "sandbox"
-SOURCE_ROOT = ROOT / "data" / "raw" / "company_source" / "hangyeol_pharma"
+SOURCE_ROOT = ROOT / "data" / "company_source" / "hangyeol_pharma"
 OUTPUT_ROOT = ROOT / "data" / "ops_validation" / "hangyeol_pharma" / "territory"
 
 

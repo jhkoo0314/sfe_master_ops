@@ -238,7 +238,7 @@ window.__INITIAL_ROUTES__ = [{"rep": "강민준", "month": "2026-01", "date": "2
         var dateSelect = document.getElementById("date-select");
         if (!repSelect || !monthSelect || !dateSelect) return;
 
-        repSelect.innerHTML = "";
+        repSelect.innerHTML = "<option value=''>담당자 선택</option>";
         monthSelect.innerHTML = "";
         dateSelect.innerHTML = "";
 
@@ -261,6 +261,11 @@ window.__INITIAL_ROUTES__ = [{"rep": "강민준", "month": "2026-01", "date": "2
 
         function updateMonths() {
           var rep = repSelect.value;
+          if (!rep) {
+            monthSelect.innerHTML = "<option value=''>월 선택</option>";
+            dateSelect.innerHTML = "<option value=''>날짜 선택</option>";
+            return;
+          }
           var routeMonths = (routes || [])
             .filter(function (r) { return r.rep === rep; })
             .map(function (r) { return r.month || String(r.date || "").slice(0, 7); })
@@ -287,6 +292,10 @@ window.__INITIAL_ROUTES__ = [{"rep": "강민준", "month": "2026-01", "date": "2
         function updateDates() {
           var rep = repSelect.value;
           var month = monthSelect.value;
+          if (!rep || !month) {
+            dateSelect.innerHTML = "<option value=''>날짜 선택</option>";
+            return;
+          }
           var routeDates = (routes || [])
             .filter(function (r) {
               var rm = r.month || String(r.date || "").slice(0, 7);
@@ -326,17 +335,35 @@ window.__INITIAL_ROUTES__ = [{"rep": "강민준", "month": "2026-01", "date": "2
         repSelect.onchange = function () {
           updateMonths();
           updateDates();
-          var rep = repSelect.value;
-          var markerCount = applyMarkerFilter(rep, monthSelect.value, dateSelect.value);
           clearRoute();
-          setStatus("mode=routing | rep=" + rep + " | month=" + monthSelect.value + " | markers=" + markerCount + " | route_points=0 | total_km=0.00");
+          if (!repSelect.value) {
+            markerLayer.clearLayers();
+            setStatus("담당자를 선택하면 마커와 동선을 렌더링합니다.");
+            return;
+          }
+          var markerCount = applyMarkerFilter(repSelect.value, "", "");
+          setStatus("담당자 선택 완료 | rep=" + repSelect.value + " | markers=" + markerCount + " | 월/날짜를 고르면 동선을 더 좁혀 볼 수 있습니다.");
         };
         monthSelect.onchange = function () {
           updateDates();
-          applyRouteFromControls();
+          clearRoute();
+          if (!repSelect.value) {
+            markerLayer.clearLayers();
+            setStatus("담당자를 먼저 선택하세요.");
+            return;
+          }
+          var markerCount = applyMarkerFilter(repSelect.value, monthSelect.value, "");
+          setStatus("월 선택 완료 | rep=" + repSelect.value + " | month=" + monthSelect.value + " | markers=" + markerCount + " | 날짜를 고르거나 '동선 보기'를 누르세요.");
         };
         dateSelect.onchange = function () {
-          applyRouteFromControls();
+          clearRoute();
+          if (!repSelect.value) {
+            markerLayer.clearLayers();
+            setStatus("담당자를 먼저 선택하세요.");
+            return;
+          }
+          var markerCount = applyMarkerFilter(repSelect.value, monthSelect.value, dateSelect.value);
+          setStatus("날짜 선택 완료 | rep=" + repSelect.value + " | month=" + monthSelect.value + " | date=" + dateSelect.value + " | markers=" + markerCount + " | '동선 보기'를 누르면 경로를 확인합니다.");
         };
         updateMonths();
         updateDates();
@@ -397,6 +424,12 @@ window.__INITIAL_ROUTES__ = [{"rep": "강민준", "month": "2026-01", "date": "2
         var rep = repSelect.value;
         var month = monthSelect.value;
         var date = dateSelect.value;
+        if (!rep) {
+          clearRoute();
+          markerLayer.clearLayers();
+          setStatus("담당자를 먼저 선택하세요.");
+          return;
+        }
         var markerCount = applyMarkerFilter(rep, month, date);
         var route = findRoute(rep, month, date);
         var points = route && Array.isArray(route.coords) ? route.coords : buildRouteFromMarkers(rep, month, date);
@@ -417,16 +450,11 @@ window.__INITIAL_ROUTES__ = [{"rep": "강민준", "month": "2026-01", "date": "2
 
       function renderMap(payload) {
         currentPayload = payload || { markers: [], routes: [], mode: "hospital" };
-        var mode = currentPayload.mode || "hospital";
         buildRepDateOptions(currentPayload.routes || [], currentPayload.markers || []);
 
         clearRoute();
-        if (mode === "routing") {
-          applyRouteFromControls();
-        } else {
-          var markerCount = renderMarkers(currentPayload.markers || []);
-          setStatus("mode=" + mode + " | markers=" + markerCount + " | route_points=0 | total_km=0.00");
-        }
+        markerLayer.clearLayers();
+        setStatus("담당자를 선택하면 마커와 동선을 렌더링합니다.");
       }
 
       document.getElementById("apply-route").addEventListener("click", applyRouteFromControls);

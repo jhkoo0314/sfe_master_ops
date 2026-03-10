@@ -10,8 +10,9 @@ import pandas as pd
 
 
 ROOT = Path(__file__).resolve().parents[1]
-RAW_ROOT = ROOT / "data" / "raw"
-OUTPUT_ROOT = ROOT / "data" / "raw" / "company_source" / "hangyeol_pharma"
+RAW_ROOT = ROOT / "data" / "sample_data"
+PUBLIC_ROOT = ROOT / "data" / "public"
+OUTPUT_ROOT = ROOT / "data" / "company_source" / "hangyeol_pharma"
 
 SEED = 20260310
 random.seed(SEED)
@@ -210,7 +211,7 @@ def synthesize_clinic_accounts(branch_df: pd.DataFrame, rep_df: pd.DataFrame) ->
 
 
 def build_account_master() -> tuple[pd.DataFrame, pd.DataFrame]:
-    assignment = pd.read_excel(RAW_ROOT / "company" / "sample_hospital_assignment_data.xlsx")
+    assignment = pd.read_excel(RAW_ROOT / "sample_company" / "sample_hospital_assignment_data.xlsx")
     branch_df = (
         assignment.groupby(["지점ID", "지점명"], as_index=False)
         .agg(hospital_count=("병원ID", "count"))
@@ -439,7 +440,7 @@ def generate_target_and_sales(account_master: pd.DataFrame, portfolio: pd.DataFr
 
 
 def transform_fact_ship(portfolio: pd.DataFrame) -> pd.DataFrame:
-    fact_ship = pd.read_csv(RAW_ROOT / "company" / "sample_fact_ship_pharmacy_raw_label.csv")
+    fact_ship = pd.read_csv(RAW_ROOT / "sample_company" / "sample_fact_ship_pharmacy_raw_label.csv")
     allowed = set(portfolio["canonical_brand"])
     ship_df = fact_ship[fact_ship["brand (브랜드)"].isin(allowed)].copy()
     ship_df["manufacturer_name (제약사)"] = "한결제약"

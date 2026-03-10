@@ -14,7 +14,7 @@ from adapters.prescription.adapter_config import CompanyPrescriptionAdapterConfi
 from adapters.prescription.company_prescription_adapter import load_prescription_from_file
 
 
-SOURCE_ROOT = ROOT / "data" / "raw" / "company_source" / "hangyeol_pharma"
+SOURCE_ROOT = ROOT / "data" / "company_source" / "hangyeol_pharma"
 OUTPUT_ROOT = ROOT / "data" / "ops_standard" / "hangyeol_pharma" / "prescription"
 
 

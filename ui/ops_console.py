@@ -21,6 +21,7 @@ import streamlit as st
 import pandas as pd
 import json
 import uuid
+import io
 from datetime import datetime
 
 # ── 페이지 설정 ─────────────────────────────────────────
@@ -686,6 +687,10 @@ if "uploaded_data" not in st.session_state:
     st.session_state.uploaded_data = {
         "crm": None, "sales": None, "target": None, "prescription": None
     }
+if "uploaded_tokens" not in st.session_state:
+    st.session_state.uploaded_tokens = {
+        "crm": None, "sales": None, "target": None, "prescription": None
+    }
 if "run_log" not in st.session_state:
     st.session_state.run_log = []
 if "module_status" not in st.session_state:
@@ -712,6 +717,42 @@ def status_badge(status: str) -> str:
 def add_log(msg: str):
     ts = datetime.now().strftime("%H:%M:%S")
     st.session_state.run_log.append(f"[{ts}] {msg}")
+
+
+@st.cache_data(show_spinner=False)
+def load_uploaded_dataframe(file_name: str, file_bytes: bytes) -> pd.DataFrame:
+    lower_name = file_name.lower()
+    if lower_name.endswith(".csv"):
+        return pd.read_csv(io.BytesIO(file_bytes))
+    return pd.read_excel(io.BytesIO(file_bytes))
+
+
+def get_file_token(uploaded_file) -> str:
+    file_size = getattr(uploaded_file, "size", None)
+    if file_size is None:
+        file_size = len(uploaded_file.getvalue())
+    return f"{uploaded_file.name}:{file_size}"
+
+
+def load_file_once(module_key: str, uploaded_file, label: str) -> dict:
+    token = get_file_token(uploaded_file)
+    existing = st.session_state.uploaded_data.get(module_key)
+
+    # 같은 파일이면 다시 읽지 않고 이전 결과를 재사용한다.
+    if st.session_state.uploaded_tokens.get(module_key) == token and existing is not None:
+        return existing
+
+    df = load_uploaded_dataframe(uploaded_file.name, uploaded_file.getvalue())
+    info = {
+        "name": uploaded_file.name,
+        "row_count": int(len(df)),
+        "columns": list(df.columns),
+        "preview": df.head(3).to_dict("records"),
+    }
+    st.session_state.uploaded_data[module_key] = info
+    st.session_state.uploaded_tokens[module_key] = token
+    add_log(f"{label} 데이터 {len(df)}건 업로드")
+    return info
 
 
 def render_page_hero(title: str, subtitle: str, badge: str | None = None):
@@ -1060,11 +1101,9 @@ with tab2:
         crm_file = st.file_uploader("CRM 파일 (CSV, XLSX)", type=["csv", "xlsx"], key="crm_up")
         if crm_file:
             try:
-                df = pd.read_csv(crm_file) if crm_file.name.endswith(".csv") else pd.read_excel(crm_file)
-                st.session_state.uploaded_data["crm"] = df.to_dict("records")
-                st.success(f"✅ {len(df)}건 로드 완료")
-                st.dataframe(df.head(3), use_container_width=True)
-                add_log(f"CRM 데이터 {len(df)}건 업로드")
+                info = load_file_once("crm", crm_file, "CRM")
+                st.success(f"✅ {info['row_count']}건 로드 완료")
+                st.dataframe(pd.DataFrame(info["preview"]), use_container_width=True)
             except Exception as e:
                 st.error(f"파일 읽기 오류: {e}")
 
@@ -1072,11 +1111,9 @@ with tab2:
         sales_file = st.file_uploader("실적 파일 (CSV, XLSX)", type=["csv", "xlsx"], key="sales_up")
         if sales_file:
             try:
-                df = pd.read_csv(sales_file) if sales_file.name.endswith(".csv") else pd.read_excel(sales_file)
-                st.session_state.uploaded_data["sales"] = df.to_dict("records")
-                st.success(f"✅ {len(df)}건 로드 완료")
-                st.dataframe(df.head(3), use_container_width=True)
-                add_log(f"실적 데이터 {len(df)}건 업로드")
+                info = load_file_once("sales", sales_file, "실적")
+                st.success(f"✅ {info['row_count']}건 로드 완료")
+                st.dataframe(pd.DataFrame(info["preview"]), use_container_width=True)
             except Exception as e:
                 st.error(f"파일 읽기 오류: {e}")
 
@@ -1085,11 +1122,9 @@ with tab2:
         target_file = st.file_uploader("목표 파일 (CSV, XLSX)", type=["csv", "xlsx"], key="target_up")
         if target_file:
             try:
-                df = pd.read_csv(target_file) if target_file.name.endswith(".csv") else pd.read_excel(target_file)
-                st.session_state.uploaded_data["target"] = df.to_dict("records")
-                st.success(f"✅ {len(df)}건 로드 완료")
-                st.dataframe(df.head(3), use_container_width=True)
-                add_log(f"목표 데이터 {len(df)}건 업로드")
+                info = load_file_once("target", target_file, "목표")
+                st.success(f"✅ {info['row_count']}건 로드 완료")
+                st.dataframe(pd.DataFrame(info["preview"]), use_container_width=True)
             except Exception as e:
                 st.error(f"파일 읽기 오류: {e}")
 
@@ -1097,11 +1132,9 @@ with tab2:
         rx_file = st.file_uploader("Prescription 파일 (CSV, XLSX)", type=["csv", "xlsx"], key="rx_up")
         if rx_file:
             try:
-                df = pd.read_csv(rx_file) if rx_file.name.endswith(".csv") else pd.read_excel(rx_file)
-                st.session_state.uploaded_data["prescription"] = df.to_dict("records")
-                st.success(f"✅ {len(df)}건 로드 완료")
-                st.dataframe(df.head(3), use_container_width=True)
-                add_log(f"Prescription 데이터 {len(df)}건 업로드")
+                info = load_file_once("prescription", rx_file, "Prescription")
+                st.success(f"✅ {info['row_count']}건 로드 완료")
+                st.dataframe(pd.DataFrame(info["preview"]), use_container_width=True)
             except Exception as e:
                 st.error(f"파일 읽기 오류: {e}")
 
@@ -1133,10 +1166,10 @@ with tab2:
             "✅ 업로드됨" if st.session_state.uploaded_data["prescription"] else "⬜ 선택사항",
         ],
         "건수": [
-            len(st.session_state.uploaded_data["crm"]) if st.session_state.uploaded_data["crm"] else 0,
-            len(st.session_state.uploaded_data["sales"]) if st.session_state.uploaded_data["sales"] else 0,
-            len(st.session_state.uploaded_data["target"]) if st.session_state.uploaded_data["target"] else 0,
-            len(st.session_state.uploaded_data["prescription"]) if st.session_state.uploaded_data["prescription"] else 0,
+            st.session_state.uploaded_data["crm"]["row_count"] if st.session_state.uploaded_data["crm"] else 0,
+            st.session_state.uploaded_data["sales"]["row_count"] if st.session_state.uploaded_data["sales"] else 0,
+            st.session_state.uploaded_data["target"]["row_count"] if st.session_state.uploaded_data["target"] else 0,
+            st.session_state.uploaded_data["prescription"]["row_count"] if st.session_state.uploaded_data["prescription"] else 0,
         ],
     }
     st.dataframe(pd.DataFrame(status_data), use_container_width=True, hide_index=True)
@@ -1189,6 +1222,9 @@ with tab3:
         st.session_state.run_log = []
         for k in st.session_state.module_status:
             st.session_state.module_status[k] = "미실행"
+        for k in st.session_state.uploaded_data:
+            st.session_state.uploaded_data[k] = None
+            st.session_state.uploaded_tokens[k] = None
         st.rerun()
 
     if run_btn:

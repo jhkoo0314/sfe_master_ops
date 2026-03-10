@@ -12,7 +12,7 @@ if str(ROOT) not in sys.path:
 
 
 TEMPLATE_PATH = ROOT / "templates" / "Spatial_Preview_260224.html"
-CRM_RAW_PATH = ROOT / "data" / "raw" / "company_source" / "hangyeol_pharma" / "crm" / "hangyeol_crm_activity_raw.xlsx"
+CRM_RAW_PATH = ROOT / "data" / "company_source" / "hangyeol_pharma" / "crm" / "hangyeol_crm_activity_raw.xlsx"
 TERRITORY_ASSET_PATH = ROOT / "data" / "ops_validation" / "hangyeol_pharma" / "territory" / "territory_result_asset.json"
 SANDBOX_ASSET_PATH = ROOT / "data" / "ops_validation" / "hangyeol_pharma" / "sandbox" / "sandbox_result_asset.json"
 OUTPUT_ROOT = ROOT / "data" / "ops_validation" / "hangyeol_pharma" / "territory"

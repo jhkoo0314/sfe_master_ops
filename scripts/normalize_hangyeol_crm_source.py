@@ -20,7 +20,7 @@ from adapters.crm.company_master_adapter import load_company_master_from_file, v
 from adapters.crm.crm_activity_adapter import load_crm_activity_from_file
 
 
-SOURCE_ROOT = ROOT / "data" / "raw" / "company_source" / "hangyeol_pharma"
+SOURCE_ROOT = ROOT / "data" / "company_source" / "hangyeol_pharma"
 OUTPUT_ROOT = ROOT / "data" / "ops_standard" / "hangyeol_pharma" / "crm"
 
 
