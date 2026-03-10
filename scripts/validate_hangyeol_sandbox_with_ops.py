@@ -18,11 +18,13 @@ from modules.sandbox.schemas import (
 )
 from modules.sandbox.service import build_sandbox_result_asset
 from ops_core.api.sandbox_router import evaluate_sandbox_asset
+from common.company_runtime import get_active_company_key, get_active_company_name, get_company_root
 
-
-CRM_STANDARD_ROOT = ROOT / "data" / "ops_standard" / "hangyeol_pharma" / "crm"
-SANDBOX_STANDARD_ROOT = ROOT / "data" / "ops_standard" / "hangyeol_pharma" / "sandbox"
-OUTPUT_ROOT = ROOT / "data" / "ops_validation" / "hangyeol_pharma" / "sandbox"
+COMPANY_KEY = get_active_company_key()
+COMPANY_NAME = get_active_company_name(COMPANY_KEY)
+CRM_STANDARD_ROOT = get_company_root(ROOT, "ops_standard", COMPANY_KEY) / "crm"
+SANDBOX_STANDARD_ROOT = get_company_root(ROOT, "ops_standard", COMPANY_KEY) / "sandbox"
+OUTPUT_ROOT = get_company_root(ROOT, "ops_validation", COMPANY_KEY) / "sandbox"
 
 
 def load_crm_domain_records() -> list[CrmDomainRecord]:
@@ -141,7 +143,7 @@ def main() -> None:
         encoding="utf-8",
     )
 
-    print("Validated Hangyeol sandbox data with OPS:")
+    print(f"Validated {COMPANY_NAME} sandbox data with OPS:")
     print(json.dumps(summary, ensure_ascii=False, indent=2))
 
 

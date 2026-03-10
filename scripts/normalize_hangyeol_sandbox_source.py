@@ -12,10 +12,11 @@ if str(ROOT) not in sys.path:
 
 from adapters.sandbox.adapter_config import SalesAdapterConfig, TargetAdapterConfig
 from adapters.sandbox.domain_adapter import load_sales_from_records, load_target_from_records
+from common.company_runtime import get_active_company_key, get_company_root
 
-
-SOURCE_ROOT = ROOT / "data" / "company_source" / "hangyeol_pharma"
-OUTPUT_ROOT = ROOT / "data" / "ops_standard" / "hangyeol_pharma" / "sandbox"
+COMPANY_KEY = get_active_company_key()
+SOURCE_ROOT = get_company_root(ROOT, "company_source", COMPANY_KEY)
+OUTPUT_ROOT = get_company_root(ROOT, "ops_standard", COMPANY_KEY) / "sandbox"
 
 
 def models_to_frame(models: list) -> pd.DataFrame:

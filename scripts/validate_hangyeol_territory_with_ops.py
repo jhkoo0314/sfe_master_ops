@@ -14,11 +14,13 @@ from modules.territory.schemas import GeoCoord
 from modules.territory.service import build_territory_result_asset
 from ops_core.api.territory_router import evaluate_territory_asset
 from modules.sandbox.schemas import HospitalAnalysisRecord
+from common.company_runtime import get_active_company_key, get_active_company_name, get_company_root
 
-
-SANDBOX_VALIDATION_ROOT = ROOT / "data" / "ops_validation" / "hangyeol_pharma" / "sandbox"
-SOURCE_ROOT = ROOT / "data" / "company_source" / "hangyeol_pharma"
-OUTPUT_ROOT = ROOT / "data" / "ops_validation" / "hangyeol_pharma" / "territory"
+COMPANY_KEY = get_active_company_key()
+COMPANY_NAME = get_active_company_name(COMPANY_KEY)
+SANDBOX_VALIDATION_ROOT = get_company_root(ROOT, "ops_validation", COMPANY_KEY) / "sandbox"
+SOURCE_ROOT = get_company_root(ROOT, "company_source", COMPANY_KEY)
+OUTPUT_ROOT = get_company_root(ROOT, "ops_validation", COMPANY_KEY) / "territory"
 
 
 def load_hospital_records() -> list[HospitalAnalysisRecord]:
@@ -83,7 +85,7 @@ def main() -> None:
         encoding="utf-8",
     )
 
-    print("Validated Hangyeol territory data with OPS:")
+    print(f"Validated {COMPANY_NAME} territory data with OPS:")
     print(json.dumps(summary, ensure_ascii=False, indent=2))
 
 

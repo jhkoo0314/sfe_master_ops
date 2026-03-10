@@ -12,15 +12,18 @@ if str(ROOT) not in sys.path:
 
 from adapters.crm.adapter_config import HospitalAdapterConfig
 from adapters.crm.hospital_adapter import load_hospital_master_from_file
+from common.company_runtime import get_active_company_key, get_active_company_name, get_company_root
 from modules.prescription.schemas import CompanyPrescriptionStandard
 from modules.prescription.flow_builder import build_hospital_region_index, build_prescription_standard_flow
 from modules.prescription.service import build_prescription_result_asset
 from ops_core.api.prescription_router import evaluate_prescription_asset
 
 
-SOURCE_ROOT = ROOT / "data" / "company_source" / "hangyeol_pharma"
-STANDARD_ROOT = ROOT / "data" / "ops_standard" / "hangyeol_pharma" / "prescription"
-OUTPUT_ROOT = ROOT / "data" / "ops_validation" / "hangyeol_pharma" / "prescription"
+COMPANY_KEY = get_active_company_key()
+COMPANY_NAME = get_active_company_name(COMPANY_KEY)
+SOURCE_ROOT = get_company_root(ROOT, "company_source", COMPANY_KEY)
+STANDARD_ROOT = get_company_root(ROOT, "ops_standard", COMPANY_KEY) / "prescription"
+OUTPUT_ROOT = get_company_root(ROOT, "ops_validation", COMPANY_KEY) / "prescription"
 ACCOUNT_MASTER_PATH = SOURCE_ROOT / "company" / "hangyeol_account_master.xlsx"
 
 
@@ -410,7 +413,7 @@ def main() -> None:
         encoding="utf-8",
     )
 
-    print("Validated Hangyeol prescription data with OPS:")
+    print(f"Validated {COMPANY_NAME} prescription data with OPS:")
     print(json.dumps(summary, ensure_ascii=False, indent=2))
 
 

@@ -18,10 +18,11 @@ from adapters.crm.adapter_config import (
 from adapters.crm.hospital_adapter import load_hospital_master_from_file, build_hospital_index
 from adapters.crm.company_master_adapter import load_company_master_from_file, validate_key_integrity
 from adapters.crm.crm_activity_adapter import load_crm_activity_from_file
+from common.company_runtime import get_active_company_key, get_company_root
 
-
-SOURCE_ROOT = ROOT / "data" / "company_source" / "hangyeol_pharma"
-OUTPUT_ROOT = ROOT / "data" / "ops_standard" / "hangyeol_pharma" / "crm"
+COMPANY_KEY = get_active_company_key()
+SOURCE_ROOT = get_company_root(ROOT, "company_source", COMPANY_KEY)
+OUTPUT_ROOT = get_company_root(ROOT, "ops_standard", COMPANY_KEY) / "crm"
 
 
 def models_to_frame(models: list) -> pd.DataFrame:

@@ -12,10 +12,11 @@ if str(ROOT) not in sys.path:
 
 from adapters.prescription.adapter_config import CompanyPrescriptionAdapterConfig
 from adapters.prescription.company_prescription_adapter import load_prescription_from_file
+from common.company_runtime import get_active_company_key, get_company_root
 
-
-SOURCE_ROOT = ROOT / "data" / "company_source" / "hangyeol_pharma"
-OUTPUT_ROOT = ROOT / "data" / "ops_standard" / "hangyeol_pharma" / "prescription"
+COMPANY_KEY = get_active_company_key()
+SOURCE_ROOT = get_company_root(ROOT, "company_source", COMPANY_KEY)
+OUTPUT_ROOT = get_company_root(ROOT, "ops_standard", COMPANY_KEY) / "prescription"
 
 
 def models_to_frame(models: list) -> pd.DataFrame:

@@ -17,9 +17,11 @@ from scripts.normalize_hangyeol_sandbox_source import main as normalize_sandbox_
 from scripts.validate_hangyeol_sandbox_with_ops import main as validate_sandbox_main
 from scripts.validate_hangyeol_territory_with_ops import main as validate_territory_main
 from scripts.validate_hangyeol_builder_with_ops import main as validate_builder_main
+from common.company_runtime import get_active_company_key, get_active_company_name, get_company_root
 
-
-OUTPUT_ROOT = ROOT / "data" / "ops_validation" / "hangyeol_pharma" / "pipeline"
+COMPANY_KEY = get_active_company_key()
+COMPANY_NAME = get_active_company_name(COMPANY_KEY)
+OUTPUT_ROOT = get_company_root(ROOT, "ops_validation", COMPANY_KEY) / "pipeline"
 RAW_ASSIGNMENT_PATH = ROOT / "data" / "sample_data" / "sample_company" / "sample_hospital_assignment_data.xlsx"
 
 
@@ -47,14 +49,15 @@ def main() -> None:
     validate_territory_main()
     validate_builder_main()
 
-    crm_summary = load_json(ROOT / "data" / "ops_validation" / "hangyeol_pharma" / "crm" / "crm_validation_summary.json")
-    rx_summary = load_json(ROOT / "data" / "ops_validation" / "hangyeol_pharma" / "prescription" / "prescription_validation_summary.json")
-    sandbox_summary = load_json(ROOT / "data" / "ops_validation" / "hangyeol_pharma" / "sandbox" / "sandbox_validation_summary.json")
-    territory_summary = load_json(ROOT / "data" / "ops_validation" / "hangyeol_pharma" / "territory" / "territory_validation_summary.json")
-    builder_summary = load_json(ROOT / "data" / "ops_validation" / "hangyeol_pharma" / "builder" / "builder_validation_summary.json")
+    validation_root = get_company_root(ROOT, "ops_validation", COMPANY_KEY)
+    crm_summary = load_json(validation_root / "crm" / "crm_validation_summary.json")
+    rx_summary = load_json(validation_root / "prescription" / "prescription_validation_summary.json")
+    sandbox_summary = load_json(validation_root / "sandbox" / "sandbox_validation_summary.json")
+    territory_summary = load_json(validation_root / "territory" / "territory_validation_summary.json")
+    builder_summary = load_json(validation_root / "builder" / "builder_validation_summary.json")
 
     pipeline_summary = {
-        "company": "한결제약",
+        "company": COMPANY_NAME,
         "stages": {
             "crm": crm_summary,
             "prescription": rx_summary,

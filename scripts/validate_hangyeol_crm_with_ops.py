@@ -16,12 +16,14 @@ from adapters.crm.adapter_config import (
 from adapters.crm.hospital_adapter import load_hospital_master_from_file, build_hospital_index
 from adapters.crm.company_master_adapter import load_company_master_from_file
 from adapters.crm.crm_activity_adapter import load_crm_activity_from_file
+from common.company_runtime import get_active_company_key, get_active_company_name, get_company_root
 from modules.crm.service import build_crm_result_asset
 from ops_core.api.crm_router import evaluate_crm_asset
 
-
-SOURCE_ROOT = ROOT / "data" / "company_source" / "hangyeol_pharma"
-OUTPUT_ROOT = ROOT / "data" / "ops_validation" / "hangyeol_pharma" / "crm"
+COMPANY_KEY = get_active_company_key()
+COMPANY_NAME = get_active_company_name(COMPANY_KEY)
+SOURCE_ROOT = get_company_root(ROOT, "company_source", COMPANY_KEY)
+OUTPUT_ROOT = get_company_root(ROOT, "ops_validation", COMPANY_KEY) / "crm"
 
 
 def main() -> None:
@@ -58,7 +60,7 @@ def main() -> None:
         unmapped_hospital_names=[
             str(item.get("hospital_name", "")) for item in crm_unmapped[:20]
         ],
-        notes="hangyeol company source -> adapter normalization -> ops crm validation",
+        notes=f"{COMPANY_KEY} company source -> adapter normalization -> ops crm validation",
     )
     evaluation = evaluate_crm_asset(result_asset)
 
@@ -89,7 +91,7 @@ def main() -> None:
         encoding="utf-8",
     )
 
-    print("Validated Hangyeol CRM data with OPS:")
+    print(f"Validated {COMPANY_NAME} CRM data with OPS:")
     print(json.dumps(run_summary, ensure_ascii=False, indent=2))
 
 
