@@ -22,7 +22,7 @@ from pydantic import BaseModel, Field
 # ────────────────────────────────────────
 
 ReportSourceModule = Literal["crm", "sandbox", "territory", "prescription"]
-BuilderTemplateKey = Literal["report_template", "territory_map", "prescription_flow"]
+BuilderTemplateKey = Literal["report_template", "territory_map", "prescription_flow", "crm_coaching"]
 
 class ReportSection(BaseModel):
     """보고서 섹션 하나 (슬롯에 주입될 단위)."""
@@ -82,7 +82,7 @@ class BuilderPayloadStandard(BaseModel):
     payload: dict[str, Any] = Field(default_factory=dict)
     source_modules: list[str] = Field(default_factory=list)
     output_name: str = "builder_output.html"
-    render_mode: Literal["report_data_json", "territory_window_vars", "prescription_window_vars"] = "report_data_json"
+    render_mode: Literal["report_data_json", "territory_window_vars", "prescription_window_vars", "crm_window_vars"] = "report_data_json"
 
 
 # ────────────────────────────────────────

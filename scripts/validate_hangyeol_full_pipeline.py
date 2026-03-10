@@ -33,8 +33,10 @@ def main() -> None:
     OUTPUT_ROOT.mkdir(parents=True, exist_ok=True)
 
     generation_note = None
-    if RAW_ASSIGNMENT_PATH.exists():
+    if COMPANY_KEY == "hangyeol_pharma" and RAW_ASSIGNMENT_PATH.exists():
         generate_source_main()
+    elif COMPANY_KEY != "hangyeol_pharma":
+        generation_note = "활성 회사가 한결제약이 아니므로 한결제약 raw 생성 단계는 건너뛰었습니다."
     else:
         generation_note = (
             "sample_hospital_assignment_data.xlsx 가 없어 raw 생성 단계는 건너뛰고 "

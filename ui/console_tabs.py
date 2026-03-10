@@ -1,5 +1,8 @@
+import json
 import os
 import subprocess
+from datetime import datetime
+from pathlib import Path
 
 import pandas as pd
 import streamlit as st
@@ -26,6 +29,55 @@ from ui.console_shared import (
     run_actual_pipeline,
     save_pipeline_run_history,
 )
+
+
+def _build_period_filter_defaults(period_mode: str, selected_year: str, selected_sub_period: str) -> dict:
+    defaults = {
+        "period_mode": "all",
+        "year": selected_year or "",
+        "month": "",
+        "quarter": "",
+    }
+    if period_mode == "연간":
+        defaults["period_mode"] = "year"
+    elif period_mode == "분기별":
+        defaults["period_mode"] = "quarter"
+        quarter_map = {"1분기": "Q1", "2분기": "Q2", "3분기": "Q3", "4분기": "Q4"}
+        defaults["quarter"] = f"{selected_year}-{quarter_map.get(selected_sub_period, 'Q1')}" if selected_year else ""
+    elif period_mode == "월별":
+        defaults["period_mode"] = "month"
+        month_num = selected_sub_period.replace("월", "").zfill(2)
+        defaults["month"] = f"{selected_year}-{month_num}" if selected_year else ""
+    return defaults
+
+
+def _materialize_periodized_report(report_output_path: str, report_period: str, report_filters: dict) -> str:
+    source_path = Path(report_output_path)
+    if not source_path.exists():
+        return report_output_path
+    if report_filters.get("period_mode") == "all":
+        return report_output_path
+
+    safe_period = (
+        report_period.replace(" ", "_")
+        .replace("년", "")
+        .replace("월", "")
+        .replace("분기", "Q")
+        .replace("/", "_")
+    )
+    target_path = source_path.with_name(f"{source_path.stem}__{safe_period}{source_path.suffix}")
+    html = source_path.read_text(encoding="utf-8")
+    injected = (
+        "<script>"
+        f"window.__OPS_DEFAULT_FILTER__ = {json.dumps(report_filters, ensure_ascii=False)};"
+        "</script>\n</head>"
+    )
+    if "window.__OPS_DEFAULT_FILTER__" in html:
+        materialized = html
+    else:
+        materialized = html.replace("</head>", injected, 1)
+    target_path.write_text(materialized, encoding="utf-8")
+    return str(target_path)
 
 
 def render_dashboard_tab() -> None:
@@ -318,25 +370,80 @@ def render_builder_tab() -> None:
 
     render_block_card("📊 OPS 분석 보고서", "현재 검증이 끝난 결과물 중 어떤 HTML 보고서를 열고 확인할지 선택하는 블록입니다.", "Output Block 01")
     report_type = st.selectbox("보고서 유형", get_report_type_options())
-    report_period = st.text_input("기간", value="2025년 1~2월")
+    period_col1, period_col2, period_col3 = st.columns(3)
+    current_year = datetime.now().year
+    year_options = [str(year) for year in range(current_year - 3, current_year + 1)]
+    default_year = "2025" if "2025" in year_options else year_options[-1]
+
+    with period_col1:
+        period_mode = st.selectbox("출력 범위", ["전체 출력", "연간", "분기별", "월별"], index=0)
+
+    selected_year = ""
+    selected_sub_period = ""
+    with period_col2:
+        if period_mode == "전체 출력":
+            st.selectbox("기준 연도", ["전체"], index=0, disabled=True)
+        else:
+            selected_year = st.selectbox(
+                "기준 연도",
+                year_options,
+                index=year_options.index(default_year),
+            )
+
+    with period_col3:
+        if period_mode == "분기별":
+            selected_sub_period = st.selectbox("분기", ["1분기", "2분기", "3분기", "4분기"], index=0)
+        elif period_mode == "월별":
+            selected_sub_period = st.selectbox(
+                "월",
+                [f"{month:02d}월" for month in range(1, 13)],
+                index=0,
+            )
+        else:
+            st.selectbox("세부 기간", ["전체"], index=0, disabled=True)
+
+    if period_mode == "전체 출력":
+        report_period = "전체 기간"
+    elif period_mode == "연간":
+        report_period = f"{selected_year}년 전체"
+    elif period_mode == "분기별":
+        report_period = f"{selected_year}년 {selected_sub_period}"
+    else:
+        report_period = f"{selected_year}년 {selected_sub_period}"
+
     report_output_path = get_report_output_path(report_type)
-    st.markdown(f"""<div class="action-note"><b>{report_type}</b><br>{get_report_type_description(report_type)}<br><br>{get_report_type_artifacts(report_type)}</div>""", unsafe_allow_html=True)
+    report_filters = _build_period_filter_defaults(period_mode, selected_year, selected_sub_period)
+    st.markdown(
+        f"""<div class="action-note"><b>{report_type}</b><br>{get_report_type_description(report_type)}<br><br>선택 기간: <b>{report_period}</b><br>{get_report_type_artifacts(report_type)}</div>""",
+        unsafe_allow_html=True,
+    )
 
     if report_type == "통합 검증 보고서":
         st.info("통합 검증 보고서는 현재 개별 HTML 1장이 아니라 요약 JSON/검증 산출물 묶음 기준입니다.")
     elif report_output_path and os.path.exists(report_output_path):
+        effective_report_path = _materialize_periodized_report(report_output_path, report_period, report_filters)
+        base_name, ext = os.path.splitext(os.path.basename(report_output_path))
+        safe_period = (
+            report_period.replace(" ", "_")
+            .replace("년", "")
+            .replace("월", "")
+            .replace("분기", "Q")
+            .replace("전체", "all")
+            .replace("/", "_")
+        )
+        download_name = f"{base_name}_{safe_period}{ext}"
         col_open, col_download = st.columns(2)
         with col_open:
             if st.button("🌐 선택한 보고서 열기", disabled=not builder_eligible, use_container_width=True):
-                subprocess.Popen(["start", report_output_path], shell=True)
-                st.info(f"브라우저에서 '{report_type}' 보고서를 엽니다.")
+                subprocess.Popen(["start", effective_report_path], shell=True)
+                st.info(f"브라우저에서 '{report_type}' 보고서를 엽니다. 선택 기간: {report_period}")
                 add_log(f"보고서 열기: {report_type} ({report_period})")
         with col_download:
-            with open(report_output_path, "rb") as f:
+            with open(effective_report_path, "rb") as f:
                 st.download_button(
                     label="⬇️ 생성된 보고서 다운로드",
                     data=f.read(),
-                    file_name=os.path.basename(report_output_path),
+                    file_name=download_name,
                     mime="text/html",
                     disabled=not builder_eligible,
                     use_container_width=True,

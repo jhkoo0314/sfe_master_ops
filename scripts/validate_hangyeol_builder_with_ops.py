@@ -9,6 +9,7 @@ if str(ROOT) not in sys.path:
     sys.path.insert(0, str(ROOT))
 
 from modules.builder.service import (
+    build_crm_template_input,
     build_html_builder_asset,
     build_prescription_template_input,
     build_sandbox_template_input,
@@ -17,24 +18,30 @@ from modules.builder.service import (
     render_builder_html,
 )
 from common.company_runtime import get_active_company_key, get_active_company_name, get_company_root
+from result_assets.crm_result_asset import CrmResultAsset
 from result_assets.sandbox_result_asset import SandboxResultAsset
 from result_assets.territory_result_asset import TerritoryResultAsset
 
 
 COMPANY_KEY = get_active_company_key()
 COMPANY_NAME = get_active_company_name(COMPANY_KEY)
+CRM_TEMPLATE_PATH = ROOT / "templates" / "crm_coaching_template.html"
 SANDBOX_TEMPLATE_PATH = ROOT / "templates" / "report_template.html"
 TERRITORY_TEMPLATE_PATH = ROOT / "templates" / "Spatial_Preview_260224.html"
 PRESCRIPTION_TEMPLATE_PATH = ROOT / "templates" / "prescription_flow_template.html"
+CRM_ASSET_PATH = get_company_root(ROOT, "ops_validation", COMPANY_KEY) / "crm" / "crm_result_asset.json"
+CRM_SUMMARY_PATH = get_company_root(ROOT, "ops_validation", COMPANY_KEY) / "crm" / "crm_validation_summary.json"
 SANDBOX_ASSET_PATH = get_company_root(ROOT, "ops_validation", COMPANY_KEY) / "sandbox" / "sandbox_result_asset.json"
 TERRITORY_ASSET_PATH = get_company_root(ROOT, "ops_validation", COMPANY_KEY) / "territory" / "territory_result_asset.json"
 PRESCRIPTION_ASSET_PATH = get_company_root(ROOT, "ops_validation", COMPANY_KEY) / "prescription" / "prescription_result_asset.json"
 PRESCRIPTION_SUMMARY_PATH = get_company_root(ROOT, "ops_validation", COMPANY_KEY) / "prescription" / "prescription_validation_summary.json"
+PRESCRIPTION_FLOW_PATH = get_company_root(ROOT, "ops_validation", COMPANY_KEY) / "prescription" / "prescription_flow_records.xlsx"
 PRESCRIPTION_CLAIM_PATH = get_company_root(ROOT, "ops_validation", COMPANY_KEY) / "prescription" / "prescription_claim_validation.xlsx"
 PRESCRIPTION_GAP_PATH = get_company_root(ROOT, "ops_validation", COMPANY_KEY) / "prescription" / "prescription_gap_records.xlsx"
 PRESCRIPTION_TRACE_PATH = get_company_root(ROOT, "ops_validation", COMPANY_KEY) / "prescription" / "prescription_hospital_trace_quarter.xlsx"
 PRESCRIPTION_REP_KPI_PATH = get_company_root(ROOT, "ops_validation", COMPANY_KEY) / "prescription" / "prescription_rep_kpi_quarter.xlsx"
 CRM_ACTIVITY_PATH = get_company_root(ROOT, "company_source", COMPANY_KEY) / "crm" / "hangyeol_crm_activity_raw.xlsx"
+COMPANY_MASTER_PATH = get_company_root(ROOT, "company_source", COMPANY_KEY) / "company" / "hangyeol_company_assignment_raw.xlsx"
 OUTPUT_ROOT = get_company_root(ROOT, "ops_validation", COMPANY_KEY) / "builder"
 
 
@@ -90,6 +97,30 @@ def main() -> None:
     else:
         summary["skipped_reports"].append("sandbox_report")
 
+    crm_ready = CRM_ASSET_PATH.exists() and CRM_SUMMARY_PATH.exists()
+    if crm_ready:
+        crm_asset = CrmResultAsset.model_validate(load_json(CRM_ASSET_PATH))
+        crm_input = build_crm_template_input(
+            crm_asset,
+            str(CRM_TEMPLATE_PATH),
+            summary_path=str(CRM_SUMMARY_PATH),
+            company_master_path=str(COMPANY_MASTER_PATH),
+            source_asset_path=str(CRM_ASSET_PATH),
+        )
+        crm_payload = build_template_payload(crm_input)
+        crm_html = render_builder_html(crm_payload)
+        crm_result_asset = build_html_builder_asset(crm_input, crm_html)
+        summary["crm_coaching"] = write_builder_output(
+            "crm_coaching_preview",
+            crm_input,
+            crm_payload,
+            crm_html,
+            crm_result_asset,
+        )
+        summary["templates_validated"].append(str(CRM_TEMPLATE_PATH))
+    else:
+        summary["skipped_reports"].append("crm_coaching")
+
     if TERRITORY_ASSET_PATH.exists():
         territory_asset = TerritoryResultAsset.model_validate(load_json(TERRITORY_ASSET_PATH))
         territory_input = build_territory_template_input(
@@ -117,6 +148,7 @@ def main() -> None:
         for path in [
             PRESCRIPTION_ASSET_PATH,
             PRESCRIPTION_SUMMARY_PATH,
+            PRESCRIPTION_FLOW_PATH,
             PRESCRIPTION_CLAIM_PATH,
             PRESCRIPTION_GAP_PATH,
             PRESCRIPTION_TRACE_PATH,
@@ -128,6 +160,7 @@ def main() -> None:
             str(PRESCRIPTION_TEMPLATE_PATH),
             summary_path=str(PRESCRIPTION_SUMMARY_PATH),
             claim_validation_path=str(PRESCRIPTION_CLAIM_PATH),
+            flow_records_path=str(PRESCRIPTION_FLOW_PATH),
             gap_report_path=str(PRESCRIPTION_GAP_PATH),
             hospital_trace_path=str(PRESCRIPTION_TRACE_PATH),
             rep_kpi_path=str(PRESCRIPTION_REP_KPI_PATH),
@@ -148,7 +181,7 @@ def main() -> None:
         summary["skipped_reports"].append("prescription_flow")
 
     summary["built_report_count"] = sum(
-        1 for key in ["sandbox_report", "territory_map", "prescription_flow"] if key in summary
+        1 for key in ["crm_coaching", "sandbox_report", "territory_map", "prescription_flow"] if key in summary
     )
     (OUTPUT_ROOT / "builder_validation_summary.json").write_text(
         json.dumps(summary, ensure_ascii=False, indent=2),

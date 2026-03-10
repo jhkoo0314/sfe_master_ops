@@ -280,19 +280,75 @@ def build_region_summary_frame(
     ).fillna({"gap_record_count": 0, "gap_quantity": 0.0})
 
 
-def build_claim_validation_frame(hospital_trace_df: pd.DataFrame) -> pd.DataFrame:
-    if hospital_trace_df.empty:
+def build_claim_validation_frame(flow_report_df: pd.DataFrame) -> pd.DataFrame:
+    connected_df = flow_report_df[flow_report_df["flow_status"] == "connected"].copy()
+    if connected_df.empty:
         return pd.DataFrame()
+    connected_df["year"] = connected_df["metric_month"].astype(str).str[:4]
+    connected_df["year_month"] = (
+        connected_df["metric_month"].astype(str).str[:4]
+        + "-"
+        + connected_df["metric_month"].astype(str).str[4:6]
+    )
 
-    claim_candidates = hospital_trace_df.sort_values(
-        ["year_quarter", "total_amount"],
-        ascending=[True, False],
-    ).head(120).reset_index(drop=True)
+    grouping_base = [
+        "rep_id",
+        "rep_name",
+        "branch_name",
+        "hospital_id",
+        "hospital_name",
+        "hospital_type",
+        "product_name",
+    ]
+
+    def aggregate_claims(period_type: str, period_column: str, top_n: int) -> pd.DataFrame:
+        group_columns = [period_column, *grouping_base]
+        if period_column != "year":
+            group_columns.insert(1, "year")
+        grouped = connected_df.groupby(
+            group_columns,
+            dropna=False,
+            as_index=False,
+        ).agg(
+            tracked_amount=("total_amount", "sum"),
+            pharmacy_count=("pharmacy_id", "nunique"),
+            wholesaler_count=("wholesaler_id", "nunique"),
+            active_month_count=("metric_month", "nunique"),
+            flow_count=("lineage_key", "count"),
+        )
+        grouped = grouped.rename(columns={period_column: "period_value"})
+        if "year" not in grouped.columns:
+            grouped["year"] = grouped["period_value"]
+        grouped["period_type"] = period_type
+        grouped["period_label"] = grouped["period_value"]
+        grouped["year_quarter"] = ""
+        grouped["year_month"] = ""
+        if period_type == "quarter":
+            grouped["year_quarter"] = grouped["period_value"]
+        elif period_type == "month":
+            grouped["year_month"] = grouped["period_value"]
+
+        ranked = (
+            grouped.sort_values(["period_value", "tracked_amount"], ascending=[True, False])
+            .groupby("period_value", group_keys=False)
+            .head(top_n)
+            .reset_index(drop=True)
+        )
+        return ranked
+
+    claim_candidates = pd.concat(
+        [
+            aggregate_claims("month", "year_month", 10),
+            aggregate_claims("quarter", "year_quarter", 30),
+            aggregate_claims("year", "year", 60),
+        ],
+        ignore_index=True,
+    )
+
     factors = [0.99, 1.04, 1.11, 0.92, 1.18]
-
     records: list[dict] = []
     for idx, row in claim_candidates.iterrows():
-        tracked_amount = float(row["total_amount"])
+        tracked_amount = float(row["tracked_amount"])
         factor = factors[idx % len(factors)]
         claimed_amount = round(tracked_amount * factor, 2)
         variance_amount = round(claimed_amount - tracked_amount, 2)
@@ -308,10 +364,16 @@ def build_claim_validation_frame(hospital_trace_df: pd.DataFrame) -> pd.DataFram
             verdict = "SUSPECT"
             note = "차이가 커서 도매/약국 흐름 재확인이 필요합니다."
 
+        period_value = str(row["period_value"])
         records.append(
             {
                 "claim_case_id": f"PDF-CLAIM-{idx + 1:03d}",
+                "period_type": row["period_type"],
+                "period_label": period_value,
+                "period_value": period_value,
+                "year": str(row["year"]),
                 "year_quarter": row["year_quarter"],
+                "year_month": row["year_month"],
                 "rep_id": row["rep_id"],
                 "rep_name": row["rep_name"],
                 "branch_name": row["branch_name"],
@@ -365,7 +427,7 @@ def main() -> None:
     quarter_kpi_df = build_quarter_kpi_frame(flow_report_df)
     hospital_trace_df = build_hospital_trace_frame(flow_report_df)
     region_summary_df = build_region_summary_frame(flow_report_df, gap_report_df)
-    claim_validation_df = build_claim_validation_frame(hospital_trace_df)
+    claim_validation_df = build_claim_validation_frame(flow_report_df)
 
     (OUTPUT_ROOT / "prescription_result_asset.json").write_text(
         json.dumps(asset.model_dump(mode="json"), ensure_ascii=False, indent=2),

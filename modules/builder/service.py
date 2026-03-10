@@ -12,6 +12,7 @@ from pathlib import Path
 
 import pandas as pd
 
+from common.company_runtime import get_active_company_name
 from modules.builder.schemas import (
     BuilderInputReference,
     BuilderInputStandard,
@@ -22,6 +23,7 @@ from modules.builder.schemas import (
     WebSlideSession,
     WebSlideSlotContent,
 )
+from result_assets.crm_result_asset import CrmResultAsset
 from result_assets.sandbox_result_asset import SandboxResultAsset
 from result_assets.territory_result_asset import TerritoryResultAsset
 import uuid
@@ -226,6 +228,7 @@ def build_prescription_template_input(
     template_path: str,
     summary_path: str,
     claim_validation_path: str,
+    flow_records_path: str,
     gap_report_path: str,
     hospital_trace_path: str,
     rep_kpi_path: str,
@@ -233,15 +236,61 @@ def build_prescription_template_input(
 ) -> BuilderInputStandard:
     summary = json.loads(Path(summary_path).read_text(encoding="utf-8"))
     claim_df = pd.read_excel(claim_validation_path)
+    flow_df = pd.read_excel(flow_records_path)
     gap_df = pd.read_excel(gap_report_path)
     hospital_trace_df = pd.read_excel(hospital_trace_path)
     rep_kpi_df = pd.read_excel(rep_kpi_path)
+
+    flow_df["metric_month"] = flow_df["metric_month"].astype(str)
+    flow_df["year"] = flow_df["metric_month"].str[:4]
+    flow_df["month"] = flow_df["metric_month"].str[:4] + "-" + flow_df["metric_month"].str[4:6]
 
     claim_df = claim_df.sort_values(["year_quarter", "tracked_amount"], ascending=[True, False])
     hospital_trace_df = hospital_trace_df.sort_values(
         ["year_quarter", "total_amount"], ascending=[True, False]
     )
     rep_kpi_df = rep_kpi_df.sort_values(["year_quarter", "total_amount"], ascending=[True, False])
+
+    flow_month_map_quarter: dict[tuple[str, str, str, str], list[str]] = (
+        flow_df.groupby(["year_quarter", "rep_name", "hospital_id", "product_name"])["month"]
+        .agg(lambda s: sorted(set(str(v) for v in s if pd.notna(v))))
+        .to_dict()
+    )
+    flow_month_map_year: dict[tuple[str, str, str, str], list[str]] = (
+        flow_df.groupby(["year", "rep_name", "hospital_id", "product_name"])["month"]
+        .agg(lambda s: sorted(set(str(v) for v in s if pd.notna(v))))
+        .to_dict()
+    )
+    claim_records = claim_df.to_dict(orient="records")
+    for row in claim_records:
+        period_type = str(row.get("period_type", "quarter"))
+        year = str(row.get("year") or "")
+        row["year"] = year
+        if period_type == "month":
+            year_month = str(row.get("year_month") or row.get("period_value") or "")
+            months = [year_month] if year_month else []
+        elif period_type == "year":
+            months = flow_month_map_year.get(
+                (year, str(row["rep_name"]), str(row["hospital_id"]), str(row["product_name"])),
+                [],
+            )
+        else:
+            year_quarter = str(row.get("year_quarter") or row.get("period_value") or "")
+            months = flow_month_map_quarter.get(
+                (year_quarter, str(row["rep_name"]), str(row["hospital_id"]), str(row["product_name"])),
+                [],
+            )
+        row["active_months"] = months
+        if not row.get("year"):
+            row["year"] = str(row.get("year_quarter", "")).split("-")[0]
+    trace_records = hospital_trace_df.to_dict(orient="records")
+    for row in trace_records:
+        quarter = str(row.get("year_quarter", ""))
+        row["year"] = quarter.split("-")[0] if "-" in quarter else str(row.get("year") or "")
+    rep_kpi_records = rep_kpi_df.to_dict(orient="records")
+    for row in rep_kpi_records:
+        quarter = str(row.get("year_quarter", ""))
+        row["year"] = quarter.split("-")[0] if "-" in quarter else str(row.get("year") or "")
 
     overview = {
         "standard_record_count": summary.get("standard_record_count", 0),
@@ -253,12 +302,13 @@ def build_prescription_template_input(
         "claim_validation_summary": summary.get("claim_validation_summary", {}),
     }
     payload_seed = {
-        "company": "한결제약",
+        "company": get_active_company_name(),
         "overview": overview,
-        "claims": claim_df.to_dict(orient="records"),
+        "claims": claim_records,
+        "flow_records": flow_df.to_dict(orient="records"),
         "gaps": gap_df.to_dict(orient="records"),
-        "hospital_traces": hospital_trace_df.head(100).to_dict(orient="records"),
-        "rep_kpis": rep_kpi_df.head(100).to_dict(orient="records"),
+        "hospital_traces": trace_records,
+        "rep_kpis": rep_kpi_records,
     }
     reference = BuilderInputReference(
         template_key="prescription_flow",
@@ -281,6 +331,161 @@ def build_prescription_template_input(
         source_references=[reference],
         payload_seed=payload_seed,
         source_modules=["prescription"],
+    )
+
+
+def build_crm_template_input(
+    asset: CrmResultAsset,
+    template_path: str,
+    summary_path: str,
+    company_master_path: str | None = None,
+    source_asset_path: str | None = None,
+) -> BuilderInputStandard:
+    summary = json.loads(Path(summary_path).read_text(encoding="utf-8"))
+
+    branch_name_map: dict[str, str] = {}
+    if company_master_path and Path(company_master_path).exists():
+        company_df = pd.read_excel(company_master_path)
+        branch_id_col = "branch_id" if "branch_id" in company_df.columns else None
+        branch_name_col = "branch_name" if "branch_name" in company_df.columns else None
+        rep_id_col = "rep_id" if "rep_id" in company_df.columns else None
+        if branch_id_col and branch_name_col:
+            branch_name_map = (
+                company_df[[branch_id_col, branch_name_col]]
+                .dropna()
+                .drop_duplicates(subset=[branch_id_col])
+                .set_index(branch_id_col)[branch_name_col]
+                .astype(str)
+                .to_dict()
+            )
+        elif rep_id_col and branch_name_col:
+            branch_name_map = (
+                company_df[[rep_id_col, branch_name_col]]
+                .dropna()
+                .drop_duplicates(subset=[rep_id_col])
+                .set_index(rep_id_col)[branch_name_col]
+                .astype(str)
+                .to_dict()
+            )
+
+    monthly_rows = []
+    for row in asset.monthly_kpi:
+        detail_rate = round(row.detail_call_count / max(row.total_visits, 1), 4)
+        monthly_rows.append(
+            {
+                "metric_month": row.metric_month,
+                "month_label": f"{str(row.metric_month)[:4]}-{str(row.metric_month)[4:6]}",
+                "total_visits": row.total_visits,
+                "total_reps_active": row.total_reps_active,
+                "total_hospitals_visited": row.total_hospitals_visited,
+                "avg_visits_per_rep": row.avg_visits_per_rep,
+                "detail_call_count": row.detail_call_count,
+                "detail_call_rate": detail_rate,
+            }
+        )
+
+    rep_rows: list[dict] = []
+    for profile in asset.behavior_profiles:
+        active_month_count = len(profile.active_months)
+        activity_diversity = len(profile.top_activity_types)
+        hir_proxy = round(
+            min(
+                100.0,
+                profile.detail_call_rate * 55
+                + min(profile.avg_visits_per_hospital, 80) * 0.35
+                + activity_diversity * 8
+                + active_month_count * 1.1,
+            ),
+            1,
+        )
+        bcr_proxy = round(min(100.0, (active_month_count / 12) * 100), 1)
+        reach_proxy = round(min(100.0, profile.unique_hospitals * 4.5), 1)
+        intensity_proxy = round(min(100.0, profile.avg_visits_per_hospital * 1.4), 1)
+        branch_name = branch_name_map.get(profile.branch_id) or profile.branch_id
+        rep_rows.append(
+            {
+                "rep_id": profile.rep_id,
+                "rep_name": profile.rep_name,
+                "branch_id": profile.branch_id,
+                "branch_name": branch_name,
+                "total_visits": profile.total_visits,
+                "unique_hospitals": profile.unique_hospitals,
+                "avg_visits_per_hospital": profile.avg_visits_per_hospital,
+                "detail_call_rate": round(profile.detail_call_rate * 100, 1),
+                "top_activity_types": profile.top_activity_types,
+                "active_month_count": active_month_count,
+                "hir_proxy": hir_proxy,
+                "bcr_proxy": bcr_proxy,
+                "reach_proxy": reach_proxy,
+                "intensity_proxy": intensity_proxy,
+            }
+        )
+
+    rep_df = pd.DataFrame(rep_rows)
+    branch_rows: list[dict] = []
+    if not rep_df.empty:
+        branch_summary = rep_df.groupby(["branch_id", "branch_name"], as_index=False).agg(
+            rep_count=("rep_id", "nunique"),
+            total_visits=("total_visits", "sum"),
+            unique_hospitals=("unique_hospitals", "sum"),
+            avg_detail_call_rate=("detail_call_rate", "mean"),
+            avg_hir_proxy=("hir_proxy", "mean"),
+            avg_bcr_proxy=("bcr_proxy", "mean"),
+        )
+        branch_rows = branch_summary.sort_values("total_visits", ascending=False).to_dict(orient="records")
+
+    top_reps = sorted(rep_rows, key=lambda row: row["hir_proxy"], reverse=True)[:12]
+    coaching_watchlist = sorted(
+        rep_rows,
+        key=lambda row: (row["hir_proxy"], row["bcr_proxy"], -row["total_visits"]),
+    )[:12]
+
+    payload_seed = {
+        "company": get_active_company_name(),
+        "overview": {
+            "quality_status": summary.get("quality_status", "unknown"),
+            "quality_score": summary.get("quality_score", 0),
+            "crm_activity_count": summary.get("crm_activity_count", 0),
+            "unique_reps": asset.activity_context.unique_reps,
+            "unique_hospitals": asset.activity_context.unique_hospitals,
+            "unique_branches": asset.activity_context.unique_branches,
+            "hospital_mapping_rate": round(asset.mapping_quality.hospital_mapping_rate * 100, 1),
+            "crm_unmapped_count": summary.get("crm_unmapped_count", 0),
+        },
+        "logic_reference": {
+            "core_kpis": ["HIR", "RTR", "BCR", "PHR"],
+            "ops_kpis": ["NAR", "AHS", "PV"],
+            "result_kpis": ["FGR", "PI", "TRG", "SWR"],
+            "note": "현재 CRM 자산에는 완성 KPI가 없어서, 본 보고서는 raw 기반 프록시 지표와 실제 집계 지표를 함께 보여줍니다.",
+        },
+        "activity_context": asset.activity_context.model_dump(mode="json"),
+        "mapping_quality": asset.mapping_quality.model_dump(mode="json"),
+        "monthly_kpi": monthly_rows,
+        "rep_profiles": rep_rows,
+        "branch_summary": branch_rows,
+        "top_reps": top_reps,
+        "coaching_watchlist": coaching_watchlist,
+    }
+    reference = BuilderInputReference(
+        template_key="crm_coaching",
+        template_path=template_path,
+        source_module="crm",
+        asset_type=asset.asset_type,
+        source_asset_path=source_asset_path,
+        description="CRM result asset -> crm coaching template 주입",
+    )
+    return BuilderInputStandard(
+        template_key="crm_coaching",
+        template_path=template_path,
+        report_title="CRM 행동 코칭 리포트",
+        executive_summary=[
+            f"CRM 활동 {summary.get('crm_activity_count', 0):,}건",
+            f"담당자 {asset.activity_context.unique_reps}명 / 병원 {asset.activity_context.unique_hospitals}개",
+            f"병원 매핑률 {asset.mapping_quality.hospital_mapping_rate:.1%}",
+        ],
+        source_references=[reference],
+        payload_seed=payload_seed,
+        source_modules=["crm"],
     )
 
 
@@ -316,6 +521,17 @@ def build_template_payload(builder_input: BuilderInputStandard) -> BuilderPayloa
             source_modules=builder_input.source_modules,
             output_name="prescription_flow_preview.html",
             render_mode="prescription_window_vars",
+        )
+
+    if builder_input.template_key == "crm_coaching":
+        return BuilderPayloadStandard(
+            template_key="crm_coaching",
+            template_path=builder_input.template_path,
+            report_title=builder_input.report_title,
+            payload=builder_input.payload_seed,
+            source_modules=builder_input.source_modules,
+            output_name="crm_coaching_preview.html",
+            render_mode="crm_window_vars",
         )
 
     raise ValueError(f"지원하지 않는 template_key: {builder_input.template_key}")
@@ -356,6 +572,15 @@ def render_builder_html(builder_payload: BuilderPayloadStandard) -> str:
         rendered = re.sub(
             r"window\.__PRESCRIPTION_DATA__ = [\s\S]*?;",
             f"window.__PRESCRIPTION_DATA__ = {json.dumps(builder_payload.payload, ensure_ascii=False)};",
+            template_text,
+            count=1,
+        )
+        return rendered
+
+    if builder_payload.render_mode == "crm_window_vars":
+        rendered = re.sub(
+            r"window\.__CRM_DATA__ = [\s\S]*?;",
+            f"window.__CRM_DATA__ = {json.dumps(builder_payload.payload, ensure_ascii=False)};",
             template_text,
             count=1,
         )
@@ -584,6 +809,12 @@ def _summarize_payload(builder_payload: BuilderPayloadStandard) -> dict:
             "claim_count": len(payload.get("claims", [])),
             "gap_count": len(payload.get("gaps", [])),
             "hospital_trace_count": len(payload.get("hospital_traces", [])),
+        }
+    if builder_payload.template_key == "crm_coaching":
+        return {
+            "monthly_kpi_count": len(payload.get("monthly_kpi", [])),
+            "rep_profile_count": len(payload.get("rep_profiles", [])),
+            "watchlist_count": len(payload.get("coaching_watchlist", [])),
         }
     return {}
 

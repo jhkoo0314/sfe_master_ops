@@ -352,6 +352,14 @@ def _build_report_template_payload(
         return round((2 * weighted) / (n * total) - (n + 1) / n, 4)
 
     branches: dict[str, dict] = defaultdict(lambda: {"members": []})
+    branch_prod_analysis_acc: dict[str, dict[str, dict]] = defaultdict(
+        lambda: defaultdict(
+            lambda: {
+                "monthly_actual": [0.0] * 12,
+                "monthly_target": [0.0] * 12,
+            }
+        )
+    )
     total_prod_analysis: dict[str, dict] = {}
     products = set()
 
@@ -391,20 +399,33 @@ def _build_report_template_payload(
         gini = calc_gini(list(rep_hospital_sales.get(rep_id, {}).values()))
 
         product_rows = []
+        member_prod_analysis: dict[str, dict] = {}
         for product_id, prod in sorted(rep_product.get(rep_id, {}).items(), key=lambda item: float(item[1]["sales"]), reverse=True):
             product_name = str(prod["product_name"] or product_id)
             products.add(product_name)
             prod_monthly_actual = month_series(prod["monthly_sales"])
             prod_monthly_target = month_series(prod["monthly_target"])
             prod_total_actual = sum(prod_monthly_actual)
+            prod_total_target = sum(prod_monthly_target)
             prev_prod = prod_monthly_actual[max(len(months) - 2, 0)] if len(months) >= 2 else 0.0
             cur_prod = prod_monthly_actual[max(len(months) - 1, 0)] if months else 0.0
             growth = round(((cur_prod - prev_prod) / prev_prod) * 100.0, 1) if prev_prod > 0 else 0.0
+            prod_pi = round((prod_total_actual / prod_total_target) * 100.0, 1) if prod_total_target > 0 else 0.0
             product_rows.append({
                 "name": product_name,
                 "ms": round((prod_total_actual / max(total_actual, 1)) * 100.0, 1) if total_actual > 0 else 0.0,
                 "growth": growth,
             })
+            member_prod_analysis[product_name] = {
+                "monthly_actual": prod_monthly_actual,
+                "monthly_target": prod_monthly_target,
+                "처방금액": round(prod_total_actual, 0),
+                "목표금액": round(prod_total_target, 0),
+                "PI": prod_pi,
+                "FGR": growth,
+                "avg_ms": round((prod_total_actual / max(total_actual, 1)) * 100.0, 1) if total_actual > 0 else 0.0,
+                "analysis": {"importance": {}, "correlation": {}, "adj_correlation": {}, "ccf": []},
+            }
             total_row = total_prod_analysis.setdefault(product_name, {
                 "achieve": 0.0,
                 "avg": {},
@@ -414,6 +435,8 @@ def _build_report_template_payload(
             for idx in range(12):
                 total_row["monthly_actual"][idx] += prod_monthly_actual[idx]
                 total_row["monthly_target"][idx] += prod_monthly_target[idx]
+                branch_prod_analysis_acc[str(meta["branch_name"])][product_name]["monthly_actual"][idx] += prod_monthly_actual[idx]
+                branch_prod_analysis_acc[str(meta["branch_name"])][product_name]["monthly_target"][idx] += prod_monthly_target[idx]
 
         if pi >= 105:
             coach_scenario = "Lead Driver"
@@ -452,6 +475,7 @@ def _build_report_template_payload(
                 "피드백": round((weighted_sum / weighted_count), 2) if weighted_count else 0.0,
             },
             "prod_matrix": product_rows[:8] if product_rows else [{"name": "NO_PRODUCT", "ms": 0.0, "growth": 0.0}],
+            "prod_analysis": member_prod_analysis,
             "monthly_actual": monthly_actual,
             "monthly_target": monthly_target,
         }
@@ -479,6 +503,24 @@ def _build_report_template_payload(
         branch["monthly_target"] = branch_target
         branch["analysis"] = {"importance": {}, "correlation": {}, "adj_correlation": {}, "ccf": []}
         branch["prod_analysis"] = {}
+        for product_name, prod_acc in branch_prod_analysis_acc.get(branch_name, {}).items():
+            prod_actual = [round(v, 0) for v in prod_acc["monthly_actual"]]
+            prod_target = [round(v, 0) for v in prod_acc["monthly_target"]]
+            prod_actual_sum = sum(prod_actual)
+            prod_target_sum = sum(prod_target)
+            prev_prod = prod_actual[max(len(months) - 2, 0)] if len(months) >= 2 else 0.0
+            cur_prod = prod_actual[max(len(months) - 1, 0)] if months else 0.0
+            branch["prod_analysis"][product_name] = {
+                "achieve": round((prod_actual_sum / prod_target_sum) * 100.0, 1) if prod_target_sum > 0 else 0.0,
+                "avg": {
+                    **branch["avg"],
+                    "PI": round((prod_actual_sum / prod_target_sum) * 100.0, 1) if prod_target_sum > 0 else 0.0,
+                    "FGR": round(((cur_prod - prev_prod) / prev_prod) * 100.0, 1) if prev_prod > 0 else 0.0,
+                },
+                "monthly_actual": prod_actual,
+                "monthly_target": prod_target,
+                "analysis": {"importance": {}, "correlation": {}, "adj_correlation": {}, "ccf": []},
+            }
 
     total_monthly_actual = [sum(member["monthly_actual"][i] for member in all_members) for i in range(12)]
     total_monthly_target = [sum(member["monthly_target"][i] for member in all_members) for i in range(12)]
@@ -500,8 +542,6 @@ def _build_report_template_payload(
         total_row["monthly_target"] = [round(v, 0) for v in total_row["monthly_target"]]
 
     missing_data = []
-    if join_quality.orphan_sales_hospitals > 0:
-        missing_data.append({"지점": "OPS", "성명": "UNMAPPED", "품목": "orphan_sales_hospitals"})
     if join_quality.orphan_crm_hospitals > 0:
         missing_data.append({"지점": "OPS", "성명": "UNMAPPED", "품목": "orphan_crm_hospitals"})
 
@@ -539,6 +579,18 @@ def _build_report_template_payload(
                 "방문수": "total_visits",
             },
             "missing_fields": [],
+            "operational_notes": [
+                {
+                    "label": "sales_only_hospitals",
+                    "count": join_quality.orphan_sales_hospitals,
+                    "message": "실적은 있으나 CRM 활동이 없는 병원 수",
+                },
+                {
+                    "label": "crm_only_hospitals",
+                    "count": join_quality.orphan_crm_hospitals,
+                    "message": "CRM 활동은 있으나 실적이 없는 병원 수",
+                },
+            ],
         },
         "missing_data": missing_data,
     }

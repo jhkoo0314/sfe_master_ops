@@ -162,6 +162,35 @@
             background: #fff;
             color: var(--ink);
         }
+        .filters button {
+            padding: 12px 18px;
+            border-radius: 14px;
+            border: 0;
+            background: var(--accent);
+            color: #fff;
+            font-weight: 700;
+            cursor: pointer;
+        }
+        .pager {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            gap: 12px;
+            margin-top: 12px;
+        }
+        .pager button {
+            padding: 10px 14px;
+            border-radius: 12px;
+            border: 1px solid var(--line);
+            background: #fff;
+            color: var(--ink);
+            font-weight: 700;
+            cursor: pointer;
+        }
+        .pager button:disabled {
+            opacity: 0.45;
+            cursor: default;
+        }
 
         .table-wrap {
             overflow: auto;
@@ -209,6 +238,26 @@
             grid-template-columns: 1.5fr 1fr;
             gap: 16px;
         }
+        details.support-panel {
+            border: 1px solid var(--line);
+            border-radius: 18px;
+            background: #fff;
+            padding: 12px 14px 16px;
+        }
+        details.support-panel summary {
+            cursor: pointer;
+            font-weight: 700;
+            color: var(--ink);
+            list-style: none;
+        }
+        details.support-panel summary::-webkit-details-marker {
+            display: none;
+        }
+        .support-caption {
+            margin: 10px 0 14px;
+            color: var(--muted);
+            font-size: 13px;
+        }
 
         .empty {
             padding: 24px;
@@ -248,18 +297,22 @@
         <section class="section">
             <div class="section-head">
                 <h2>주장 금액 비교표</h2>
-                <span>PASS, REVIEW, SUSPECT를 필터로 바로 볼 수 있습니다.</span>
+                <span>50행 미리보기 + 월/분기/연간 필터를 지원합니다.</span>
             </div>
             <div class="filters">
+                <select id="periodTypeFilter"></select>
+                <select id="yearFilter"></select>
+                <select id="monthFilter"></select>
                 <select id="quarterFilter"></select>
                 <select id="repFilter"></select>
                 <select id="verdictFilter"></select>
+                <button id="applyFilterBtn" type="button">검색</button>
             </div>
             <div class="table-wrap">
                 <table>
                     <thead>
                         <tr>
-                            <th>분기</th>
+                            <th>기간</th>
                             <th>담당자</th>
                             <th>병원</th>
                             <th>품목</th>
@@ -274,44 +327,51 @@
                     <tbody id="claimTableBody"></tbody>
                 </table>
             </div>
+            <div class="pager">
+                <span id="claimPageInfo"></span>
+                <div>
+                    <button id="claimPrevBtn">이전</button>
+                    <button id="claimNextBtn">다음</button>
+                </div>
+            </div>
         </section>
 
         <section class="section">
-            <div class="section-head">
-                <h2>추적 보조표</h2>
-                <span>병원 추적 상위와 미연결 약국을 함께 봅니다.</span>
-            </div>
-            <div class="sub-grid">
-                <div class="table-wrap">
-                    <table>
-                        <thead>
-                            <tr>
-                                <th>분기</th>
-                                <th>담당자</th>
-                                <th>병원</th>
-                                <th>품목</th>
-                                <th>추적금액</th>
-                                <th>약국수</th>
-                                <th>도매수</th>
-                            </tr>
-                        </thead>
-                        <tbody id="traceTableBody"></tbody>
-                    </table>
+            <details class="support-panel">
+                <summary>이상건 원인 보기</summary>
+                <div class="support-caption">현재 필터 조건에서 `REVIEW / SUSPECT` 건과 연결된 추적 정보만 보여줍니다.</div>
+                <div class="sub-grid">
+                    <div class="table-wrap">
+                        <table>
+                            <thead>
+                                <tr>
+                                    <th>기간</th>
+                                    <th>담당자</th>
+                                    <th>병원</th>
+                                    <th>품목</th>
+                                    <th>추적금액</th>
+                                    <th>약국수</th>
+                                    <th>도매수</th>
+                                </tr>
+                            </thead>
+                            <tbody id="traceTableBody"></tbody>
+                        </table>
+                    </div>
+                    <div class="table-wrap">
+                        <table>
+                            <thead>
+                                <tr>
+                                    <th>기간</th>
+                                    <th>약국</th>
+                                    <th>품목</th>
+                                    <th>사유</th>
+                                </tr>
+                            </thead>
+                            <tbody id="gapTableBody"></tbody>
+                        </table>
+                    </div>
                 </div>
-                <div class="table-wrap">
-                    <table>
-                        <thead>
-                            <tr>
-                                <th>분기</th>
-                                <th>약국</th>
-                                <th>품목</th>
-                                <th>사유</th>
-                            </tr>
-                        </thead>
-                        <tbody id="gapTableBody"></tbody>
-                    </table>
-                </div>
-            </div>
+            </details>
         </section>
     </div>
 
@@ -319,10 +379,12 @@
         window.__PRESCRIPTION_DATA__ = {};
 
         const data = window.__PRESCRIPTION_DATA__ || {};
+        const opsDefaultFilter = window.__OPS_DEFAULT_FILTER__ || {};
         const claims = data.claims || [];
         const gaps = data.gaps || [];
         const traces = data.hospital_traces || [];
         const overview = data.overview || {};
+        const flowRecords = data.flow_records || [];
 
         const fmtCurrency = (value) => {
             const amount = Number(value || 0);
@@ -335,12 +397,32 @@
         const overviewCards = document.getElementById("overviewCards");
         const verdictCards = document.getElementById("verdictCards");
         const qualityStatus = document.getElementById("qualityStatus");
+        const periodTypeFilter = document.getElementById("periodTypeFilter");
+        const yearFilter = document.getElementById("yearFilter");
+        const monthFilter = document.getElementById("monthFilter");
         const quarterFilter = document.getElementById("quarterFilter");
         const repFilter = document.getElementById("repFilter");
         const verdictFilter = document.getElementById("verdictFilter");
+        const applyFilterBtn = document.getElementById("applyFilterBtn");
         const claimTableBody = document.getElementById("claimTableBody");
+        const claimPageInfo = document.getElementById("claimPageInfo");
+        const claimPrevBtn = document.getElementById("claimPrevBtn");
+        const claimNextBtn = document.getElementById("claimNextBtn");
         const traceTableBody = document.getElementById("traceTableBody");
         const gapTableBody = document.getElementById("gapTableBody");
+        let claimPage = 1;
+        const claimPageSize = 50;
+
+        function getCurrentFilters() {
+            return {
+                periodType: periodTypeFilter.value || "quarter",
+                year: yearFilter.value || "",
+                month: monthFilter.value || "",
+                quarter: quarterFilter.value || "",
+                rep: repFilter.value || "",
+                verdict: verdictFilter.value || "",
+            };
+        }
 
         function makeOptions(select, values, defaultLabel) {
             select.innerHTML = "";
@@ -394,12 +476,16 @@
             `).join("");
         }
 
-        function renderClaimTable() {
-            const quarter = quarterFilter.value;
-            const rep = repFilter.value;
-            const verdict = verdictFilter.value;
+        function renderClaimTable(filters) {
+            const { periodType, year, month, quarter, rep, verdict } = filters;
             const filtered = claims.filter((row) => {
-                if (quarter && row.year_quarter !== quarter) return false;
+                if ((row.period_type || "quarter") !== periodType) return false;
+                if (year && String(row.year || "") !== year) return false;
+                if (periodType === "month" && month) {
+                    const activeMonths = row.active_months || [];
+                    if (!activeMonths.includes(month)) return false;
+                }
+                if (periodType === "quarter" && quarter && (row.year_quarter || row.period_value) !== quarter) return false;
                 if (rep && row.rep_name !== rep) return false;
                 if (verdict && row.verdict !== verdict) return false;
                 return true;
@@ -407,12 +493,18 @@
 
             if (!filtered.length) {
                 claimTableBody.innerHTML = `<tr><td colspan="10" class="empty">조건에 맞는 비교표가 없습니다.</td></tr>`;
+                claimPageInfo.textContent = "0 / 0";
+                claimPrevBtn.disabled = true;
+                claimNextBtn.disabled = true;
                 return;
             }
 
-            claimTableBody.innerHTML = filtered.map((row) => `
+            const totalPages = Math.max(1, Math.ceil(filtered.length / claimPageSize));
+            if (claimPage > totalPages) claimPage = totalPages;
+            const pageRows = filtered.slice((claimPage - 1) * claimPageSize, claimPage * claimPageSize);
+            claimTableBody.innerHTML = pageRows.map((row) => `
                 <tr>
-                    <td>${row.year_quarter}</td>
+                    <td>${row.period_label || row.year_quarter || row.year}</td>
                     <td>${row.rep_name}<br><span style="color:#667085">${row.branch_name || ""}</span></td>
                     <td>${row.hospital_name}</td>
                     <td>${row.product_name}</td>
@@ -424,26 +516,118 @@
                     <td>${row.review_note || ""}</td>
                 </tr>
             `).join("");
+            claimPageInfo.textContent = `${claimPage} / ${totalPages} 페이지 · ${filtered.length.toLocaleString("ko-KR")}건`;
+            claimPrevBtn.disabled = claimPage <= 1;
+            claimNextBtn.disabled = claimPage >= totalPages;
         }
 
-        function renderTraceTable() {
-            traceTableBody.innerHTML = traces.slice(0, 20).map((row) => `
+        function getSupportClaims(filters) {
+            const { periodType, year, month, quarter, rep, verdict } = filters;
+            return claims.filter((row) => {
+                if ((row.period_type || "quarter") !== periodType) return false;
+                if (year && String(row.year || "") !== year) return false;
+                if (periodType === "month" && month) {
+                    const activeMonths = row.active_months || [];
+                    if (!activeMonths.includes(month)) return false;
+                }
+                if (periodType === "quarter" && quarter && (row.year_quarter || row.period_value) !== quarter) return false;
+                if (rep && row.rep_name !== rep) return false;
+                if (verdict) {
+                    if (row.verdict !== verdict) return false;
+                } else if (row.verdict === "PASS") {
+                    return false;
+                }
+                return true;
+            });
+        }
+
+        function renderTraceTable(filters) {
+            const { periodType, year, month, quarter, rep } = filters;
+            const supportClaims = getSupportClaims(filters);
+            const supportKeys = new Set(
+                supportClaims.map((row) => [row.rep_name, row.hospital_id, row.product_name].join("||"))
+            );
+            if (!supportKeys.size) {
+                traceTableBody.innerHTML = `<tr><td colspan="7" class="empty">선택한 조건의 REVIEW / SUSPECT 건이 없습니다.</td></tr>`;
+                return;
+            }
+            const connectedFlows = flowRecords.filter((row) => row.flow_status === "connected");
+            const filtered = connectedFlows.filter((row) => {
+                if (year && String(row.year || "") !== year) return false;
+                if (periodType === "month" && month && row.month !== month) return false;
+                if (periodType === "quarter" && quarter && row.year_quarter !== quarter) return false;
+                if (rep && row.rep_name !== rep) return false;
+                const supportKey = [row.rep_name, row.hospital_id, row.product_name].join("||");
+                if (!supportKeys.has(supportKey)) return false;
+                return true;
+            });
+            const grouped = new Map();
+            filtered.forEach((row) => {
+                const periodLabel = periodType === "month"
+                    ? row.month
+                    : periodType === "year"
+                        ? row.year
+                        : row.year_quarter;
+                const key = [
+                    periodLabel,
+                    row.rep_name,
+                    row.hospital_name,
+                    row.product_name
+                ].join("||");
+                if (!grouped.has(key)) {
+                    grouped.set(key, {
+                        period_label: periodLabel,
+                        rep_name: row.rep_name,
+                        hospital_name: row.hospital_name,
+                        product_name: row.product_name,
+                        total_amount: 0,
+                        pharmacy_ids: new Set(),
+                        wholesaler_ids: new Set(),
+                    });
+                }
+                const item = grouped.get(key);
+                item.total_amount += Number(row.total_amount || 0);
+                item.pharmacy_ids.add(row.pharmacy_id);
+                item.wholesaler_ids.add(row.wholesaler_id);
+            });
+            const rows = [...grouped.values()]
+                .sort((a, b) => b.total_amount - a.total_amount)
+                .slice(0, 20);
+            traceTableBody.innerHTML = rows.map((row) => `
                 <tr>
-                    <td>${row.year_quarter}</td>
+                    <td>${row.period_label}</td>
                     <td>${row.rep_name}</td>
                     <td>${row.hospital_name}</td>
                     <td>${row.product_name}</td>
                     <td>${fmtCurrency(row.total_amount)}</td>
-                    <td>${Number(row.pharmacy_count || 0).toLocaleString("ko-KR")}</td>
-                    <td>${Number(row.wholesaler_count || 0).toLocaleString("ko-KR")}</td>
+                    <td>${Number(row.pharmacy_ids.size || 0).toLocaleString("ko-KR")}</td>
+                    <td>${Number(row.wholesaler_ids.size || 0).toLocaleString("ko-KR")}</td>
                 </tr>
             `).join("") || `<tr><td colspan="7" class="empty">추적 데이터가 없습니다.</td></tr>`;
         }
 
-        function renderGapTable() {
-            gapTableBody.innerHTML = gaps.slice(0, 20).map((row) => `
+        function renderGapTable(filters) {
+            const { periodType, year, month, quarter } = filters;
+            const supportClaims = getSupportClaims(filters);
+            const supportProducts = new Set(supportClaims.map((row) => row.product_name).filter(Boolean));
+            if (!supportClaims.length) {
+                gapTableBody.innerHTML = `<tr><td colspan="4" class="empty">선택한 조건의 REVIEW / SUSPECT 건이 없습니다.</td></tr>`;
+                return;
+            }
+            const filtered = gaps.filter((row) => {
+                const rowQuarter = row.year_quarter || "";
+                const rowYear = rowQuarter.split("-")[0] || "";
+                const rawMonth = String(row.metric_month || "");
+                const rowMonth = rawMonth.length >= 6 ? `${rawMonth.slice(0, 4)}-${rawMonth.slice(4, 6)}` : "";
+                if (year && rowYear !== year) return false;
+                if (periodType === "month" && month && rowMonth !== month) return false;
+                if (periodType === "quarter" && quarter && rowQuarter !== quarter) return false;
+                if (supportProducts.size && !supportProducts.has(row.product_name || row.product_id)) return false;
+                return true;
+            });
+            gapTableBody.innerHTML = filtered.slice(0, 20).map((row) => `
                 <tr>
-                    <td>${row.year_quarter}</td>
+                    <td>${periodType === "month" ? `${String(row.metric_month).slice(0, 4)}-${String(row.metric_month).slice(4, 6)}` : row.year_quarter}</td>
                     <td>${row.pharmacy_name}</td>
                     <td>${row.product_name || row.product_id}</td>
                     <td>${row.gap_reason}</td>
@@ -451,23 +635,72 @@
             `).join("") || `<tr><td colspan="4" class="empty">미연결 약국이 없습니다.</td></tr>`;
         }
 
+        function updateFilterVisibility() {
+            monthFilter.style.display = periodTypeFilter.value === "month" ? "inline-flex" : "none";
+            quarterFilter.style.display = periodTypeFilter.value === "quarter" ? "inline-flex" : "none";
+        }
+
+        function applyFilters() {
+            claimPage = 1;
+            const filters = getCurrentFilters();
+            renderClaimTable(filters);
+            renderTraceTable(filters);
+            renderGapTable(filters);
+        }
+
+        function applyDefaultFilters() {
+            const modeMap = { month: "month", quarter: "quarter", year: "year" };
+            const defaultMode = modeMap[opsDefaultFilter.period_mode] || "";
+            if (defaultMode) {
+                periodTypeFilter.value = defaultMode;
+            }
+            if (opsDefaultFilter.year) {
+                yearFilter.value = String(opsDefaultFilter.year);
+            }
+            if (opsDefaultFilter.month) {
+                monthFilter.value = String(opsDefaultFilter.month);
+            }
+            if (opsDefaultFilter.quarter) {
+                quarterFilter.value = String(opsDefaultFilter.quarter);
+            }
+            updateFilterVisibility();
+        }
+
         function initFilters() {
-            const quarters = [...new Set(claims.map((row) => row.year_quarter).filter(Boolean))].sort();
+            const years = [...new Set(flowRecords.map((row) => String(row.year || "")).filter(Boolean))].sort();
+            const months = [...new Set(flowRecords.map((row) => row.month).filter(Boolean))].sort();
+            const quarters = [...new Set(flowRecords.map((row) => row.year_quarter).filter(Boolean))].sort();
             const reps = [...new Set(claims.map((row) => row.rep_name).filter(Boolean))].sort((a, b) => a.localeCompare(b, "ko"));
             const verdicts = [...new Set(claims.map((row) => row.verdict).filter(Boolean))];
+            periodTypeFilter.innerHTML = `
+                <option value="month">월별</option>
+                <option value="quarter" selected>분기별</option>
+                <option value="year">연간</option>
+            `;
+            makeOptions(yearFilter, years, "전체 연도");
+            makeOptions(monthFilter, months, "전체 월");
             makeOptions(quarterFilter, quarters, "전체 분기");
             makeOptions(repFilter, reps, "전체 담당자");
             makeOptions(verdictFilter, verdicts, "전체 판정");
-            [quarterFilter, repFilter, verdictFilter].forEach((select) => {
-                select.addEventListener("change", renderClaimTable);
+            updateFilterVisibility();
+            periodTypeFilter.addEventListener("change", updateFilterVisibility);
+            applyFilterBtn.addEventListener("click", applyFilters);
+            claimPrevBtn.addEventListener("click", () => {
+                if (claimPage > 1) {
+                    claimPage -= 1;
+                    renderClaimTable(getCurrentFilters());
+                }
+            });
+            claimNextBtn.addEventListener("click", () => {
+                claimPage += 1;
+                renderClaimTable(getCurrentFilters());
             });
         }
 
         renderSummary();
         initFilters();
-        renderClaimTable();
-        renderTraceTable();
-        renderGapTable();
+        applyDefaultFilters();
+        applyFilters();
     </script>
 </body>
 </html>
