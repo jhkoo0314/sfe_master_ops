@@ -1,0 +1,375 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Prescription Flow Intelligence — Operational Console</title>
+<script src="https://cdn.tailwindcss.com"></script>
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&family=JetBrains+Mono:wght@400;700&family=Noto+Sans+KR:wght@300;400;500;700;900&display=swap');
+
+:root {
+  --bg: #0a0e1a;
+  --surface: #111827;
+  --surface-alt: #161e2e;
+  --border: #1e293b;
+  --accent: #3b82f6;
+  --success: #10b981;
+  --warning: #f59e0b;
+  --danger: #ef4444;
+  --text: #f1f5f9;
+  --text-muted: #94a3b8;
+  --mono: 'JetBrains Mono', monospace;
+}
+
+body {
+  background-color: var(--bg);
+  color: var(--text);
+  font-family: 'Inter', 'Noto Sans KR', sans-serif;
+  letter-spacing: -0.01em;
+}
+
+.font-mono { font-family: var(--mono); }
+
+/* Custom Scrollbar */
+::-webkit-scrollbar { width: 5px; height: 5px; }
+::-webkit-scrollbar-track { background: var(--bg); }
+::-webkit-scrollbar-thumb { background: var(--border); border-radius: 10px; }
+
+/* Clinical Precision Styling */
+.glass-panel {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 2px;
+}
+
+.pipeline-step {
+  position: relative;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.pipeline-step::after {
+  content: '';
+  position: absolute;
+  bottom: 0; left: 0; right: 0;
+  height: 3px;
+  background: var(--border);
+}
+
+.pipeline-step.active::after { background: var(--accent); }
+.pipeline-step.complete::after { background: var(--success); }
+.pipeline-step.error::after { background: var(--danger); }
+
+.stat-value {
+  font-family: var(--mono);
+  font-variant-numeric: tabular-nums;
+  letter-spacing: -0.05em;
+}
+
+/* Tooltip-like details */
+.data-row:hover { background: var(--surface-alt); }
+
+/* Table Reset */
+table { width: 100%; border-collapse: collapse; }
+th { text-align: left; padding: 12px 16px; font-size: 0.75rem; color: var(--text-muted); text-transform: uppercase; border-bottom: 2px solid var(--border); }
+td { padding: 12px 16px; border-bottom: 1px solid var(--border); font-size: 0.85rem; }
+
+.status-tag {
+  display: inline-flex;
+  align-items: center;
+  padding: 2px 8px;
+  border-radius: 9999px;
+  font-size: 0.7rem;
+  font-weight: 800;
+  text-transform: uppercase;
+}
+
+.chart-container { position: relative; width: 100%; height: 280px; }
+
+</style>
+</head>
+<body class="p-6">
+
+  <!-- MASTER HEADER -->
+  <header class="flex justify-between items-end mb-8 pb-6 border-b border-slate-800">
+    <div>
+      <div class="flex items-center gap-2 mb-2">
+        <span class="bg-blue-600 text-white px-2 py-0.5 text-[10px] font-black tracking-widest uppercase">Operational</span>
+        <span class="text-slate-500 font-mono text-[10px]">UUID: PDF-2026-X01</span>
+      </div>
+      <h1 class="text-4xl font-black tracking-tighter text-white">PRESCRIPTION DATA <span class="text-blue-500">FLOW</span></h1>
+      <p class="text-slate-400 font-bold text-xs mt-1 uppercase tracking-wider">도매 → 문전약국 → 담당자 추적 파이프라인 모니터링</p>
+    </div>
+    <div class="flex flex-col items-end gap-3">
+      <div class="flex items-center gap-2">
+        <span class="w-2 h-2 bg-emerald-500 rounded-full animate-pulse"></span>
+        <span class="text-[10px] font-mono text-emerald-500 font-bold">SYSTEM_ENGINE_ACTIVE</span>
+      </div>
+      <div class="flex gap-2">
+        <select class="bg-slate-900 border border-slate-700 text-[11px] font-bold px-3 py-1.5 focus:border-blue-500 outline-none">
+          <option>2026 Q1 - Current</option>
+          <option>2025 Q4 - Closed</option>
+        </select>
+        <select class="bg-slate-900 border border-slate-700 text-[11px] font-bold px-3 py-1.5 focus:border-blue-500 outline-none">
+          <option>전체 영업권역</option>
+          <option>T01 - 서울 강남</option>
+          <option>T02 - 서울 서초</option>
+        </select>
+      </div>
+    </div>
+  </header>
+
+  <!-- PIPELINE TRAIL -->
+  <section class="grid grid-cols-6 gap-2 mb-8">
+    <div class="pipeline-step complete bg-slate-900/50 p-4">
+      <span class="text-[9px] font-mono text-slate-500">STEP 01</span>
+      <h4 class="text-xs font-black text-slate-300 uppercase mt-1">Ingest Merge</h4>
+      <p class="text-[10px] text-slate-500 mt-2">1,842,000 Rows</p>
+    </div>
+    <div class="pipeline-step complete bg-slate-900/50 p-4">
+      <span class="text-[9px] font-mono text-slate-500">STEP 02</span>
+      <h4 class="text-xs font-black text-slate-300 uppercase mt-1">Mastering</h4>
+      <p class="text-[10px] text-emerald-500 mt-2">Mapping: 98.4%</p>
+    </div>
+    <div class="pipeline-step complete bg-slate-900/50 p-4">
+      <span class="text-[9px] font-mono text-slate-500">STEP 03</span>
+      <h4 class="text-xs font-black text-slate-300 uppercase mt-1">Tracking Val.</h4>
+      <p class="text-[10px] text-slate-500 mt-2">Coverage: 87.2%</p>
+    </div>
+    <div class="pipeline-step complete bg-slate-900/50 p-4">
+      <span class="text-[9px] font-mono text-slate-500">STEP 04</span>
+      <h4 class="text-xs font-black text-slate-300 uppercase mt-1">Share Settlement</h4>
+      <p class="text-[10px] text-slate-500 mt-2">24 Rules Applied</p>
+    </div>
+    <div class="pipeline-step active bg-slate-900/50 p-4">
+      <span class="text-[9px] font-mono text-slate-500">STEP 05</span>
+      <h4 class="text-xs font-black text-blue-400 uppercase mt-1">KPI Publish</h4>
+      <p class="text-[10px] text-blue-500 font-bold mt-2">In Progress (85%)</p>
+    </div>
+    <div class="pipeline-step bg-slate-900/50 p-4">
+      <span class="text-[9px] font-mono text-slate-500">STEP 06</span>
+      <h4 class="text-xs font-black text-slate-700 uppercase mt-1">Validation</h4>
+      <p class="text-[10px] text-slate-700 mt-2">Waiting</p>
+    </div>
+  </section>
+
+  <!-- MAIN DASHBOARD CONTENT -->
+  <div class="grid grid-cols-12 gap-6">
+    
+    <!-- LEFT PANEL: KPI & FLOW -->
+    <div class="col-span-12 lg:col-span-8 space-y-6">
+      
+      <!-- FLOW SANKEY/INDICATOR PLACEHOLDER -->
+      <div class="glass-panel p-6">
+        <div class="flex justify-between items-center mb-6">
+          <h3 class="text-sm font-black text-white uppercase tracking-tighter flex items-center gap-2">
+            <i class="fas fa-stream text-blue-500"></i> Data Flow Distribution
+          </h3>
+          <span class="text-[10px] font-mono text-slate-500">Unit: Million KRW</span>
+        </div>
+        
+        <div class="grid grid-cols-4 gap-4 mb-8">
+          <div class="bg-slate-900/80 p-4 border-l-2 border-blue-600">
+            <span class="text-[9px] text-slate-500 font-bold uppercase block mb-1">Total Wholesale</span>
+            <span class="stat-value text-xl font-bold">12,480</span>
+          </div>
+          <div class="bg-slate-900/80 p-4 border-l-2 border-purple-600">
+            <span class="text-[9px] text-slate-500 font-bold uppercase block mb-1">Mastered Amount</span>
+            <span class="stat-value text-xl font-bold">11,204</span>
+          </div>
+          <div class="bg-slate-900/80 p-4 border-l-2 border-emerald-600">
+            <span class="text-[9px] text-slate-500 font-bold uppercase block mb-1">Tracked Out</span>
+            <span class="stat-value text-xl font-bold">9,842</span>
+          </div>
+          <div class="bg-slate-900/80 p-4 border-l-2 border-amber-600">
+            <span class="text-[9px] text-slate-500 font-bold uppercase block mb-1">Pre-KPI Final</span>
+            <span class="stat-value text-xl font-bold">10,120</span>
+          </div>
+        </div>
+
+        <div class="chart-container">
+          <canvas id="flowChart"></canvas>
+        </div>
+      </div>
+
+      <!-- KPI TABLE: REP LEVEL -->
+      <div class="glass-panel overflow-hidden">
+        <div class="p-4 border-b border-slate-800 flex justify-between items-center bg-slate-900/30">
+          <h3 class="text-xs font-black text-white uppercase tracking-tighter">Rep Individual KPI Post-Share</h3>
+          <button class="text-[10px] bg-slate-800 hover:bg-slate-700 px-2 py-1 flex items-center gap-1">
+            <i class="fas fa-download"></i> EXPORT CSV
+          </button>
+        </div>
+        <div class="overflow-x-auto">
+          <table>
+            <thead>
+              <tr>
+                <th>Rep Name</th>
+                <th>Territory</th>
+                <th>Brand</th>
+                <th>Pre-Share</th>
+                <th>Post-Share</th>
+                <th>Status</th>
+                <th>Rule Version</th>
+              </tr>
+            </thead>
+            <tbody id="repTableBody">
+              <!-- JS Dynamic -->
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+    <!-- RIGHT PANEL: QUALITY & LOGS -->
+    <div class="col-span-12 lg:col-span-4 space-y-6">
+      
+      <!-- DATA QUALITY MONITOR -->
+      <div class="glass-panel p-6">
+        <h3 class="text-sm font-black text-white uppercase tracking-tighter mb-4 flex items-center gap-2">
+          <i class="fas fa-shield-virus text-amber-500"></i> Integrity Diagnostic
+        </h3>
+        <div class="space-y-4">
+          <div class="flex justify-between items-end">
+            <span class="text-[10px] font-bold text-slate-400">Mastering Ratio</span>
+            <span class="text-xs font-mono font-bold text-emerald-500">98.4%</span>
+          </div>
+          <div class="w-full bg-slate-800 h-1.5 overflow-hidden">
+            <div class="bg-emerald-500 h-full w-[98.4%]"></div>
+          </div>
+
+          <div class="flex justify-between items-end mt-4">
+            <span class="text-[10px] font-bold text-slate-400">Rule Coverage</span>
+            <span class="text-xs font-mono font-bold text-amber-500">76.2%</span>
+          </div>
+          <div class="w-full bg-slate-800 h-1.5 overflow-hidden">
+            <div class="bg-amber-500 h-full w-[76.2%]"></div>
+          </div>
+        </div>
+
+        <div class="mt-8 grid grid-cols-2 gap-4">
+          <div class="p-3 bg-slate-900 border border-slate-800 rounded-px text-center">
+            <p class="text-[9px] font-bold text-slate-500 uppercase">High Severity</p>
+            <p class="text-xl font-black text-rose-500 pt-1">04</p>
+          </div>
+          <div class="p-3 bg-slate-900 border border-slate-800 rounded-px text-center">
+            <p class="text-[9px] font-bold text-slate-500 uppercase">Warnings</p>
+            <p class="text-xl font-black text-amber-500 pt-1">12</p>
+          </div>
+        </div>
+      </div>
+
+      <!-- TRACE LOG CONSOLE -->
+      <div class="glass-panel h-[400px] flex flex-col">
+        <div class="p-4 border-b border-slate-800 bg-slate-900/30">
+          <h3 class="text-xs font-black text-white uppercase tracking-tighter">Trace Case Log</h3>
+          <p class="text-[9px] text-slate-500 mt-1">Wholesaler Inconsistency Tracker</p>
+        </div>
+        <div id="traceLog" class="flex-1 overflow-y-auto p-4 font-mono text-[10px] space-y-2">
+          <!-- JS Dynamic -->
+        </div>
+      </div>
+
+    </div>
+  </div>
+
+  <footer class="mt-12 pt-6 border-t border-slate-900 flex justify-between items-center text-[10px] font-mono text-slate-600">
+    <p>© 2026 SFE STRATEGIC INTEL ENGINE. PDF-MVP_v2.0_REBUILD</p>
+    <div class="flex gap-4">
+      <span class="flex items-center gap-1"><i class="fas fa-database"></i> Source: PostgreSQL (Core)</span>
+      <span class="flex items-center gap-1"><i class="fas fa-microchip"></i> Arch: HTML Architect v1.0</span>
+    </div>
+  </footer>
+
+  <script>
+    // --- Data Implementation ---
+    const repData = [
+      { name: "홍길동", territory: "T01", brand: "글리메피리드", pre: 420.5, post: 450.2, status: "Confirmed", rule: "v2.1" },
+      { name: "김영희", territory: "T01", brand: "메트포르민", pre: 280.1, post: 275.4, status: "Settled", rule: "v2.1" },
+      { name: "이철수", territory: "T02", brand: "SGLT-2i", pre: 150.8, post: 180.3, status: "Variance", rule: "v1.9" },
+      { name: "박민수", territory: "T03", brand: "DPP-4i", pre: 320.4, post: 320.4, status: "No Rule", rule: "-" },
+      { name: "최유리", territory: "T02", brand: "글리메피리드", pre: 190.2, post: 195.8, status: "Confirmed", rule: "v2.1" }
+    ];
+
+    const traceLogs = [
+      { time: "10:24:12", case: "UNMAPPED_PHARMACY", detail: "Pharmacy [UID: PH-102] territory missing.", sev: "high" },
+      { time: "11:05:55", case: "RULE_EXTENDED", detail: "Territory T02 brand SGLT-2i: Extended from Q4.", sev: "low" },
+      { time: "13:42:01", case: "WHOLESALER_MISMATCH", detail: "Case #402: Rep claim vs Data variance detected.", sev: "med" },
+      { time: "14:12:15", case: "OUTLIER_DETECTED", detail: "Brand 글리메피리드 in T01: +35% variance.", sev: "med" },
+      { time: "15:00:10", case: "SYSTEM_SYNC", detail: "Share settlement engine phase 2 triggered.", sev: "low" }
+    ];
+
+    // --- Render Functions ---
+    const renderTable = () => {
+      const tbody = document.getElementById('repTableBody');
+      tbody.innerHTML = repData.map(d => `
+        <tr class="data-row">
+          <td class="font-bold underline text-blue-400 cursor-pointer">${d.name}</td>
+          <td class="font-mono">${d.territory}</td>
+          <td>${d.brand}</td>
+          <td class="font-mono text-slate-400">${d.pre.toLocaleString()}</td>
+          <td class="font-mono font-bold text-white">${d.post.toLocaleString()}</td>
+          <td>
+            <span class="status-tag ${d.status === 'Confirmed' ? 'bg-emerald-900/40 text-emerald-400' : d.status === 'Variance' ? 'bg-rose-900/40 text-rose-400' : 'bg-slate-800 text-slate-500'}">
+              ${d.status}
+            </span>
+          </td>
+          <td class="text-slate-500 text-[10px]">${d.rule}</td>
+        </tr>
+      `).join('');
+    };
+
+    const renderLogs = () => {
+      const logBox = document.getElementById('traceLog');
+      logBox.innerHTML = traceLogs.map(l => `
+        <div class="flex gap-2">
+          <span class="text-slate-600">${l.time}</span>
+          <span class="uppercase font-bold ${l.sev === 'high' ? 'text-rose-500' : l.sev === 'med' ? 'text-amber-500' : 'text-slate-400'}">[${l.case}]</span>
+          <span class="text-slate-300">${l.detail}</span>
+        </div>
+      `).join('');
+    };
+
+    const initChart = () => {
+      const ctx = document.getElementById('flowChart').getContext('2d');
+      new Chart(ctx, {
+        type: 'line',
+        data: {
+          labels: ['JAN', 'FEB', 'MAR', 'APR', 'MAY', 'JUN'],
+          datasets: [{
+            label: 'Wholesale Amount',
+            data: [1200, 1900, 1700, 2100, 2400, 2800],
+            borderColor: '#3b82f6',
+            backgroundColor: 'rgba(59, 130, 246, 0.1)',
+            fill: true,
+            tension: 0.4
+          }, {
+            label: 'Post-Share Target',
+            data: [1100, 1700, 1600, 1950, 2200, 2600],
+            borderColor: '#10b981',
+            borderDash: [5, 5],
+            tension: 0.4
+          }]
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          plugins: { legend: { display: false } },
+          scales: {
+            y: { grid: { color: 'rgba(255,255,255,0.05)' }, ticks: { font: { size: 10 } } },
+            x: { grid: { display: false }, ticks: { font: { size: 10 } } }
+          }
+        }
+      });
+    };
+
+    // Initialize
+    renderTable();
+    renderLogs();
+    initChart();
+
+  </script>
+</body>
+</html>

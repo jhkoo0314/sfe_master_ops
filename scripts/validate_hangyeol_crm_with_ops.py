@@ -17,7 +17,7 @@ from adapters.crm.hospital_adapter import load_hospital_master_from_file, build_
 from adapters.crm.company_master_adapter import load_company_master_from_file
 from adapters.crm.crm_activity_adapter import load_crm_activity_from_file
 from common.company_runtime import get_active_company_key, get_active_company_name, get_company_root
-from modules.crm.service import build_crm_result_asset
+from modules.crm.service import build_crm_builder_payload, build_crm_result_asset
 from ops_core.api.crm_router import evaluate_crm_asset
 
 COMPANY_KEY = get_active_company_key()
@@ -77,6 +77,7 @@ def main() -> None:
         "quality_score": evaluation.quality_score,
         "next_modules": evaluation.next_modules,
     }
+    builder_payload = build_crm_builder_payload(result_asset, run_summary, COMPANY_NAME)
 
     (OUTPUT_ROOT / "crm_result_asset.json").write_text(
         json.dumps(asset_payload, ensure_ascii=False, indent=2),
@@ -88,6 +89,10 @@ def main() -> None:
     )
     (OUTPUT_ROOT / "crm_validation_summary.json").write_text(
         json.dumps(run_summary, ensure_ascii=False, indent=2),
+        encoding="utf-8",
+    )
+    (OUTPUT_ROOT / "crm_builder_payload.json").write_text(
+        json.dumps(builder_payload, ensure_ascii=False, indent=2),
         encoding="utf-8",
     )
 

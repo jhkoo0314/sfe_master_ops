@@ -15,6 +15,7 @@ from adapters.crm.hospital_adapter import load_hospital_master_from_file
 from common.company_runtime import get_active_company_key, get_active_company_name, get_company_root
 from modules.prescription.schemas import CompanyPrescriptionStandard
 from modules.prescription.flow_builder import build_hospital_region_index, build_prescription_standard_flow
+from modules.prescription.builder_payload import build_prescription_builder_payload
 from modules.prescription.service import build_prescription_result_asset
 from ops_core.api.prescription_router import evaluate_prescription_asset
 
@@ -60,6 +61,13 @@ def _to_quarter(metric_month: str) -> str:
     month = int(metric_month[4:6])
     quarter = ((month - 1) // 3) + 1
     return f"{year}-Q{quarter}"
+
+
+def _pick_primary_text(series: pd.Series, fallback: str = "") -> str:
+    values = [str(v).strip() for v in series if pd.notna(v) and str(v).strip()]
+    if not values:
+        return fallback
+    return pd.Series(values, dtype="string").value_counts().idxmax()
 
 
 def load_hospital_assignment_frame() -> pd.DataFrame:
@@ -108,6 +116,10 @@ def build_flow_report_frame(
     flow_df["rep_name"] = flow_df["rep_name"].fillna("미배정")
     flow_df["branch_id"] = flow_df["branch_id"].fillna("UNASSIGNED")
     flow_df["branch_name"] = flow_df["branch_name"].fillna("미배정")
+    flow_df["hospital_region_key"] = flow_df["hospital_region_key"].fillna(flow_df["pharmacy_region_key"])
+    flow_df["hospital_sub_region_key"] = flow_df["hospital_sub_region_key"].fillna(flow_df["pharmacy_sub_region_key"])
+    flow_df["territory_group"] = flow_df["hospital_region_key"].fillna(flow_df["branch_name"])
+    flow_df["territory_name"] = flow_df["hospital_sub_region_key"].fillna(flow_df["territory_group"])
     flow_df["total_amount"] = flow_df["total_amount"].fillna(0.0)
     flow_df["hospital_mapping_method"] = flow_df["hospital_mapping_method"].fillna("unmapped")
     return flow_df[
@@ -127,6 +139,10 @@ def build_flow_report_frame(
             "hospital_id",
             "hospital_name_final",
             "hospital_type_final",
+            "hospital_region_key",
+            "hospital_sub_region_key",
+            "territory_group",
+            "territory_name",
             "rep_id",
             "rep_name",
             "branch_id",
@@ -191,21 +207,119 @@ def build_gap_report_frame(
     ]
 
 
-def build_quarter_kpi_frame(flow_report_df: pd.DataFrame) -> pd.DataFrame:
+def build_quarter_kpi_frame(
+    flow_report_df: pd.DataFrame,
+    claim_validation_df: pd.DataFrame,
+) -> pd.DataFrame:
     connected_df = flow_report_df[flow_report_df["flow_status"] == "connected"].copy()
     if connected_df.empty:
         return pd.DataFrame()
     grouped = connected_df.groupby(
-        ["year_quarter", "rep_id", "rep_name", "branch_id", "branch_name", "product_name"],
+        [
+            "year_quarter",
+            "rep_id",
+            "rep_name",
+            "branch_id",
+            "branch_name",
+            "product_name",
+        ],
         dropna=False,
         as_index=False,
     ).agg(
+        territory_group=("territory_group", lambda s: _pick_primary_text(s, "")),
+        territory_name=("territory_name", lambda s: _pick_primary_text(s, "")),
         total_quantity=("total_quantity", "sum"),
         total_amount=("total_amount", "sum"),
         flow_count=("lineage_key", "count"),
         pharmacy_count=("pharmacy_id", "nunique"),
         hospital_count=("hospital_id", "nunique"),
         wholesaler_count=("wholesaler_id", "nunique"),
+    )
+    if claim_validation_df.empty:
+        grouped["pre_share_amount"] = grouped["total_amount"]
+        grouped["post_share_amount"] = grouped["total_amount"]
+        grouped["settlement_gap_amount"] = 0.0
+        grouped["settlement_gap_rate"] = 0.0
+        grouped["status"] = "No Rule"
+        grouped["rule_version"] = "-"
+        grouped["rule_applied"] = False
+        return grouped.sort_values(
+            ["year_quarter", "rep_name", "total_amount"],
+            ascending=[True, True, False],
+        )
+
+    quarter_claim_df = claim_validation_df[
+        claim_validation_df["period_type"].astype(str) == "quarter"
+    ].copy()
+    if quarter_claim_df.empty:
+        grouped["pre_share_amount"] = grouped["total_amount"]
+        grouped["post_share_amount"] = grouped["total_amount"]
+        grouped["settlement_gap_amount"] = 0.0
+        grouped["settlement_gap_rate"] = 0.0
+        grouped["status"] = "No Rule"
+        grouped["rule_version"] = "-"
+        grouped["rule_applied"] = False
+    else:
+        severity_rank = {"PASS": 0, "REVIEW": 1, "SUSPECT": 2}
+        quarter_claim_df["severity_rank"] = quarter_claim_df["verdict"].map(severity_rank).fillna(0)
+        claim_summary = quarter_claim_df.groupby(
+            ["year_quarter", "rep_id", "product_name"],
+            dropna=False,
+            as_index=False,
+        ).agg(
+            pre_share_amount=("claimed_amount", "sum"),
+            post_share_amount=("tracked_amount", "sum"),
+            territory_group=("territory_group", lambda s: _pick_primary_text(s, "")),
+            territory_name=("territory_name", lambda s: _pick_primary_text(s, "")),
+            max_severity=("severity_rank", "max"),
+            claim_case_count=("claim_case_id", "count"),
+        )
+        claim_summary["status"] = claim_summary["max_severity"].map(
+            {0: "Confirmed", 1: "Settled", 2: "Variance"}
+        ).fillna("Confirmed")
+        claim_summary["rule_version"] = "SIM-CLAIM-v1"
+        claim_summary["rule_applied"] = True
+        grouped = grouped.merge(
+            claim_summary[
+                [
+                    "year_quarter",
+                    "rep_id",
+                    "product_name",
+                    "pre_share_amount",
+                    "post_share_amount",
+                    "territory_group",
+                    "territory_name",
+                    "status",
+                    "rule_version",
+                    "rule_applied",
+                ]
+            ],
+            on=["year_quarter", "rep_id", "product_name"],
+            how="left",
+            suffixes=("", "_claim"),
+        )
+        grouped["territory_group"] = grouped["territory_group_claim"].fillna(grouped["territory_group"])
+        grouped["territory_name"] = grouped["territory_name_claim"].fillna(grouped["territory_name"])
+        grouped["pre_share_amount"] = grouped["pre_share_amount"].fillna(grouped["total_amount"])
+        grouped["post_share_amount"] = grouped["post_share_amount"].fillna(grouped["total_amount"])
+        grouped["status"] = grouped["status"].fillna("No Rule")
+        grouped["rule_version"] = grouped["rule_version"].fillna("-")
+        grouped["rule_applied"] = (
+            grouped["rule_applied"]
+            .astype("boolean")
+            .fillna(False)
+            .astype(bool)
+        )
+        grouped = grouped.drop(columns=["territory_group_claim", "territory_name_claim"])
+
+    grouped["settlement_gap_amount"] = grouped["post_share_amount"] - grouped["pre_share_amount"]
+    grouped["settlement_gap_rate"] = grouped.apply(
+        lambda row: round(
+            (float(row["settlement_gap_amount"]) / float(row["pre_share_amount"]))
+            if float(row["pre_share_amount"] or 0) else 0.0,
+            4,
+        ),
+        axis=1,
     )
     return grouped.sort_values(
         ["year_quarter", "rep_name", "total_amount"],
@@ -226,6 +340,8 @@ def build_hospital_trace_frame(flow_report_df: pd.DataFrame) -> pd.DataFrame:
             "rep_id",
             "rep_name",
             "branch_name",
+            "territory_group",
+            "territory_name",
             "product_name",
         ],
         dropna=False,
@@ -295,6 +411,8 @@ def build_claim_validation_frame(flow_report_df: pd.DataFrame) -> pd.DataFrame:
         "rep_id",
         "rep_name",
         "branch_name",
+        "territory_group",
+        "territory_name",
         "hospital_id",
         "hospital_name",
         "hospital_type",
@@ -357,12 +475,18 @@ def build_claim_validation_frame(flow_report_df: pd.DataFrame) -> pd.DataFrame:
         if abs_rate <= 0.05:
             verdict = "PASS"
             note = "주장값과 추적값 차이가 작아서 정상 범위입니다."
+            severity = "low"
+            trace_case = "CLAIM_CONFIRMED"
         elif abs_rate <= 0.15:
             verdict = "REVIEW"
             note = "차이가 있어 추가 확인이 필요합니다."
+            severity = "med"
+            trace_case = "CLAIM_REVIEW"
         else:
             verdict = "SUSPECT"
             note = "차이가 커서 도매/약국 흐름 재확인이 필요합니다."
+            severity = "high"
+            trace_case = "CLAIM_VARIANCE"
 
         period_value = str(row["period_value"])
         records.append(
@@ -377,6 +501,8 @@ def build_claim_validation_frame(flow_report_df: pd.DataFrame) -> pd.DataFrame:
                 "rep_id": row["rep_id"],
                 "rep_name": row["rep_name"],
                 "branch_name": row["branch_name"],
+                "territory_group": row["territory_group"],
+                "territory_name": row["territory_name"],
                 "hospital_id": row["hospital_id"],
                 "hospital_name": row["hospital_name"],
                 "hospital_type": row["hospital_type"],
@@ -392,6 +518,8 @@ def build_claim_validation_frame(flow_report_df: pd.DataFrame) -> pd.DataFrame:
                 "flow_count": int(row["flow_count"]),
                 "claim_source": "synthetic_demo_claim",
                 "review_note": note,
+                "severity": severity,
+                "trace_case": trace_case,
             }
         )
 
@@ -424,10 +552,10 @@ def main() -> None:
     assignment_df = load_hospital_assignment_frame()
     flow_report_df = build_flow_report_frame(flows, assignment_df)
     gap_report_df = build_gap_report_frame(gaps, flow_report_df)
-    quarter_kpi_df = build_quarter_kpi_frame(flow_report_df)
+    claim_validation_df = build_claim_validation_frame(flow_report_df)
+    quarter_kpi_df = build_quarter_kpi_frame(flow_report_df, claim_validation_df)
     hospital_trace_df = build_hospital_trace_frame(flow_report_df)
     region_summary_df = build_region_summary_frame(flow_report_df, gap_report_df)
-    claim_validation_df = build_claim_validation_frame(flow_report_df)
 
     (OUTPUT_ROOT / "prescription_result_asset.json").write_text(
         json.dumps(asset.model_dump(mode="json"), ensure_ascii=False, indent=2),
@@ -470,8 +598,21 @@ def main() -> None:
             "claim_validation": "prescription_claim_validation.xlsx",
         },
     }
+    builder_payload = build_prescription_builder_payload(
+        company_name=COMPANY_NAME,
+        summary=summary,
+        claim_df=claim_validation_df,
+        flow_df=flow_report_df,
+        gap_df=gap_report_df,
+        rep_kpi_df=quarter_kpi_df,
+        download_files=summary["output_files"],
+    )
     (OUTPUT_ROOT / "prescription_validation_summary.json").write_text(
         json.dumps(summary, ensure_ascii=False, indent=2),
+        encoding="utf-8",
+    )
+    (OUTPUT_ROOT / "prescription_builder_payload.json").write_text(
+        json.dumps(builder_payload, ensure_ascii=False, indent=2),
         encoding="utf-8",
     )
 

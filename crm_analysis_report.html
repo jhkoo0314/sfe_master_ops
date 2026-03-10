@@ -1,0 +1,651 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Behavior CRM — System Intelligence Report</title>
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Inter:ital,wght@0,300;0,400;0,500;0,600;0,700;0,800;0,900;1,400&family=JetBrains+Mono:wght@400;700&family=Noto+Sans+KR:wght@300;400;500;700;900&display=swap');
+
+:root {
+  --bg:#080d18; --s1:#0f1623; --s2:#141e2e; --s3:#1a2332;
+  --bd:#1e2d40; --bd2:#243347;
+  --blue:#3b82f6; --teal:#0ea5e9; --green:#10b981;
+  --amber:#f59e0b; --red:#ef4444; --purple:#8b5cf6; --pink:#ec4899;
+  --text:#e8f0f8; --muted:#64748b; --dim:#334055;
+  --mono:'JetBrains Mono',monospace;
+}
+
+*{box-sizing:border-box;margin:0;padding:0}
+body{background:var(--bg);color:var(--text);font-family:'Inter','Noto Sans KR',sans-serif;font-size:13px;min-height:100vh;}
+::-webkit-scrollbar{width:4px;height:4px}
+::-webkit-scrollbar-track{background:var(--bg)}
+::-webkit-scrollbar-thumb{background:var(--bd);border-radius:2px}
+
+/* ─── Layout ─── */
+.topbar{display:flex;align-items:center;justify-content:space-between;padding:14px 28px;background:var(--s1);border-bottom:1px solid var(--bd);position:sticky;top:0;z-index:100}
+.brand{display:flex;align-items:center;gap:10px}
+.brand-hex{width:36px;height:36px;background:linear-gradient(135deg,var(--blue),var(--purple));clip-path:polygon(50% 0%,100% 25%,100% 75%,50% 100%,0% 75%,0% 25%);display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:900;color:#fff}
+.brand-text h1{font-size:15px;font-weight:900;letter-spacing:-.02em}
+.brand-text h1 span{color:var(--blue)}
+.brand-text p{font-size:10px;color:var(--muted);font-family:var(--mono);margin-top:1px}
+.topbar-right{display:flex;align-items:center;gap:16px}
+.live-badge{display:flex;align-items:center;gap:5px;font-size:10px;font-family:var(--mono);font-weight:700;color:var(--green)}
+.pulse{width:7px;height:7px;border-radius:50%;background:var(--green);animation:pulse 2s infinite}
+@keyframes pulse{0%{box-shadow:0 0 0 0 rgba(16,185,129,.5)}70%{box-shadow:0 0 0 7px rgba(16,185,129,0)}100%{box-shadow:0 0 0 0 rgba(16,185,129,0)}}
+.ctrl-bar{display:flex;align-items:center;gap:10px;padding:10px 28px;background:var(--s1);border-bottom:1px solid var(--bd)}
+.ctrl-label{font-size:10px;font-weight:800;color:var(--muted);text-transform:uppercase;letter-spacing:.06em}
+select{background:var(--s2);border:1px solid var(--bd);color:var(--text);padding:5px 10px;font-size:11px;font-family:var(--mono);font-weight:700;border-radius:2px;outline:none;cursor:pointer}
+select:hover{border-color:var(--blue)}
+.sep{width:1px;height:22px;background:var(--bd);margin:0 4px}
+.main{padding:22px 28px;display:flex;flex-direction:column;gap:18px}
+
+/* ─── KPI Architecture Banner ─── */
+.arch-banner{display:grid;grid-template-columns:1fr 1fr 1fr;gap:2px;background:var(--bd);border-radius:3px;overflow:hidden}
+.arch-zone{background:var(--s1);display:flex;flex-direction:column}
+.arch-zone-head{padding:10px 16px;display:flex;align-items:center;justify-content:space-between;border-bottom:1px solid var(--bd)}
+.arch-zone-title{font-size:10px;font-weight:900;text-transform:uppercase;letter-spacing:.07em;display:flex;align-items:center;gap:6px}
+.arch-zone-desc{font-size:9px;color:var(--muted);font-family:var(--mono)}
+.arch-kpi-row{display:grid;grid-template-columns:repeat(4,1fr);gap:1px;background:var(--bd);flex:1}
+.arch-kpi-row.three{grid-template-columns:repeat(3,1fr)}
+.arch-kpi-row.four{grid-template-columns:repeat(4,1fr)}
+.kpi-tile{background:var(--s2);padding:14px 12px;display:flex;flex-direction:column;gap:4px;cursor:pointer;transition:background .2s}
+.kpi-tile:hover{background:var(--s3)}
+.kpi-tile-code{font-size:9px;font-family:var(--mono);font-weight:700;color:var(--muted)}
+.kpi-tile-val{font-size:1.5rem;font-weight:900;letter-spacing:-.04em;font-variant-numeric:tabular-nums;line-height:1}
+.kpi-tile-name{font-size:10px;color:var(--muted);margin-top:2px}
+.kpi-tile-bar{height:3px;border-radius:1px;margin-top:8px;background:var(--bd)}
+.kpi-tile-fill{height:100%;border-radius:1px}
+
+/* ─── 2-col, 3-col grids ─── */
+.row2{display:grid;grid-template-columns:1fr 1fr;gap:16px}
+.row3{display:grid;grid-template-columns:2fr 1fr 1fr;gap:16px}
+.row-left2{display:grid;grid-template-columns:1fr 1.4fr;gap:16px}
+
+.panel{background:var(--s1);border:1px solid var(--bd);border-radius:2px;overflow:hidden}
+.panel-head{display:flex;align-items:center;justify-content:space-between;padding:10px 16px;border-bottom:1px solid var(--bd)}
+.panel-title{font-size:11px;font-weight:800;text-transform:uppercase;letter-spacing:.04em;display:flex;align-items:center;gap:7px}
+.panel-meta{font-size:9px;color:var(--muted);font-family:var(--mono)}
+.panel-body{padding:14px 16px}
+
+/* ─── Tag ─── */
+.tag{display:inline-flex;align-items:center;padding:2px 7px;border-radius:2px;font-size:9px;font-weight:800;text-transform:uppercase;font-family:var(--mono)}
+.tag-v{background:rgba(16,185,129,.13);color:var(--green)}
+.tag-a{background:rgba(245,158,11,.13);color:var(--amber)}
+.tag-s{background:rgba(239,68,68,.13);color:var(--red)}
+.tag-blue{background:rgba(59,130,246,.13);color:var(--blue)}
+.tag-muted{background:rgba(100,116,139,.13);color:var(--muted)}
+.tag-purple{background:rgba(139,92,246,.13);color:var(--purple)}
+
+/* ─── Table ─── */
+.dt{width:100%;border-collapse:collapse;font-size:11px}
+.dt th{font-size:9px;font-weight:800;color:var(--muted);text-transform:uppercase;letter-spacing:.06em;padding:8px 10px;border-bottom:1px solid var(--bd);text-align:left}
+.dt td{padding:9px 10px;border-bottom:1px solid rgba(255,255,255,.03);font-family:var(--mono)}
+.dt tr:last-child td{border-bottom:none}
+.dt tr:hover td{background:rgba(255,255,255,.02)}
+
+/* ─── Radar ─── */
+.chart-wrap{position:relative;width:100%}
+
+/* ─── Trust Gauge ─── */
+.trust-bar{display:flex;height:20px;overflow:hidden;border-radius:2px;gap:1px}
+.trust-seg{display:flex;align-items:center;justify-content:center;font-size:9px;font-weight:900;font-family:var(--mono);transition:width .8s ease}
+
+/* ─── Heatmap ─── */
+.heatmap-grid{display:grid;gap:3px}
+.hm-cell{border-radius:2px;aspect-ratio:1;cursor:pointer;transition:opacity .2s}
+.hm-cell:hover{opacity:.7}
+.hm-axis-row{display:grid;gap:3px}
+
+/* ─── Behavior axis ─── */
+.b-axis-row{display:flex;align-items:center;gap:8px;padding:5px 0;border-bottom:1px solid rgba(255,255,255,.04)}
+.b-axis-row:last-child{border-bottom:none}
+.b-axis-label{width:110px;font-size:10px;color:var(--muted);flex-shrink:0}
+.b-axis-track{flex:1;height:8px;background:var(--s3);border-radius:1px;overflow:hidden}
+.b-axis-fill{height:100%;border-radius:1px}
+.b-axis-val{width:34px;text-align:right;font-size:10px;font-family:var(--mono);font-weight:700}
+
+/* ─── Pipeline stages ─── */
+.pipe-funnel{display:flex;flex-direction:column;gap:6px}
+.stage-row{display:grid;grid-template-columns:90px 1fr 50px;align-items:center;gap:8px}
+.stage-name{font-size:10px;color:var(--muted)}
+.stage-track{background:var(--s3);height:12px;border-radius:1px;overflow:hidden}
+.stage-fill{height:100%;border-radius:1px}
+.stage-val{font-size:10px;font-family:var(--mono);font-weight:700;text-align:right}
+
+/* ─── Coach Score Matrix ─── */
+.matrix-wrap{overflow-x:auto}
+.cs-matrix{border-collapse:collapse;width:100%;font-size:10px}
+.cs-matrix th,.cs-matrix td{padding:7px 10px;border:1px solid var(--bd2);text-align:center;font-family:var(--mono)}
+.cs-matrix th{background:var(--s3);color:var(--muted);font-size:9px;font-weight:800;text-transform:uppercase}
+.cs-matrix td.rep-name{background:var(--s2);text-align:left;font-weight:700;color:var(--text);font-family:'Inter','Noto Sans KR',sans-serif;font-size:11px}
+.cell-hot{background:rgba(16,185,129,.18);color:var(--green)}
+.cell-ok{background:rgba(59,130,246,.12);color:var(--blue)}
+.cell-warn{background:rgba(245,158,11,.15);color:var(--amber)}
+.cell-cold{background:rgba(239,68,68,.15);color:var(--red)}
+
+/* ─── Timeline ─── */
+.tl-item{display:flex;gap:10px;padding:8px 0;border-bottom:1px solid rgba(255,255,255,.04)}
+.tl-item:last-child{border-bottom:none}
+.tl-dot{width:8px;height:8px;border-radius:50%;margin-top:3px;flex-shrink:0}
+.tl-content{flex:1}
+.tl-event{font-size:11px;font-weight:700}
+.tl-meta{font-size:9px;color:var(--muted);font-family:var(--mono);margin-top:2px}
+
+/* ─── Footer ─── */
+.footer{text-align:center;padding:14px;font-size:10px;color:var(--muted);font-family:var(--mono);border-top:1px solid var(--bd)}
+</style>
+</head>
+<body>
+
+<!-- ══ TOPBAR ══ -->
+<div class="topbar">
+  <div class="brand">
+    <div class="brand-hex">C</div>
+    <div class="brand-text">
+      <h1>Behavior <span>CRM</span> — System Intelligence</h1>
+      <p>선행행동 유도형 CRM 운영 분석 리포트 · SFE Strategic Engine</p>
+    </div>
+  </div>
+  <div class="topbar-right">
+    <div class="live-badge"><div class="pulse"></div>LIVE v2.0</div>
+    <div style="font-size:10px;color:var(--muted);font-family:var(--mono);" id="ts-now">2026-03-11</div>
+  </div>
+</div>
+
+<!-- ══ CONTROL BAR ══ -->
+<div class="ctrl-bar">
+  <span class="ctrl-label">Period</span>
+  <select id="ctx-period">
+    <option value="2026-M02">2026-02 (Feb)</option>
+    <option value="2026-M01" selected>2026-01 (Jan)</option>
+    <option value="2025-Q4">2025-Q4</option>
+  </select>
+  <div class="sep"></div>
+  <span class="ctrl-label">Team</span>
+  <select id="ctx-team">
+    <option>전체 팀</option><option>서울 1팀</option><option>경기 2팀</option>
+  </select>
+  <div class="sep"></div>
+  <span class="ctrl-label">View</span>
+  <select id="ctx-view" onchange="toggleView(this.value)">
+    <option value="overview">Overview</option>
+    <option value="rep">Rep-Level</option>
+  </select>
+</div>
+
+<div class="main">
+
+<!-- ══ 1. KPI ARCHITECTURE BANNER ══ -->
+<div class="arch-banner">
+
+  <!-- Zone A: 선행행동 -->
+  <div class="arch-zone">
+    <div class="arch-zone-head" style="border-left:3px solid var(--blue)">
+      <div class="arch-zone-title" style="color:var(--blue)"><i class="fas fa-arrow-up"></i> Leading KPI (선행행동)</div>
+      <div class="arch-zone-desc">Core — 행동 품질 평가</div>
+    </div>
+    <div class="arch-kpi-row four">
+      <div class="kpi-tile">
+        <div class="kpi-tile-code">HIR</div>
+        <div class="kpi-tile-val" style="color:var(--blue)" id="k-hir">0.74</div>
+        <div class="kpi-tile-name">High-Impact Rate</div>
+        <div class="kpi-tile-bar"><div class="kpi-tile-fill" style="width:74%;background:var(--blue)"></div></div>
+      </div>
+      <div class="kpi-tile">
+        <div class="kpi-tile-code">RTR</div>
+        <div class="kpi-tile-val" style="color:var(--teal)" id="k-rtr">0.61</div>
+        <div class="kpi-tile-name">Relationship Temp.</div>
+        <div class="kpi-tile-bar"><div class="kpi-tile-fill" style="width:61%;background:var(--teal)"></div></div>
+      </div>
+      <div class="kpi-tile">
+        <div class="kpi-tile-code">BCR</div>
+        <div class="kpi-tile-val" style="color:var(--purple)" id="k-bcr">0.68</div>
+        <div class="kpi-tile-name">Behavior Consistency</div>
+        <div class="kpi-tile-bar"><div class="kpi-tile-fill" style="width:68%;background:var(--purple)"></div></div>
+      </div>
+      <div class="kpi-tile">
+        <div class="kpi-tile-code">PHR</div>
+        <div class="kpi-tile-val" style="color:var(--pink)" id="k-phr">0.55</div>
+        <div class="kpi-tile-name">Proactive Health</div>
+        <div class="kpi-tile-bar"><div class="kpi-tile-fill" style="width:55%;background:var(--pink)"></div></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Zone B: 운영관리 -->
+  <div class="arch-zone">
+    <div class="arch-zone-head" style="border-left:3px solid var(--amber)">
+      <div class="arch-zone-title" style="color:var(--amber)"><i class="fas fa-cogs"></i> Operational KPI (운영관리)</div>
+      <div class="arch-zone-desc">Auxiliary — 운영 통제</div>
+    </div>
+    <div class="arch-kpi-row three">
+      <div class="kpi-tile">
+        <div class="kpi-tile-code">NAR</div>
+        <div class="kpi-tile-val" style="color:var(--amber)" id="k-nar">0.71</div>
+        <div class="kpi-tile-name">Next Action Reliability</div>
+        <div class="kpi-tile-bar"><div class="kpi-tile-fill" style="width:71%;background:var(--amber)"></div></div>
+      </div>
+      <div class="kpi-tile">
+        <div class="kpi-tile-code">AHS</div>
+        <div class="kpi-tile-val" style="color:var(--amber)" id="k-ahs">72.3</div>
+        <div class="kpi-tile-name">Account Health Score</div>
+        <div class="kpi-tile-bar"><div class="kpi-tile-fill" style="width:72%;background:var(--amber)"></div></div>
+      </div>
+      <div class="kpi-tile">
+        <div class="kpi-tile-code">PV</div>
+        <div class="kpi-tile-val" style="color:var(--amber)" id="k-pv">3.4M</div>
+        <div class="kpi-tile-name">Pipeline Velocity</div>
+        <div class="kpi-tile-bar"><div class="kpi-tile-fill" style="width:68%;background:var(--amber)"></div></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Zone C: 결과검증 -->
+  <div class="arch-zone">
+    <div class="arch-zone-head" style="border-left:3px solid var(--green)">
+      <div class="arch-zone-title" style="color:var(--green)"><i class="fas fa-chart-line"></i> Outcome KPI (결과검증)</div>
+      <div class="arch-zone-desc">Lagging — 성과 검증</div>
+    </div>
+    <div class="arch-kpi-row four">
+      <div class="kpi-tile">
+        <div class="kpi-tile-code">FGR</div>
+        <div class="kpi-tile-val" style="color:var(--green)" id="k-fgr">+8.4%</div>
+        <div class="kpi-tile-name">Field Growth Rate</div>
+        <div class="kpi-tile-bar"><div class="kpi-tile-fill" style="width:64%;background:var(--green)"></div></div>
+      </div>
+      <div class="kpi-tile">
+        <div class="kpi-tile-code">PI</div>
+        <div class="kpi-tile-val" style="color:var(--green)" id="k-pi">81.2</div>
+        <div class="kpi-tile-name">Prescription Index</div>
+        <div class="kpi-tile-bar"><div class="kpi-tile-fill" style="width:81%;background:var(--green)"></div></div>
+      </div>
+      <div class="kpi-tile">
+        <div class="kpi-tile-code">TRG</div>
+        <div class="kpi-tile-val" style="color:var(--muted)" id="k-trg">+5.2%</div>
+        <div class="kpi-tile-name">Target Revenue Gap</div>
+        <div class="kpi-tile-bar"><div class="kpi-tile-fill" style="width:52%;background:var(--muted)"></div></div>
+      </div>
+      <div class="kpi-tile">
+        <div class="kpi-tile-code">SWR</div>
+        <div class="kpi-tile-val" style="color:var(--muted)" id="k-swr">68%</div>
+        <div class="kpi-tile-name">Share Win Rate</div>
+        <div class="kpi-tile-bar"><div class="kpi-tile-fill" style="width:68%;background:var(--muted)"></div></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ══ 2. RADAR + TRUST DISTRIBUTION ══ -->
+<div class="row3">
+
+  <!-- Radar: KPI Balance -->
+  <div class="panel">
+    <div class="panel-head">
+      <div class="panel-title"><i class="fas fa-radar" style="color:var(--blue)"></i><i class="fas fa-circle-nodes" style="color:var(--blue)"></i> KPI Balance — Leading Layer</div>
+      <div class="panel-meta">CoachScore 구성 분포</div>
+    </div>
+    <div class="panel-body">
+      <div class="chart-wrap" style="height:260px"><canvas id="chart-radar"></canvas></div>
+    </div>
+  </div>
+
+  <!-- Data Trust Distribution -->
+  <div class="panel">
+    <div class="panel-head">
+      <div class="panel-title"><i class="fas fa-shield-halved" style="color:var(--amber)"></i> Data Integrity</div>
+      <div class="panel-meta">입력 신뢰도 분포</div>
+    </div>
+    <div class="panel-body">
+      <div style="margin-bottom:14px">
+        <div style="font-size:9px;color:var(--muted);font-weight:800;text-transform:uppercase;margin-bottom:8px">신뢰도 구성 (Verified / Assisted / Self-Only)</div>
+        <div class="trust-bar" id="trust-bar" style="height:24px;border-radius:2px;overflow:hidden">
+          <div class="trust-seg" id="tb-v" style="background:var(--green);width:52%">52%</div>
+          <div class="trust-seg" id="tb-a" style="background:var(--amber);width:31%">31%</div>
+          <div class="trust-seg" id="tb-s" style="background:var(--red);width:17%">17%</div>
+        </div>
+        <div style="display:flex;gap:12px;margin-top:6px;font-size:9px;font-family:var(--mono)">
+          <span style="color:var(--green)">■ Verified</span>
+          <span style="color:var(--amber)">■ Assisted</span>
+          <span style="color:var(--red)">■ Self-Only</span>
+        </div>
+      </div>
+      <div style="margin-top:18px;display:flex;flex-direction:column;gap:6px">
+        <div style="display:flex;justify-content:space-between;align-items:center;padding:8px 10px;background:rgba(16,185,129,.07);border:1px solid rgba(16,185,129,.2);border-radius:2px">
+          <span style="font-size:10px">Verified 활동</span>
+          <span style="font-family:var(--mono);font-weight:900;color:var(--green)">1,842건</span>
+        </div>
+        <div style="display:flex;justify-content:space-between;align-items:center;padding:8px 10px;background:rgba(245,158,11,.07);border:1px solid rgba(245,158,11,.2);border-radius:2px">
+          <span style="font-size:10px">HIR 상한 제한 (Self-only)</span>
+          <span style="font-family:var(--mono);font-weight:900;color:var(--amber)">603건</span>
+        </div>
+        <div style="display:flex;justify-content:space-between;align-items:center;padding:8px 10px;background:rgba(239,68,68,.07);border:1px solid rgba(239,68,68,.2);border-radius:2px">
+          <span style="font-size:10px">중복/추상 감점 처리</span>
+          <span style="font-family:var(--mono);font-weight:900;color:var(--red)">217건</span>
+        </div>
+        <div style="display:flex;justify-content:space-between;align-items:center;padding:8px 10px;background:var(--s2);border:1px solid var(--bd);border-radius:2px">
+          <span style="font-size:10px">Unscored (결측)</span>
+          <span style="font-family:var(--mono);font-weight:900;color:var(--muted)">89건</span>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- CoachScore Summary -->
+  <div class="panel">
+    <div class="panel-head">
+      <div class="panel-title"><i class="fas fa-brain" style="color:var(--purple)"></i> CoachScore</div>
+      <div class="panel-meta">코칭 우선순위 지수</div>
+    </div>
+    <div class="panel-body">
+      <div style="text-align:center;padding:16px 0">
+        <div style="font-size:50px;font-weight:900;color:var(--purple);letter-spacing:-.04em;font-variant-numeric:tabular-nums" id="coach-score">0.674</div>
+        <div style="font-size:10px;color:var(--muted);margin-top:4px">Team Average CoachScore</div>
+        <div style="margin-top:12px;display:inline-flex;align-items:center;gap:6px;font-size:10px;padding:4px 12px;background:rgba(139,92,246,.1);border:1px solid rgba(139,92,246,.3);border-radius:2px">
+          <i class="fas fa-arrow-up" style="color:var(--purple)"></i>
+          <span style="color:var(--purple)">+0.042 vs prev period</span>
+        </div>
+      </div>
+      <div style="margin-top:16px;font-size:9px;color:var(--muted);font-weight:800;text-transform:uppercase;letter-spacing:.06em;margin-bottom:8px">구성 가중치</div>
+      <div style="display:flex;flex-direction:column;gap:5px">
+        <div style="display:flex;justify-content:space-between;font-size:10px"><span>HIR</span><span style="font-family:var(--mono)">× 0.30</span></div>
+        <div style="display:flex;justify-content:space-between;font-size:10px"><span>RTR</span><span style="font-family:var(--mono)">× 0.20</span></div>
+        <div style="display:flex;justify-content:space-between;font-size:10px"><span>BCR</span><span style="font-family:var(--mono)">× 0.15</span></div>
+        <div style="display:flex;justify-content:space-between;font-size:10px"><span>PHR</span><span style="font-family:var(--mono)">× 0.15</span></div>
+        <div style="display:flex;justify-content:space-between;font-size:10px"><span>NAR</span><span style="font-family:var(--mono)">× 0.10</span></div>
+        <div style="display:flex;justify-content:space-between;font-size:10px"><span>AHS</span><span style="font-family:var(--mono)">× 0.10</span></div>
+      </div>
+    </div>
+  </div>
+
+</div>
+
+<!-- ══ 3. 8-ACTION AXIS + PIPELINE ══ -->
+<div class="row-left2">
+
+  <!-- 8 Behavior Axis (원인 진단 레이어) -->
+  <div class="panel">
+    <div class="panel-head">
+      <div class="panel-title"><i class="fas fa-list-check" style="color:var(--teal)"></i> 8대 행동 진단 레이어</div>
+      <div class="panel-meta">원인 코드 · HIR 분해 뷰</div>
+    </div>
+    <div class="panel-body">
+      <div style="display:flex;flex-direction:column;gap:0">
+        <div class="b-axis-row">
+          <div class="b-axis-label">Approach</div>
+          <div class="b-axis-track"><div class="b-axis-fill" style="width:72%;background:var(--blue)"></div></div>
+          <div class="b-axis-val" style="color:var(--blue)">72%</div>
+        </div>
+        <div class="b-axis-row">
+          <div class="b-axis-label">Contact</div>
+          <div class="b-axis-track"><div class="b-axis-fill" style="width:88%;background:var(--blue)"></div></div>
+          <div class="b-axis-val" style="color:var(--blue)">88%</div>
+        </div>
+        <div class="b-axis-row">
+          <div class="b-axis-label">Visit</div>
+          <div class="b-axis-track"><div class="b-axis-fill" style="width:65%;background:var(--teal)"></div></div>
+          <div class="b-axis-val" style="color:var(--teal)">65%</div>
+        </div>
+        <div class="b-axis-row">
+          <div class="b-axis-label">Presentation</div>
+          <div class="b-axis-track"><div class="b-axis-fill" style="width:43%;background:var(--amber)"></div></div>
+          <div class="b-axis-val" style="color:var(--amber)">43%</div>
+        </div>
+        <div class="b-axis-row">
+          <div class="b-axis-label">Question</div>
+          <div class="b-axis-track"><div class="b-axis-fill" style="width:58%;background:var(--teal)"></div></div>
+          <div class="b-axis-val" style="color:var(--teal)">58%</div>
+        </div>
+        <div class="b-axis-row">
+          <div class="b-axis-label">Need Creation</div>
+          <div class="b-axis-track"><div class="b-axis-fill" style="width:31%;background:var(--red)"></div></div>
+          <div class="b-axis-val" style="color:var(--red)">31%</div>
+        </div>
+        <div class="b-axis-row">
+          <div class="b-axis-label">Demonstration</div>
+          <div class="b-axis-track"><div class="b-axis-fill" style="width:49%;background:var(--amber)"></div></div>
+          <div class="b-axis-val" style="color:var(--amber)">49%</div>
+        </div>
+        <div class="b-axis-row">
+          <div class="b-axis-label">Follow-up</div>
+          <div class="b-axis-track"><div class="b-axis-fill" style="width:76%;background:var(--green)"></div></div>
+          <div class="b-axis-val" style="color:var(--green)">76%</div>
+        </div>
+      </div>
+      <div style="margin-top:14px;padding:10px;background:var(--s2);border-radius:2px;border:1px solid var(--bd)">
+        <div style="font-size:9px;color:var(--amber);font-weight:800;text-transform:uppercase;margin-bottom:4px">⚠ 취약 축 진단</div>
+        <div style="font-size:11px">Need Creation(31%), Presentation(43%) 축 부진 — HIR 연계 코칭 필요</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Pipeline Velocity Funnel -->
+  <div class="panel">
+    <div class="panel-head">
+      <div class="panel-title"><i class="fas fa-filter" style="color:var(--amber)"></i> Pipeline Funnel (PV)</div>
+      <div class="panel-meta">파이프라인 단계별 속도</div>
+    </div>
+    <div class="panel-body">
+      <div class="pipe-funnel">
+        <div class="stage-row">
+          <div class="stage-name">Prospect</div>
+          <div class="stage-track"><div class="stage-fill" style="width:100%;background:var(--blue)"></div></div>
+          <div class="stage-val" style="color:var(--blue)">142</div>
+        </div>
+        <div class="stage-row">
+          <div class="stage-name">Contact</div>
+          <div class="stage-track"><div class="stage-fill" style="width:78%;background:var(--teal)"></div></div>
+          <div class="stage-val" style="color:var(--teal)">111</div>
+        </div>
+        <div class="stage-row">
+          <div class="stage-name">Presentation</div>
+          <div class="stage-track"><div class="stage-fill" style="width:54%;background:var(--purple)"></div></div>
+          <div class="stage-val" style="color:var(--purple)">77</div>
+        </div>
+        <div class="stage-row">
+          <div class="stage-name">Negotiation</div>
+          <div class="stage-track"><div class="stage-fill" style="width:35%;background:var(--amber)"></div></div>
+          <div class="stage-val" style="color:var(--amber)">50</div>
+        </div>
+        <div class="stage-row">
+          <div class="stage-name">Close</div>
+          <div class="stage-track"><div class="stage-fill" style="width:19%;background:var(--green)"></div></div>
+          <div class="stage-val" style="color:var(--green)">27</div>
+        </div>
+      </div>
+      <div style="margin-top:16px;display:grid;grid-template-columns:1fr 1fr;gap:8px">
+        <div style="background:var(--s2);border:1px solid var(--bd);padding:10px;border-radius:2px;text-align:center">
+          <div style="font-size:9px;color:var(--muted);font-weight:800;text-transform:uppercase">Avg Dwell (days)</div>
+          <div style="font-size:20px;font-weight:900;font-family:var(--mono);color:var(--amber);margin-top:4px">18.4</div>
+        </div>
+        <div style="background:var(--s2);border:1px solid var(--bd);padding:10px;border-radius:2px;text-align:center">
+          <div style="font-size:9px;color:var(--muted);font-weight:800;text-transform:uppercase">Conversion</div>
+          <div style="font-size:20px;font-weight:900;font-family:var(--mono);color:var(--green);margin-top:4px">19%</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+</div>
+
+<!-- ══ 4. COACH SCORE MATRIX + TREND ══ -->
+<div class="row2">
+
+  <!-- Rep-Level CoachScore Matrix -->
+  <div class="panel">
+    <div class="panel-head">
+      <div class="panel-title"><i class="fas fa-table-cells" style="color:var(--purple)"></i> Rep CoachScore Matrix</div>
+      <div class="panel-meta">담당자별 선행지표 히트맵</div>
+    </div>
+    <div class="panel-body matrix-wrap">
+      <table class="cs-matrix">
+        <thead>
+          <tr>
+            <th>Rep</th>
+            <th>HIR</th><th>RTR</th><th>BCR</th><th>PHR</th>
+            <th>NAR</th><th>AHS</th>
+            <th>Coach 점수</th>
+          </tr>
+        </thead>
+        <tbody id="matrix-body"></tbody>
+      </table>
+    </div>
+  </div>
+
+  <!-- Trend Chart: Leading → Outcome -->
+  <div class="panel">
+    <div class="panel-head">
+      <div class="panel-title"><i class="fas fa-wave-square" style="color:var(--green)"></i> 선행 → 결과 시차 검증</div>
+      <div class="panel-meta">HIR·BCR 개선 vs FGR 전환</div>
+    </div>
+    <div class="panel-body">
+      <div class="chart-wrap" style="height:240px"><canvas id="chart-trend"></canvas></div>
+    </div>
+  </div>
+
+</div>
+
+<!-- ══ 5. SYSTEM QUALITY FLAGS ══ -->
+<div class="panel">
+  <div class="panel-head">
+    <div class="panel-title"><i class="fas fa-flag" style="color:var(--red)"></i> System Quality Flags — 90일 도입 현황</div>
+    <div class="panel-meta">Go/No-Go 기준 모니터</div>
+  </div>
+  <div class="panel-body">
+    <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:12px">
+      <div style="padding:14px;background:var(--s2);border:1px solid var(--bd);border-radius:2px;">
+        <div style="font-size:9px;color:var(--muted);font-weight:800;text-transform:uppercase;margin-bottom:8px">신뢰성</div>
+        <div style="font-size:10px;margin-bottom:6px;">Self-only 비중</div>
+        <div style="font-size:22px;font-weight:900;font-family:var(--mono);color:var(--green)">17%</div>
+        <div style="font-size:9px;color:var(--green);margin-top:4px">↓ -8pt vs D-Day 목표</div>
+        <div style="margin-top:8px"><span class="tag tag-v">PASS</span></div>
+      </div>
+      <div style="padding:14px;background:var(--s2);border:1px solid var(--bd);border-radius:2px;">
+        <div style="font-size:9px;color:var(--muted);font-weight:800;text-transform:uppercase;margin-bottom:8px">실행성</div>
+        <div style="font-size:10px;margin-bottom:6px;">NAR 달성률</div>
+        <div style="font-size:22px;font-weight:900;font-family:var(--mono);color:var(--amber)">71%</div>
+        <div style="font-size:9px;color:var(--amber);margin-top:4px">목표 80% —9pt 미달</div>
+        <div style="margin-top:8px"><span class="tag tag-a">AT RISK</span></div>
+      </div>
+      <div style="padding:14px;background:var(--s2);border:1px solid var(--bd);border-radius:2px;">
+        <div style="font-size:9px;color:var(--muted);font-weight:800;text-transform:uppercase;margin-bottom:8px">효과성</div>
+        <div style="font-size:10px;margin-bottom:6px;">선행개선 → FGR전환</div>
+        <div style="font-size:22px;font-weight:900;font-family:var(--mono);color:var(--green)">✓</div>
+        <div style="font-size:9px;color:var(--green);margin-top:4px">상관 r=0.72 유의 (p&lt;.05)</div>
+        <div style="margin-top:8px"><span class="tag tag-v">PASS</span></div>
+      </div>
+      <div style="padding:14px;background:var(--s2);border:1px solid var(--bd);border-radius:2px;">
+        <div style="font-size:9px;color:var(--muted);font-weight:800;text-transform:uppercase;margin-bottom:8px">수용성</div>
+        <div style="font-size:10px;margin-bottom:6px;">현장 만족도 (NPS)</div>
+        <div style="font-size:22px;font-weight:900;font-family:var(--mono);color:var(--blue)">+34</div>
+        <div style="font-size:9px;color:var(--blue);margin-top:4px">이전 +12 대비 개선</div>
+        <div style="margin-top:8px"><span class="tag tag-blue">IMPROVED</span></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+</div><!-- /main -->
+
+<div class="footer">
+  BEHAVIOR CRM Intelligence v2.0 · 선행행동 유도형 운영모델 · SFE Strategic Engine ·
+  <span id="footer-period">2026-01</span>
+</div>
+
+<script>
+// ═══ DATA ═══
+const repMatrix = [
+  {name:'홍길동', hir:.82, rtr:.74, bcr:.71, phr:.66, nar:.88, ahs:79},
+  {name:'김영희', hir:.61, rtr:.55, bcr:.81, phr:.52, nar:.70, ahs:68},
+  {name:'이철수', hir:.44, rtr:.38, bcr:.50, phr:.30, nar:.55, ahs:54},
+  {name:'박민수', hir:.78, rtr:.67, bcr:.63, phr:.72, nar:.74, ahs:74},
+  {name:'최유리', hir:.55, rtr:.71, bcr:.84, phr:.61, nar:.79, ahs:82},
+];
+
+function cellClass(v) {
+  if (v >= 0.75) return 'cell-hot';
+  if (v >= 0.60) return 'cell-ok';
+  if (v >= 0.45) return 'cell-warn';
+  return 'cell-cold';
+}
+
+function coachScore(r) {
+  return (r.hir*.30 + r.rtr*.20 + r.bcr*.15 + r.phr*.15 + r.nar*.10 + (r.ahs/100)*.10).toFixed(3);
+}
+
+// Matrix render
+const tbody = document.getElementById('matrix-body');
+repMatrix.forEach(r => {
+  const cs = parseFloat(coachScore(r));
+  const csClass = cs >= 0.70 ? 'cell-hot' : cs >= 0.60 ? 'cell-ok' : cs >= 0.50 ? 'cell-warn' : 'cell-cold';
+  tbody.innerHTML += `<tr>
+    <td class="rep-name">${r.name}</td>
+    <td class="${cellClass(r.hir)}">${r.hir.toFixed(2)}</td>
+    <td class="${cellClass(r.rtr)}">${r.rtr.toFixed(2)}</td>
+    <td class="${cellClass(r.bcr)}">${r.bcr.toFixed(2)}</td>
+    <td class="${cellClass(r.phr)}">${r.phr.toFixed(2)}</td>
+    <td class="${cellClass(r.nar)}">${r.nar.toFixed(2)}</td>
+    <td class="${cellClass(r.ahs/100)}">${r.ahs}</td>
+    <td class="${csClass}" style="font-weight:900">${cs}</td>
+  </tr>`;
+});
+
+// Radar Chart
+const radarCtx = document.getElementById('chart-radar').getContext('2d');
+new Chart(radarCtx, {
+  type: 'radar',
+  data: {
+    labels: ['HIR', 'RTR', 'BCR', 'PHR', 'NAR', 'AHS'],
+    datasets: [
+      { label: 'Team Avg', data: [0.74, 0.61, 0.68, 0.55, 0.71, 0.72], fill: true,
+        borderColor: '#3b82f6', backgroundColor: 'rgba(59,130,246,.12)', pointBackgroundColor: '#3b82f6', borderWidth: 2 },
+      { label: 'Target', data: [0.80, 0.75, 0.75, 0.70, 0.80, 0.80], fill: false,
+        borderColor: 'rgba(255,255,255,.2)', borderDash: [4,4], pointRadius: 0, borderWidth: 1 }
+    ]
+  },
+  options: {
+    responsive: true, maintainAspectRatio: false,
+    scales: { r: { min: 0, max: 1, ticks: { display: false }, grid: { color: 'rgba(255,255,255,.08)' },
+      pointLabels: { color: '#94a3b8', font: { size: 11, weight: '700' } },
+      angleLines: { color: 'rgba(255,255,255,.06)' } } },
+    plugins: { legend: { position: 'bottom', labels: { color: '#64748b', font: { size: 10 }, boxWidth: 12 } } }
+  }
+});
+
+// Trend Chart
+const trendCtx = document.getElementById('chart-trend').getContext('2d');
+new Chart(trendCtx, {
+  type: 'line',
+  data: {
+    labels: ['D+0', 'D+14', 'D+30', 'D+45', 'D+60', 'D+75', 'D+90'],
+    datasets: [
+      { label: 'HIR (Leading)', data: [0.52, 0.58, 0.64, 0.68, 0.71, 0.74, 0.76],
+        borderColor: '#3b82f6', backgroundColor: 'rgba(59,130,246,.08)', fill: true, tension: 0.4, borderWidth: 2 },
+      { label: 'BCR (Leading)', data: [0.48, 0.55, 0.60, 0.64, 0.66, 0.68, 0.70],
+        borderColor: '#8b5cf6', borderDash: [3,3], fill: false, tension: 0.4, borderWidth: 2 },
+      { label: 'FGR% (Lagging)', data: [null, null, 2.1, 3.8, 5.2, 6.7, 8.4],
+        borderColor: '#10b981', backgroundColor: 'rgba(16,185,129,.06)', fill: false, tension: 0.4, borderWidth: 2,
+        yAxisID: 'y2' }
+    ]
+  },
+  options: {
+    responsive: true, maintainAspectRatio: false,
+    interaction: { mode: 'index', intersect: false },
+    plugins: { legend: { position: 'bottom', labels: { color: '#64748b', font: { size: 10 }, boxWidth: 12 } } },
+    scales: {
+      x: { grid: { display: false }, ticks: { color: '#64748b', font: { size: 10 } } },
+      y: { min: 0, max: 1, grid: { color: 'rgba(255,255,255,.04)' }, ticks: { color: '#64748b', font: { size: 10 } } },
+      y2: { position: 'right', min: 0, max: 15, grid: { display: false }, ticks: { color: '#10b981', font: { size: 10 }, callback: v => v + '%' } }
+    }
+  }
+});
+
+function toggleView(v) { console.log('view:', v); }
+document.getElementById('ctx-period').addEventListener('change', function() {
+  document.getElementById('footer-period').textContent = this.value;
+});
+</script>
+</body>
+</html>

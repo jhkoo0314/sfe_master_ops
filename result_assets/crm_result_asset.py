@@ -26,6 +26,7 @@ class RepBehaviorProfile(BaseModel):
     rep_id: str
     rep_name: str
     branch_id: str
+    branch_name: str = ""
     total_visits: int = Field(0, description="총 방문 건수")
     unique_hospitals: int = Field(0, description="방문한 고유 병원 수")
     avg_visits_per_hospital: float = Field(0.0, description="병원당 평균 방문 횟수")

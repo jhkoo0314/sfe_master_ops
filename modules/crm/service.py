@@ -12,6 +12,7 @@ OPS에 전달할 CrmResultAsset을 생성한다.
 
 from collections import Counter
 from typing import Optional
+import pandas as pd
 
 from modules.crm.schemas import CrmStandardActivity, CompanyMasterStandard
 from result_assets.crm_result_asset import (
@@ -90,6 +91,7 @@ def build_crm_result_asset(
             rep_id=rep_id,
             rep_name=meta.rep_name if meta else rep_id,
             branch_id=meta.branch_id if meta else "",
+            branch_name=meta.branch_name if meta else "",
             total_visits=total_v,
             unique_hospitals=unique_h,
             avg_visits_per_hospital=round(total_v / unique_h, 2) if unique_h > 0 else 0.0,
@@ -169,3 +171,107 @@ def build_crm_result_asset(
         mapping_quality=mapping_quality,
         notes=notes,
     )
+
+
+def build_crm_builder_payload(
+    asset: CrmResultAsset,
+    summary: dict,
+    company_name: str,
+) -> dict:
+    monthly_rows = []
+    for row in asset.monthly_kpi:
+        detail_rate = round(row.detail_call_count / max(row.total_visits, 1), 4)
+        monthly_rows.append(
+            {
+                "metric_month": row.metric_month,
+                "month_label": f"{str(row.metric_month)[:4]}-{str(row.metric_month)[4:6]}",
+                "total_visits": row.total_visits,
+                "total_reps_active": row.total_reps_active,
+                "total_hospitals_visited": row.total_hospitals_visited,
+                "avg_visits_per_rep": row.avg_visits_per_rep,
+                "detail_call_count": row.detail_call_count,
+                "detail_call_rate": detail_rate,
+            }
+        )
+
+    rep_rows: list[dict] = []
+    for profile in asset.behavior_profiles:
+        active_month_count = len(profile.active_months)
+        activity_diversity = len(profile.top_activity_types)
+        hir_proxy = round(
+            min(
+                100.0,
+                profile.detail_call_rate * 55
+                + min(profile.avg_visits_per_hospital, 80) * 0.35
+                + activity_diversity * 8
+                + active_month_count * 1.1,
+            ),
+            1,
+        )
+        bcr_proxy = round(min(100.0, (active_month_count / 12) * 100), 1)
+        reach_proxy = round(min(100.0, profile.unique_hospitals * 4.5), 1)
+        intensity_proxy = round(min(100.0, profile.avg_visits_per_hospital * 1.4), 1)
+        rep_rows.append(
+            {
+                "rep_id": profile.rep_id,
+                "rep_name": profile.rep_name,
+                "branch_id": profile.branch_id,
+                "branch_name": profile.branch_name or profile.branch_id,
+                "total_visits": profile.total_visits,
+                "unique_hospitals": profile.unique_hospitals,
+                "avg_visits_per_hospital": profile.avg_visits_per_hospital,
+                "detail_call_rate": round(profile.detail_call_rate * 100, 1),
+                "top_activity_types": profile.top_activity_types,
+                "active_month_count": active_month_count,
+                "hir_proxy": hir_proxy,
+                "bcr_proxy": bcr_proxy,
+                "reach_proxy": reach_proxy,
+                "intensity_proxy": intensity_proxy,
+            }
+        )
+
+    rep_df = pd.DataFrame(rep_rows)
+    branch_rows: list[dict] = []
+    if not rep_df.empty:
+        branch_summary = rep_df.groupby(["branch_id", "branch_name"], as_index=False).agg(
+            rep_count=("rep_id", "nunique"),
+            total_visits=("total_visits", "sum"),
+            unique_hospitals=("unique_hospitals", "sum"),
+            avg_detail_call_rate=("detail_call_rate", "mean"),
+            avg_hir_proxy=("hir_proxy", "mean"),
+            avg_bcr_proxy=("bcr_proxy", "mean"),
+        )
+        branch_rows = branch_summary.sort_values("total_visits", ascending=False).to_dict(orient="records")
+
+    top_reps = sorted(rep_rows, key=lambda row: row["hir_proxy"], reverse=True)[:12]
+    coaching_watchlist = sorted(
+        rep_rows,
+        key=lambda row: (row["hir_proxy"], row["bcr_proxy"], -row["total_visits"]),
+    )[:12]
+
+    return {
+        "company": company_name,
+        "overview": {
+            "quality_status": summary.get("quality_status", "unknown"),
+            "quality_score": summary.get("quality_score", 0),
+            "crm_activity_count": summary.get("crm_activity_count", 0),
+            "unique_reps": asset.activity_context.unique_reps,
+            "unique_hospitals": asset.activity_context.unique_hospitals,
+            "unique_branches": asset.activity_context.unique_branches,
+            "hospital_mapping_rate": round(asset.mapping_quality.hospital_mapping_rate * 100, 1),
+            "crm_unmapped_count": summary.get("crm_unmapped_count", 0),
+        },
+        "logic_reference": {
+            "core_kpis": ["HIR", "RTR", "BCR", "PHR"],
+            "ops_kpis": ["NAR", "AHS", "PV"],
+            "result_kpis": ["FGR", "PI", "TRG", "SWR"],
+            "note": "현재 CRM 자산에는 완성 KPI가 없어서, 본 보고서는 raw 기반 프록시 지표와 실제 집계 지표를 함께 보여줍니다.",
+        },
+        "activity_context": asset.activity_context.model_dump(mode="json"),
+        "mapping_quality": asset.mapping_quality.model_dump(mode="json"),
+        "monthly_kpi": monthly_rows,
+        "rep_profiles": rep_rows,
+        "branch_summary": branch_rows,
+        "top_reps": top_reps,
+        "coaching_watchlist": coaching_watchlist,
+    }
