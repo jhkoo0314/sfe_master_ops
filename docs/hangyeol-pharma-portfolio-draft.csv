@@ -1,0 +1,21 @@
+company_name,canonical_product_id,canonical_brand,canonical_product_name,canonical_sku,formulation,strength,pack_size,therapy_area,portfolio_group,care_setting,channel_priority,portfolio_role,strategic_weight,source_basis,notes
+한결제약,AC001,자누비아정,자누비아정 600mg,자누비아정 600mg,정,600mg,300정,대사질환,Metabolic,Clinic,Mixed,Core Growth,1.2,fact_ship,의원과 종합병원 모두 쓰는 대표 당뇨 브랜드
+한결제약,AC002,플라빅스정,플라빅스정 75mg,플라빅스정 75mg,정,75mg,300정,심혈관,Cardio,General Hospital,Hospital Priority,Core Anchor,1.1,fact_ship,입원 연계 설명이 쉬운 항혈소판 대표 브랜드
+한결제약,AC003,로수젯정,로수젯정 10/10mg,로수젯정 10/10mg,정,10/10mg,300정,지질질환,Lipid,Clinic,Clinic Priority,Growth Driver,1.0,fact_ship,의원 만성질환 채널에서 반복 처방 가정
+한결제약,AC004,아토젯정,아토젯정 10/20mg,아토젯정 10/20mg,정,10/20mg,300정,지질질환,Lipid,Clinic,Clinic Priority,Growth Driver,1.0,fact_ship,지질 복합제 전략군
+한결제약,AC005,타미플루캡슐,타미플루캡슐 45mg,타미플루캡슐 45mg,캡슐,45mg,500C,감염질환,Infection,Mixed,Mixed,Seasonal Driver,0.9,fact_ship,계절성 유행 반영이 필요한 브랜드
+한결제약,AC006,네시나정,네시나정 25mg,네시나정 25mg,정,25mg,300정,대사질환,Metabolic,Clinic,Clinic Priority,Core Growth,1.0,fact_ship,의원 당뇨 포트폴리오 보강용
+한결제약,AC007,가브스정,가브스메트정 50/850mg,가브스메트정 50/850mg,정,50/850mg,300정,대사질환,Metabolic,Clinic,Clinic Priority,Core Growth,1.1,fact_ship,복합제라 행동평가 연결이 쉬움
+한결제약,AC008,넥시움정,넥시움정 40mg,넥시움정 40mg,정,40mg,300정,소화기,GI,Mixed,Mixed,Base Support,0.8,fact_ship,만성 유지 처방과 단기 처방이 섞이는 브랜드
+한결제약,AC009,엑스포지정,엑스포지정 5/160mg,엑스포지정 5/160mg,정,5/160mg,300정,심혈관,Cardio,Clinic,Clinic Priority,Core Growth,1.0,fact_ship,고혈압 복합제 대표군
+한결제약,AC010,세파클러캡슐,세파클러캡슐 500mg,세파클러캡슐 500mg,캡슐,500mg,500C,감염질환,Infection,Clinic,Clinic Priority,Base Support,0.8,fact_ship,의원 외래 처방 중심 항생제
+한결제약,AC011,아모잘탄정,아모잘탄정 5/100mg,아모잘탄정 5/100mg,정,5/100mg,300정,심혈관,Cardio,Clinic,Clinic Priority,Core Growth,1.0,fact_ship,의원 고혈압 포트폴리오 핵심
+한결제약,AC012,카나브정,카나브정 60mg,카나브정 60mg,정,60mg,300정,심혈관,Cardio,Mixed,Mixed,Anchor Brand,0.95,fact_ship,단일제라 병원과 의원 모두 연결 가능
+한결제약,AC013,서스펜정,서스펜정 200mg,서스펜정 200mg,정,200mg,300정,감염질환,Infection,Clinic,Clinic Priority,Base Support,0.7,fact_ship,소규모 일반 처방 비중 가정
+한결제약,AC014,리피토정,리피토정 20mg,리피토정 20mg,정,20mg,300정,지질질환,Lipid,Mixed,Mixed,Anchor Brand,0.9,fact_ship,인지도 높은 기준 지질 브랜드
+한결제약,AC015,디아미크롱서방정,디아미크롱서방정 60mg,디아미크롱서방정 60mg,서방정,60mg,300정,대사질환,Metabolic,Clinic,Clinic Priority,Base Support,0.95,fact_ship,장기 추적이 쉬운 서방형
+한결제약,AC016,올메텍정,올메텍정 20mg,올메텍정 20mg,정,20mg,300정,심혈관,Cardio,Clinic,Clinic Priority,Base Support,0.85,fact_ship,ARB 단일제 보조군
+한결제약,AC017,아토르바정,아토르바정 20mg,아토르바정 20mg,정,20mg,300정,지질질환,Lipid,Clinic,Clinic Priority,Base Support,0.85,fact_ship,기본 지질 포트폴리오 보완용
+한결제약,AC018,트라젠타정,트라젠타정 5mg,트라젠타정 5mg,정,5mg,30정,대사질환,Metabolic,Mixed,Mixed,Growth Driver,0.9,fact_ship,종합병원과 의원 전환 포인트용
+한결제약,AC019,글루코파지정,글루코파지정 1000mg,글루코파지정 1000mg,정,1000mg,300정,대사질환,Metabolic,Clinic,Clinic Priority,Base Support,0.9,fact_ship,기초 치료제라 처방 모수 확보에 유리
+한결제약,AC020,록소르정,록소르정 10mg,록소르정 10mg,정,10mg,300정,통증관리,Pain,Clinic,Clinic Priority,Tactical Support,0.6,fact_ship,핵심 포트폴리오보다는 보조 일반 처방군
