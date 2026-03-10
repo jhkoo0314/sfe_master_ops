@@ -151,11 +151,11 @@ def run_pipeline(
             step=5, module="builder",
             status=QualityGateStatus.PASS,
             score=100.0,
-            reasoning_note="✅ Builder handoff 준비 완료. HTML 보고서 및 WebSlide 생성 가능.",
+            reasoning_note="✅ Builder handoff 준비 완료. HTML 보고서 생성 가능.",
             next_modules=[],
         ))
         _update_registry("builder", QualityGateStatus.PASS)
-        recommended_actions.append("✅ HTML Builder 실행 가능. 보고서 및 슬라이드를 생성하세요.")
+        recommended_actions.append("✅ HTML Builder 실행 가능. 보고서를 생성하세요.")
 
     # 전체 판정
     all_statuses = [s.status for s in steps]

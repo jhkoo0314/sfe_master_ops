@@ -11,6 +11,7 @@ if str(ROOT) not in sys.path:
     sys.path.insert(0, str(ROOT))
 
 from modules.territory.schemas import GeoCoord
+from modules.territory.builder_payload import build_territory_builder_payload
 from modules.territory.service import build_territory_result_asset
 from ops_core.api.territory_router import evaluate_territory_asset
 from modules.sandbox.schemas import HospitalAnalysisRecord
@@ -21,6 +22,7 @@ COMPANY_NAME = get_active_company_name(COMPANY_KEY)
 SANDBOX_VALIDATION_ROOT = get_company_root(ROOT, "ops_validation", COMPANY_KEY) / "sandbox"
 SOURCE_ROOT = get_company_root(ROOT, "company_source", COMPANY_KEY)
 OUTPUT_ROOT = get_company_root(ROOT, "ops_validation", COMPANY_KEY) / "territory"
+CRM_ACTIVITY_PATH = get_company_root(ROOT, "company_source", COMPANY_KEY) / "crm" / "hangyeol_crm_activity_raw.xlsx"
 
 
 def load_hospital_records() -> list[HospitalAnalysisRecord]:
@@ -60,9 +62,14 @@ def main() -> None:
         hospital_rep_map=rep_map,
     )
     evaluation = evaluate_territory_asset(asset)
+    builder_payload = build_territory_builder_payload(asset, crm_activity_path=str(CRM_ACTIVITY_PATH))
 
     (OUTPUT_ROOT / "territory_result_asset.json").write_text(
         json.dumps(asset.model_dump(mode="json"), ensure_ascii=False, indent=2),
+        encoding="utf-8",
+    )
+    (OUTPUT_ROOT / "territory_builder_payload.json").write_text(
+        json.dumps(builder_payload, ensure_ascii=False, indent=2),
         encoding="utf-8",
     )
     (OUTPUT_ROOT / "territory_ops_evaluation.json").write_text(

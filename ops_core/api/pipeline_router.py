@@ -122,7 +122,7 @@ async def list_modules():
             module="builder",
             endpoint="UI: templates/total_valid_templates.html",
             status=status.module_statuses.get("builder", "미실행"),
-            description="OPS 보고서 HTML + WebSlide Studio"
+            description="OPS 보고서 HTML 생성 허브"
         ),
     ]
     return modules

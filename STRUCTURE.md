@@ -1,6 +1,6 @@
 # SFE OPS 구조 문서
 
-작성일: 2026-03-10
+작성일: 2026-03-11
 
 ## 핵심 흐름
 
@@ -15,7 +15,6 @@
 `단방향 검증 확장`에 더 가깝습니다.
 
 즉:
-
 - 앞단 결과를 확인하고
 - OPS가 중간 검증을 하고
 - 통과한 것만 다음 단계와 템플릿으로 넘깁니다
@@ -52,20 +51,29 @@ sfe_master_ops/
 
 ### `modules/`
 
-실제 분석을 수행하고 Result Asset을 만드는 층입니다.
+실제 계산과 Builder용 재료 생성을 담당하는 층입니다.
 
 - `modules/crm/`
+  - CRM Result Asset 생성
+  - `builder_payload.py`에서 CRM 보고서용 payload 생성
 - `modules/prescription/`
+  - Prescription Result Asset 생성
+  - `builder_payload.py`에서 처방 보고서용 payload 생성
 - `modules/sandbox/`
+  - Sandbox Result Asset 생성
+  - `dashboard_payload.template_payload`를 Builder 입력으로 사용
 - `modules/territory/`
+  - Territory Result Asset 생성
+  - `builder_payload.py`에서 지도 보고서용 payload 생성
 - `modules/builder/`
+  - 모듈이 만든 payload를 읽어 HTML로 주입
+  - 직접 계산 엔진 역할은 하지 않음
 
 ### `ops_core/`
 
 OPS 판단과 파이프라인 실행을 담당합니다.
 
 여기서 OPS는:
-
 - 직접 계산하는 분석 엔진이 아니라
 - `중앙 관제 게이트` 역할입니다
 
@@ -76,6 +84,7 @@ OPS 판단과 파이프라인 실행을 담당합니다.
 - 다음 단계 전달 판단
 - 실행 흐름 관리
 
+주요 위치:
 - `ops_core/main.py`
 - `ops_core/api/`
 - `ops_core/workflow/`
@@ -88,7 +97,9 @@ OPS 판단과 파이프라인 실행을 담당합니다.
 - `prescription_result_asset.py`
 - `sandbox_result_asset.py`
 - `territory_result_asset.py`
-- `html_builder_result_asset.py`
+
+참고:
+- Builder 결과 스키마 `HtmlBuilderResultAsset`은 현재 `modules/builder/schemas.py` 안에 있습니다.
 
 ### `ui/`
 
@@ -110,13 +121,12 @@ OPS 판단과 파이프라인 실행을 담당합니다.
 실제 HTML 보고서 템플릿입니다.
 
 - [report_template.html](/C:/sfe_master_ops/templates/report_template.html)
-- [crm_coaching_template.html](/C:/sfe_master_ops/templates/crm_coaching_template.html)
+- [crm_analysis_template.html](/C:/sfe_master_ops/templates/crm_analysis_template.html)
 - [Spatial_Preview_260224.html](/C:/sfe_master_ops/templates/Spatial_Preview_260224.html)
 - [prescription_flow_template.html](/C:/sfe_master_ops/templates/prescription_flow_template.html)
 - [total_valid_templates.html](/C:/sfe_master_ops/templates/total_valid_templates.html)
 
 참고:
-
 - `hh.html`, `hh_builder_template.js`, `hhb.js`는 통합 보고서 디자인 복구 참고용 템플릿 자산입니다.
 
 ### `scripts/`
@@ -138,6 +148,12 @@ OPS 판단과 파이프라인 실행을 담당합니다.
 이름은 `hangyeol`이 남아 있지만,
 현재는 `company_runtime.py`를 통해 회사 코드 기준 동적 경로를 사용합니다.
 
+현재 중요한 점:
+- CRM 검증 스크립트가 `crm_builder_payload.json` 생성
+- Prescription 검증 스크립트가 `prescription_builder_payload.json` 생성
+- Territory 검증 스크립트가 `territory_builder_payload.json` 생성
+- Builder 검증 스크립트는 이 payload를 읽어 HTML 생성
+
 ### `common/`
 
 공통 설정과 회사 런타임 유틸입니다.
@@ -156,7 +172,7 @@ OPS 판단과 파이프라인 실행을 담당합니다.
 data/
 ├── company_source/      # 회사별 원천데이터
 ├── ops_standard/        # 정규화 결과
-├── ops_validation/      # 검증 결과 + HTML
+├── ops_validation/      # 검증 결과 + builder payload + HTML
 ├── public/              # 공공 기준 데이터
 ├── sample_data/         # 샘플/기획 참고 데이터
 └── README.md
@@ -169,6 +185,30 @@ data/company_source/{company_key}/
 data/ops_standard/{company_key}/
 data/ops_validation/{company_key}/
 ```
+
+## 현재 Builder 기준 흐름
+
+Builder는 직접 raw를 읽지 않습니다.
+
+현재 연결은 이렇게 정리됩니다.
+
+- CRM
+  - `crm_result_asset.json`
+  - `crm_builder_payload.json`
+  - `crm_analysis_preview.html`
+- Prescription
+  - `prescription_result_asset.json`
+  - `prescription_builder_payload.json`
+  - `prescription_flow_preview.html`
+- Territory
+  - `territory_result_asset.json`
+  - `territory_builder_payload.json`
+  - `territory_map_preview.html`
+- Sandbox
+  - `sandbox_result_asset.json` 내부 `dashboard_payload.template_payload`
+  - `sandbox_report_preview.html`
+
+즉 Builder는 `표현 단계`이고, 계산은 앞단 모듈에 둡니다.
 
 ## 현재 UI 기준 흐름
 
@@ -203,15 +243,13 @@ data/ops_validation/{company_key}/
 
 ## 현재 생성되는 보고서
 
-### 개별 보고서
-
-- CRM 행동 코칭 보고서
+개별 보고서:
+- CRM 행동 분석 보고서
 - Sandbox 성과 보고서
 - Territory 권역 지도 보고서
 - PDF 처방흐름 보고서
 
-### 통합 보고서
-
+통합 보고서:
 - `total_valid_preview.html`
 - 생성된 개별 HTML을 한 화면에서 묶어 보는 허브
 - 사이드바에는 4개 보고서가 항상 보이고

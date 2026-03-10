@@ -77,7 +77,13 @@ def main() -> None:
         "quality_score": evaluation.quality_score,
         "next_modules": evaluation.next_modules,
     }
-    builder_payload = build_crm_builder_payload(result_asset, run_summary, COMPANY_NAME)
+    builder_payload = build_crm_builder_payload(
+        result_asset,
+        run_summary,
+        COMPANY_NAME,
+        activities=crm_activities,
+        company_master=company_master,
+    )
 
     (OUTPUT_ROOT / "crm_result_asset.json").write_text(
         json.dumps(asset_payload, ensure_ascii=False, indent=2),

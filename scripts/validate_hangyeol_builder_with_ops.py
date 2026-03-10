@@ -20,12 +20,11 @@ from modules.builder.service import (
 )
 from common.company_runtime import get_active_company_key, get_active_company_name, get_company_root
 from result_assets.sandbox_result_asset import SandboxResultAsset
-from result_assets.territory_result_asset import TerritoryResultAsset
 
 
 COMPANY_KEY = get_active_company_key()
 COMPANY_NAME = get_active_company_name(COMPANY_KEY)
-CRM_TEMPLATE_PATH = ROOT / "templates" / "crm_coaching_template.html"
+CRM_TEMPLATE_PATH = ROOT / "templates" / "crm_analysis_template.html"
 SANDBOX_TEMPLATE_PATH = ROOT / "templates" / "report_template.html"
 TERRITORY_TEMPLATE_PATH = ROOT / "templates" / "Spatial_Preview_260224.html"
 PRESCRIPTION_TEMPLATE_PATH = ROOT / "templates" / "prescription_flow_template.html"
@@ -33,9 +32,9 @@ CRM_ASSET_PATH = get_company_root(ROOT, "ops_validation", COMPANY_KEY) / "crm" /
 CRM_BUILDER_PAYLOAD_PATH = get_company_root(ROOT, "ops_validation", COMPANY_KEY) / "crm" / "crm_builder_payload.json"
 SANDBOX_ASSET_PATH = get_company_root(ROOT, "ops_validation", COMPANY_KEY) / "sandbox" / "sandbox_result_asset.json"
 TERRITORY_ASSET_PATH = get_company_root(ROOT, "ops_validation", COMPANY_KEY) / "territory" / "territory_result_asset.json"
+TERRITORY_BUILDER_PAYLOAD_PATH = get_company_root(ROOT, "ops_validation", COMPANY_KEY) / "territory" / "territory_builder_payload.json"
 PRESCRIPTION_ASSET_PATH = get_company_root(ROOT, "ops_validation", COMPANY_KEY) / "prescription" / "prescription_result_asset.json"
 PRESCRIPTION_BUILDER_PAYLOAD_PATH = get_company_root(ROOT, "ops_validation", COMPANY_KEY) / "prescription" / "prescription_builder_payload.json"
-CRM_ACTIVITY_PATH = get_company_root(ROOT, "company_source", COMPANY_KEY) / "crm" / "hangyeol_crm_activity_raw.xlsx"
 OUTPUT_ROOT = get_company_root(ROOT, "ops_validation", COMPANY_KEY) / "builder"
 TOTAL_VALID_TEMPLATE_PATH = ROOT / "templates" / "total_valid_templates.html"
 
@@ -71,7 +70,7 @@ def write_total_valid_output(summary: dict) -> dict | None:
 
     report_map = {
         "sandbox": ("sandbox_report", "Sandbox 성과 보고서", "Sandbox 결과 HTML"),
-        "crm": ("crm_coaching", "CRM 행동 코칭 보고서", "CRM 행동 코칭 HTML"),
+        "crm": ("crm_analysis", "CRM 행동 분석 보고서", "CRM 행동 분석 HTML"),
         "territory": ("territory_map", "Territory 권역 지도 보고서", "Territory 지도 HTML"),
         "prescription": ("prescription_flow", "PDF 처방흐름 보고서", "Prescription 흐름 HTML"),
     }
@@ -148,8 +147,8 @@ def main() -> None:
         crm_payload = build_template_payload(crm_input)
         crm_html = render_builder_html(crm_payload)
         crm_result_asset = build_html_builder_asset(crm_input, crm_html)
-        summary["crm_coaching"] = write_builder_output(
-            "crm_coaching_preview",
+        summary["crm_analysis"] = write_builder_output(
+            "crm_analysis_preview",
             crm_input,
             crm_payload,
             crm_html,
@@ -157,15 +156,14 @@ def main() -> None:
         )
         summary["templates_validated"].append(str(CRM_TEMPLATE_PATH))
     else:
-        summary["skipped_reports"].append("crm_coaching")
+        summary["skipped_reports"].append("crm_analysis")
 
-    if TERRITORY_ASSET_PATH.exists():
-        territory_asset = TerritoryResultAsset.model_validate(load_json(TERRITORY_ASSET_PATH))
+    territory_ready = TERRITORY_ASSET_PATH.exists() and TERRITORY_BUILDER_PAYLOAD_PATH.exists()
+    if territory_ready:
         territory_input = build_territory_template_input(
-            territory_asset,
             str(TERRITORY_TEMPLATE_PATH),
+            builder_payload_path=str(TERRITORY_BUILDER_PAYLOAD_PATH),
             source_asset_path=str(TERRITORY_ASSET_PATH),
-            crm_activity_path=str(CRM_ACTIVITY_PATH),
         )
         territory_payload = build_template_payload(territory_input)
         territory_html = render_builder_html(territory_payload)
@@ -216,7 +214,7 @@ def main() -> None:
         summary["skipped_reports"].append("total_valid")
 
     summary["built_report_count"] = sum(
-        1 for key in ["crm_coaching", "sandbox_report", "territory_map", "prescription_flow", "total_valid"] if key in summary
+        1 for key in ["crm_analysis", "sandbox_report", "territory_map", "prescription_flow", "total_valid"] if key in summary
     )
     (OUTPUT_ROOT / "builder_validation_summary.json").write_text(
         json.dumps(summary, ensure_ascii=False, indent=2),

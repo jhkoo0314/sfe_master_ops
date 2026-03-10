@@ -365,7 +365,7 @@ def load_artifact_preview(path: str, ext: str, max_rows: int = 10) -> tuple[pd.D
 
 def get_report_type_options() -> list[str]:
     return [
-        "CRM 행동 코칭 보고서",
+        "CRM 행동 분석 보고서",
         "Sandbox 성과 보고서",
         "Territory 권역 지도 보고서",
         "PDF 처방흐름 보고서",
@@ -375,7 +375,7 @@ def get_report_type_options() -> list[str]:
 
 def get_report_type_description(report_type: str) -> str:
     descriptions = {
-        "CRM 행동 코칭 보고서": "CRM 활동 raw를 바탕으로 행동 품질, 월별 추이, 코칭 우선순위를 보는 CRM 전용 HTML 보고서입니다.",
+        "CRM 행동 분석 보고서": "CRM 활동 raw를 바탕으로 행동 품질, 신뢰도, 파이프라인 흐름, 담당자별 CoachScore를 보는 CRM 전용 HTML 보고서입니다.",
         "Sandbox 성과 보고서": "실적, 목표, CRM을 묶어 성과 분석 결과를 보여주는 HTML 보고서입니다.",
         "Territory 권역 지도 보고서": "권역별 커버리지와 이동 흐름을 지도 중심으로 보는 HTML 보고서입니다.",
         "PDF 처방흐름 보고서": "Prescription Data Flow 비교표와 추적 보조표를 중심으로 보는 HTML 보고서입니다.",
@@ -386,7 +386,7 @@ def get_report_type_description(report_type: str) -> str:
 
 def get_report_type_artifacts(report_type: str) -> str:
     artifacts = {
-        "CRM 행동 코칭 보고서": "연결 파일: crm_coaching_preview.html / crm_result_asset.json",
+        "CRM 행동 분석 보고서": "연결 파일: crm_analysis_preview.html / crm_result_asset.json",
         "Sandbox 성과 보고서": "연결 파일: sandbox_report_preview.html / sandbox_result_asset.json",
         "Territory 권역 지도 보고서": "연결 파일: territory_map_preview.html / territory_result_asset.json",
         "PDF 처방흐름 보고서": "연결 파일: prescription_flow_preview.html / prescription_claim_validation.xlsx",
@@ -399,7 +399,7 @@ def get_report_output_path(report_type: str) -> str | None:
     root = get_project_root()
     builder_root = os.path.join(root, "data", "ops_validation", get_active_company_key(), "builder")
     mapping = {
-        "CRM 행동 코칭 보고서": os.path.join(builder_root, "crm_coaching_preview.html"),
+        "CRM 행동 분석 보고서": os.path.join(builder_root, "crm_analysis_preview.html"),
         "Sandbox 성과 보고서": os.path.join(builder_root, "sandbox_report_preview.html"),
         "Territory 권역 지도 보고서": os.path.join(builder_root, "territory_map_preview.html"),
         "PDF 처방흐름 보고서": os.path.join(builder_root, "prescription_flow_preview.html"),
@@ -619,7 +619,7 @@ def _build_step_result(module: str, label: str, duration_ms: int) -> dict:
     if module == "builder":
         if summary_path and os.path.exists(summary_path):
             summary = _read_json(summary_path)
-            built_count = sum(1 for key in ["crm_coaching", "sandbox_report", "territory_map", "prescription_flow", "total_valid"] if key in summary)
+            built_count = sum(1 for key in ["crm_analysis", "sandbox_report", "territory_map", "prescription_flow", "total_valid"] if key in summary)
             return {
                 "module": module,
                 "status": "PASS",

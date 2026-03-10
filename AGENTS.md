@@ -123,10 +123,28 @@ Builder는 직접 raw를 보지 않는다.
 Result Asset -> builder_input_standard -> builder_payload_standard -> HTML
 ```
 
+현재 모듈별 연결 방식은 이렇게 본다.
+
+- CRM
+  - `crm_result_asset.json` 생성
+  - `crm_builder_payload.json` 생성
+  - Builder는 이 payload만 읽어 `crm_analysis_preview.html` 생성
+- Prescription
+  - `prescription_result_asset.json` 생성
+  - `prescription_builder_payload.json` 생성
+  - Builder는 이 payload만 읽어 `prescription_flow_preview.html` 생성
+- Territory
+  - `territory_result_asset.json` 생성
+  - `territory_builder_payload.json` 생성
+  - Builder는 이 payload만 읽어 `territory_map_preview.html` 생성
+- Sandbox
+  - `sandbox_result_asset.json` 안의 `dashboard_payload.template_payload`를 Builder가 사용
+  - 별도 `sandbox_builder_payload.json` 파일은 현재 없다
+
 현재 템플릿:
 
 - `templates/report_template.html`
-- `templates/crm_coaching_template.html`
+- `templates/crm_analysis_template.html`
 - `templates/Spatial_Preview_260224.html`
 - `templates/prescription_flow_template.html`
 - `templates/total_valid_templates.html`
@@ -134,6 +152,7 @@ Result Asset -> builder_input_standard -> builder_payload_standard -> HTML
 현재 상태:
 
 - WebSlide 기능은 제거됨
+- Builder는 계산 엔진이 아니라 `payload 주입기`에 가깝다
 - 통합 보고서는 슬라이드 도구가 아니라 `개별 HTML 허브`
 - 최종 결과 확인은 결국 템플릿이 있어야 가능하므로, 현재 흐름은 템플릿 기반 단방향 검증으로 본다
 
