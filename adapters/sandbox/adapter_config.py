@@ -29,6 +29,9 @@ class SalesAdapterConfig(BaseModel):
 
     # 담당자
     rep_id_col: str
+    rep_name_col: Optional[str] = None
+    branch_id_col: Optional[str] = None
+    branch_name_col: Optional[str] = None
 
     # 날짜/기간
     metric_month_col: Optional[str] = None      # YYYYMM 형태 컬럼
@@ -84,6 +87,29 @@ class SalesAdapterConfig(BaseModel):
             channel_col="channel",
         )
 
+    @classmethod
+    def hangyeol_sales_source_example(cls) -> "SalesAdapterConfig":
+        """
+        한결제약 회사 원본형 sales 파일 기준 설정.
+
+        파일:
+          data/raw/company_source/hangyeol_pharma/sales/hangyeol_sales_raw.xlsx
+        """
+        return cls(
+            hospital_id_col="거래처코드",
+            hospital_name_col="거래처명",
+            rep_id_col="영업사원코드",
+            rep_name_col="영업사원명",
+            branch_id_col="본부코드",
+            branch_name_col="본부명",
+            metric_month_col="기준년월",
+            product_id_col="브랜드코드",
+            product_name_col="브랜드명",
+            amount_col="매출금액",
+            quantity_col="매출수량",
+            channel_col="본부명",
+        )
+
 
 # ────────────────────────────────────────
 # 2. 목표(Target) Adapter 설정
@@ -98,6 +124,9 @@ class TargetAdapterConfig(BaseModel):
     """
     # 담당자
     rep_id_col: str
+    rep_name_col: Optional[str] = None
+    branch_id_col: Optional[str] = None
+    branch_name_col: Optional[str] = None
 
     # 날짜/기간
     metric_month_col: Optional[str] = None
@@ -134,4 +163,25 @@ class TargetAdapterConfig(BaseModel):
             product_id_col="product_id",
             target_amount_col="target_amount",
             hospital_id_col="hospital_id",
+        )
+
+    @classmethod
+    def hangyeol_target_source_example(cls) -> "TargetAdapterConfig":
+        """
+        한결제약 회사 원본형 target 파일 기준 설정.
+
+        파일:
+          data/raw/company_source/hangyeol_pharma/target/hangyeol_target_raw.xlsx
+        """
+        return cls(
+            rep_id_col="영업사원코드",
+            rep_name_col="영업사원명",
+            branch_id_col="본부코드",
+            branch_name_col="본부명",
+            metric_month_col="기준년월",
+            product_id_col="브랜드코드",
+            product_name_col="브랜드명",
+            target_amount_col="계획금액",
+            hospital_id_col="거래처코드",
+            hospital_name_col="거래처명",
         )

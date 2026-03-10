@@ -109,6 +109,10 @@ def build_territory_result_asset(
     hospital_records: list[HospitalAnalysisRecord],
     contract: Optional[TerritoryMapContract] = None,
     hospital_region_map: Optional[dict[str, str]] = None,
+    hospital_coord_map: Optional[dict[str, GeoCoord]] = None,
+    hospital_name_map: Optional[dict[str, str]] = None,
+    hospital_sub_region_map: Optional[dict[str, str]] = None,
+    hospital_rep_map: Optional[dict[str, str]] = None,
 ) -> "TerritoryResultAsset":
     """
     Sandbox의 HospitalAnalysisRecord를 받아 Territory 지도 자산을 생성한다.
@@ -136,7 +140,7 @@ def build_territory_result_asset(
         if h not in hosp_agg:
             hosp_agg[h] = {
                 "hospital_id": h,
-                "rep_id": rec.rep_id,
+                "rep_id": (hospital_rep_map or {}).get(h),
                 "total_sales": 0.0,
                 "total_target": 0.0,
                 "total_visits": 0,
@@ -154,7 +158,7 @@ def build_territory_result_asset(
 
     for h_id, agg in hosp_agg.items():
         region_key = (hospital_region_map or {}).get(h_id, "기타")
-        coord = _resolve_coord(region_key)
+        coord = (hospital_coord_map or {}).get(h_id) or _resolve_coord(region_key)
 
         # 집계 레코드 임시 객체 (마커 스타일 결정용)
         mock_rec = HospitalAnalysisRecord(
@@ -177,8 +181,10 @@ def build_territory_result_asset(
 
         markers.append(MapMarker(
             hospital_id=h_id,
+            hospital_name=(hospital_name_map or {}).get(h_id),
             coord=coord,
             region_key=region_key,
+            sub_region_key=(hospital_sub_region_map or {}).get(h_id),
             total_sales=agg["total_sales"],
             total_target=agg["total_target"],
             attainment_rate=mock_rec.attainment_rate,

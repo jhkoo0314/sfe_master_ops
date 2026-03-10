@@ -22,7 +22,17 @@ def _to_metric_month(date_str: str, fmt: str) -> str:
     try:
         return datetime.strptime(str(date_str).strip(), fmt).strftime("%Y%m")
     except Exception:
-        return str(date_str).strip()[:6]
+        digits = "".join(ch for ch in str(date_str).strip() if ch.isdigit())
+        return digits[:6]
+
+
+def _normalize_metric_month(raw: object) -> str:
+    """YYYY-MM / YYYYMM / Timestamp 등을 YYYYMM으로 표준화."""
+    text = str(raw).strip()
+    digits = "".join(ch for ch in text if ch.isdigit())
+    if len(digits) >= 6:
+        return digits[:6]
+    return text[:6]
 
 
 def _resolve_hospital_id(
@@ -94,7 +104,7 @@ def load_sales_from_records(
 
             # metric_month 결정
             if config.metric_month_col and config.metric_month_col in row:
-                metric_month = str(row[config.metric_month_col]).strip()[:6]
+                metric_month = _normalize_metric_month(row[config.metric_month_col])
             elif config.sales_date_col and config.sales_date_col in row:
                 metric_month = _to_metric_month(
                     row[config.sales_date_col], config.date_format
@@ -117,9 +127,14 @@ def load_sales_from_records(
 
             success.append(SalesDomainRecord(
                 hospital_id=hospital_id,
+                hospital_name=str(row.get(config.hospital_name_col, "") or "").strip() if config.hospital_name_col else None,
                 rep_id=rep_id,
+                rep_name=str(row.get(config.rep_name_col, "") or "").strip() if config.rep_name_col else None,
+                branch_id=str(row.get(config.branch_id_col, "") or "").strip() if config.branch_id_col else None,
+                branch_name=str(row.get(config.branch_name_col, "") or "").strip() if config.branch_name_col else None,
                 metric_month=metric_month,
                 product_id=product_id,
+                product_name=str(row.get(config.product_name_col, "") or "").strip() if config.product_name_col else None,
                 sales_amount=amount,
                 sales_quantity=quantity,
                 channel=channel or None,
@@ -165,7 +180,7 @@ def load_target_from_records(
 
             # metric_month
             if config.metric_month_col and config.metric_month_col in row:
-                metric_month = str(row[config.metric_month_col]).strip()[:6]
+                metric_month = _normalize_metric_month(row[config.metric_month_col])
             elif config.target_date_col and config.target_date_col in row:
                 metric_month = _to_metric_month(
                     row[config.target_date_col], config.date_format
@@ -194,10 +209,15 @@ def load_target_from_records(
 
             success.append(TargetDomainRecord(
                 rep_id=rep_id,
+                rep_name=str(row.get(config.rep_name_col, "") or "").strip() if config.rep_name_col else None,
+                branch_id=str(row.get(config.branch_id_col, "") or "").strip() if config.branch_id_col else None,
+                branch_name=str(row.get(config.branch_name_col, "") or "").strip() if config.branch_name_col else None,
                 metric_month=metric_month,
                 product_id=product_id,
+                product_name=str(row.get(config.product_name_col, "") or "").strip() if config.product_name_col else None,
                 target_amount=target_amount,
                 hospital_id=hospital_id,
+                hospital_name=str(row.get(config.hospital_name_col, "") or "").strip() if config.hospital_name_col else None,
                 source_label=source_label,
             ))
         except Exception as e:

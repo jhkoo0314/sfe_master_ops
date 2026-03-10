@@ -119,6 +119,24 @@ class HospitalAdapterConfig(BaseModel):
             phone_col="phone",
         )
 
+    @classmethod
+    def hangyeol_account_example(cls) -> "HospitalAdapterConfig":
+        """
+        한결제약 회사 원본형 account master 파일 기준 설정.
+
+        파일:
+          data/raw/company_source/hangyeol_pharma/company/hangyeol_account_master.xlsx
+        """
+        return cls(
+            hospital_id_col="account_id",
+            hospital_name_col="account_name",
+            hospital_type_col="account_type",
+            region_key_col="region_key",
+            sub_region_key_col="sub_region_key",
+            address_col="address",
+            active_type_values=["의원", "종합병원", "상급종합"],
+        )
+
 
 # ────────────────────────────────────────
 # 2. 회사 마스터 Adapter 설정
@@ -195,6 +213,25 @@ class CompanyMasterAdapterConfig(BaseModel):
             is_primary_col="is_primary",
         )
 
+    @classmethod
+    def hangyeol_company_source_example(cls) -> "CompanyMasterAdapterConfig":
+        """
+        한결제약 회사 원본형 배정 파일 기준 설정.
+
+        파일:
+          data/raw/company_source/hangyeol_pharma/company/hangyeol_company_assignment_raw.xlsx
+        """
+        return cls(
+            rep_id_col="영업사원코드",
+            rep_name_col="영업사원명",
+            branch_id_col="본부코드",
+            branch_name_col="본부명",
+            hospital_name_col="거래처명",
+            hospital_id_col="거래처코드",
+            channel_type_col="기관구분",
+            is_primary_col="주담당여부",
+        )
+
 
 # ────────────────────────────────────────
 # 3. CRM 활동 Adapter 설정
@@ -221,6 +258,13 @@ class CrmActivityAdapterConfig(BaseModel):
     has_detail_call_col: Optional[str] = None    # 디테일링 여부 컬럼명 (없으면 False)
     products_mentioned_col: Optional[str] = None # 제품 언급 컬럼명 (쉼표 구분)
     notes_col: Optional[str] = None              # 비고 컬럼명
+    trust_level_col: Optional[str] = None
+    sentiment_score_col: Optional[str] = None
+    quality_factor_col: Optional[str] = None
+    impact_factor_col: Optional[str] = None
+    activity_weight_col: Optional[str] = None
+    weighted_activity_score_col: Optional[str] = None
+    next_action_text_col: Optional[str] = None
 
     # 날짜 형식 설정
     date_format: str = "%Y-%m-%d"
@@ -291,4 +335,40 @@ class CrmActivityAdapterConfig(BaseModel):
             has_detail_call_col="has_detail_call",
             products_mentioned_col="products_mentioned",
             notes_col="notes",
+        )
+
+    @classmethod
+    def hangyeol_crm_source_example(cls) -> "CrmActivityAdapterConfig":
+        """
+        한결제약 회사 원본형 CRM 파일 기준 설정.
+
+        파일:
+          data/raw/company_source/hangyeol_pharma/crm/hangyeol_crm_activity_raw.xlsx
+        """
+        return cls(
+            rep_id_col="영업사원코드",
+            hospital_name_col="방문기관",
+            activity_date_col="실행일",
+            activity_type_col="액션유형",
+            visit_count_col="방문횟수",
+            has_detail_call_col="상세콜여부",
+            products_mentioned_col="언급브랜드",
+            notes_col="활동메모",
+            trust_level_col="신뢰등급",
+            sentiment_score_col="정서점수",
+            quality_factor_col="품질계수",
+            impact_factor_col="영향계수",
+            activity_weight_col="행동가중치",
+            weighted_activity_score_col="가중활동점수",
+            next_action_text_col="차기액션",
+            activity_type_map={
+                "접근": "방문",
+                "컨택": "전화",
+                "대면": "방문",
+                "pt": "행사",
+                "시연": "디지털",
+                "니즈환기": "방문",
+                "클로징": "방문",
+                "피드백": "전화",
+            },
         )

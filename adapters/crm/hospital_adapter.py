@@ -16,7 +16,12 @@ Hospital Adapter - 공공/기준 병원 데이터 → HospitalMaster 변환
 """
 
 from pathlib import Path
-import polars as pl
+from typing import Any
+try:
+    import polars as pl
+except ModuleNotFoundError:  # pragma: no cover - 환경 의존 fallback
+    pl = None
+import pandas as pd
 
 from modules.crm.schemas import HospitalMaster
 from adapters.crm.adapter_config import HospitalAdapterConfig
@@ -53,9 +58,15 @@ def load_hospital_master_from_file(
     # 파일 로드
     try:
         if path.suffix.lower() in (".xlsx", ".xls"):
-            df = pl.read_excel(str(path))
+            if pl is not None:
+                df = pl.read_excel(str(path))
+            else:
+                df = pd.read_excel(str(path))
         elif path.suffix.lower() == ".csv":
-            df = pl.read_csv(str(path), encoding="utf-8-sig")
+            if pl is not None:
+                df = pl.read_csv(str(path), encoding="utf-8-sig")
+            else:
+                df = pd.read_csv(str(path), encoding="utf-8-sig")
         else:
             raise AdapterInputError(f"지원하지 않는 파일 형식: {path.suffix}")
     except AdapterInputError:
@@ -81,12 +92,12 @@ def load_hospital_master_from_records(
     Returns:
         list[HospitalMaster]
     """
-    df = pl.DataFrame(records)
+    df = pl.DataFrame(records) if pl is not None else pd.DataFrame(records)
     return _convert_dataframe_to_hospital_master(df, config)
 
 
 def _convert_dataframe_to_hospital_master(
-    df: pl.DataFrame,
+    df: Any,
     config: HospitalAdapterConfig,
 ) -> list[HospitalMaster]:
     """
@@ -101,31 +112,36 @@ def _convert_dataframe_to_hospital_master(
         "region_key": config.region_key_col,
         "sub_region_key": config.sub_region_key_col,
     }
-    missing = [
-        f"{field}({col})" for field, col in required_cols.items()
-        if col not in df.columns
-    ]
+    columns = list(df.columns)
+    missing = [f"{field}({col})" for field, col in required_cols.items() if col not in columns]
     if missing:
         raise AdapterInputError(
             "필수 컬럼이 파일에 없습니다.",
-            detail=f"누락 항목: {missing} | 파일 컬럼: {list(df.columns)}"
+            detail=f"누락 항목: {missing} | 파일 컬럼: {columns}"
         )
 
     # 병원 종별 필터 적용
     if config.active_type_values:
-        df = df.filter(
-            pl.col(config.hospital_type_col).is_in(config.active_type_values)
-        )
+        if pl is not None and isinstance(df, pl.DataFrame):
+            df = df.filter(pl.col(config.hospital_type_col).is_in(config.active_type_values))
+        else:
+            df = df[df[config.hospital_type_col].isin(config.active_type_values)]
 
     # null 행 제거 (ID 없는 행)
-    df = df.filter(
-        pl.col(config.hospital_id_col).is_not_null() &
-        pl.col(config.hospital_id_col).cast(pl.Utf8).str.len_chars().gt(0)
-    )
+    if pl is not None and isinstance(df, pl.DataFrame):
+        df = df.filter(
+            pl.col(config.hospital_id_col).is_not_null() &
+            pl.col(config.hospital_id_col).cast(pl.Utf8).str.len_chars().gt(0)
+        )
+        rows = df.iter_rows(named=True)
+    else:
+        df = df[df[config.hospital_id_col].notna()]
+        df = df[df[config.hospital_id_col].astype(str).str.len() > 0]
+        rows = df.to_dict(orient="records")
 
     # HospitalMaster로 변환
     result: list[HospitalMaster] = []
-    for row in df.iter_rows(named=True):
+    for row in rows:
         try:
             hospital = HospitalMaster(
                 hospital_id=str(row[config.hospital_id_col]).strip(),

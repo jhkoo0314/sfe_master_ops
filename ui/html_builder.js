@@ -322,14 +322,18 @@
         );
       }
 
-      function replaceSpatialPayload(template, markers, routes) {
+      function replaceSpatialPayload(template, markers, routes, mode = "hospital") {
         return template
           .replace(
-            /window\.__INITIAL_MARKERS__ = \/\*INITIAL_MARKERS_PLACEHOLDER\*\/ \[\];/,
+            /window\.__INITIAL_MODE__ = "[^"]*";/,
+            `window.__INITIAL_MODE__ = "${mode}";`,
+          )
+          .replace(
+            /window\.__INITIAL_MARKERS__ = [\s\S]*?;/,
             `window.__INITIAL_MARKERS__ = ${JSON.stringify(markers, null, 2)};`,
           )
           .replace(
-            /window\.__INITIAL_ROUTES__ = \/\*INITIAL_ROUTES_PLACEHOLDER\*\/ \[\];/,
+            /window\.__INITIAL_ROUTES__ = [\s\S]*?;/,
             `window.__INITIAL_ROUTES__ = ${JSON.stringify(routes, null, 2)};`,
           );
       }
@@ -552,7 +556,7 @@
           return buildGenericExportHtml(data, "territory");
         }
         const payload = buildTerritoryTemplatePayload(data);
-        return replaceSpatialPayload(template, payload.markers, payload.routes);
+        return replaceSpatialPayload(template, payload.markers, payload.routes, "hospital");
       }
 
       function buildTemplatePreviewShell(title, subtitle, badge) {

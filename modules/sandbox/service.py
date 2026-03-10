@@ -178,6 +178,12 @@ def build_sandbox_result_asset(
     template.period_label = f"{analysis_summary.metric_months[0]}~{analysis_summary.metric_months[-1]}" if analysis_summary.metric_months else "N/A"
     
     report_contract = _inject_data_to_template(template, analysis_summary, records)
+    template_payload = _build_report_template_payload(
+        input_std=input_std,
+        analysis_summary=analysis_summary,
+        domain_quality=domain_quality,
+        join_quality=join_quality,
+    )
 
     return SandboxResultAsset(
         scenario=input_std.scenario,
@@ -185,13 +191,14 @@ def build_sandbox_result_asset(
         analysis_summary=analysis_summary,
         domain_quality=domain_quality,
         join_quality=join_quality,
-        hospital_records=records[:200],
+        hospital_records=records,
         handoff_candidates=handoff_candidates,
         dashboard_payload=DashboardPayload(
             layout_type="dynamic_dashboard",
             chart_data=report_contract.main_trend_chart.dict() if report_contract.main_trend_chart else {},
             top_performers=[{"name": row[0], "val": row[1]} for row in (report_contract.top_efficiency_hospitals.rows if report_contract.top_efficiency_hospitals else [])],
-            insight_messages=report_contract.executive_summary
+            insight_messages=report_contract.executive_summary,
+            template_payload=template_payload,
         ),
         source_crm_asset_id=input_std.source_crm_asset_id,
         source_rx_asset_id=input_std.source_rx_asset_id,
@@ -243,6 +250,297 @@ def _inject_data_to_template(
     )
 
     return contract
+
+
+def _build_report_template_payload(
+    input_std: SandboxInputStandard,
+    analysis_summary: AnalysisSummary,
+    domain_quality: DomainQualitySummary,
+    join_quality: JoinQualitySummary,
+) -> dict:
+    months = sorted(input_std.metric_months)
+    month_index = {month: idx for idx, month in enumerate(months[:12])}
+
+    rep_meta: dict[str, dict[str, str]] = {}
+    rep_month: dict[str, dict[str, dict[str, float]]] = defaultdict(lambda: defaultdict(lambda: {
+        "sales": 0.0,
+        "target": 0.0,
+        "visits": 0.0,
+        "detail_calls": 0.0,
+        "active_days": 0.0,
+        "next_actions": 0.0,
+        "weighted_sum": 0.0,
+        "weighted_count": 0.0,
+        "sentiment_sum": 0.0,
+        "sentiment_count": 0.0,
+        "quality_sum": 0.0,
+        "quality_count": 0.0,
+        "impact_sum": 0.0,
+        "impact_count": 0.0,
+    }))
+    rep_product: dict[str, dict[str, dict]] = defaultdict(lambda: defaultdict(lambda: {
+        "product_name": None,
+        "sales": 0.0,
+        "target": 0.0,
+        "monthly_sales": defaultdict(float),
+        "monthly_target": defaultdict(float),
+    }))
+    rep_hospital_sales: dict[str, dict[str, float]] = defaultdict(lambda: defaultdict(float))
+
+    for row in input_std.crm_records:
+        rep_meta.setdefault(row.rep_id, {
+            "rep_name": row.rep_name or row.rep_id,
+            "branch_name": row.branch_name or row.branch_id or "UNASSIGNED",
+            "branch_id": row.branch_id or "UNASSIGNED",
+        })
+        bucket = rep_month[row.rep_id][row.metric_month]
+        bucket["visits"] += row.total_visits
+        bucket["detail_calls"] += row.detail_call_count
+        bucket["active_days"] += row.active_day_count
+        bucket["next_actions"] += row.next_action_count
+        if row.avg_weighted_activity_score is not None:
+            bucket["weighted_sum"] += row.avg_weighted_activity_score
+            bucket["weighted_count"] += 1
+        if row.avg_sentiment_score is not None:
+            bucket["sentiment_sum"] += row.avg_sentiment_score
+            bucket["sentiment_count"] += 1
+        if row.avg_quality_factor is not None:
+            bucket["quality_sum"] += row.avg_quality_factor
+            bucket["quality_count"] += 1
+        if row.avg_impact_factor is not None:
+            bucket["impact_sum"] += row.avg_impact_factor
+            bucket["impact_count"] += 1
+
+    for row in input_std.sales_records:
+        rep_meta.setdefault(row.rep_id, {
+            "rep_name": row.rep_name or row.rep_id,
+            "branch_name": row.branch_name or row.branch_id or "UNASSIGNED",
+            "branch_id": row.branch_id or "UNASSIGNED",
+        })
+        rep_month[row.rep_id][row.metric_month]["sales"] += row.sales_amount
+        rep_product[row.rep_id][row.product_id]["product_name"] = row.product_name or row.product_id
+        rep_product[row.rep_id][row.product_id]["sales"] += row.sales_amount
+        rep_product[row.rep_id][row.product_id]["monthly_sales"][row.metric_month] += row.sales_amount
+        rep_hospital_sales[row.rep_id][row.hospital_id] += row.sales_amount
+
+    for row in input_std.target_records:
+        rep_meta.setdefault(row.rep_id, {
+            "rep_name": row.rep_name or row.rep_id,
+            "branch_name": row.branch_name or row.branch_id or "UNASSIGNED",
+            "branch_id": row.branch_id or "UNASSIGNED",
+        })
+        rep_month[row.rep_id][row.metric_month]["target"] += row.target_amount
+        rep_product[row.rep_id][row.product_id]["product_name"] = row.product_name or row.product_id
+        rep_product[row.rep_id][row.product_id]["target"] += row.target_amount
+        rep_product[row.rep_id][row.product_id]["monthly_target"][row.metric_month] += row.target_amount
+
+    def month_series(metric_map: dict[str, float]) -> list[float]:
+        values = [0.0] * 12
+        for month, value in metric_map.items():
+            idx = month_index.get(month)
+            if idx is not None:
+                values[idx] = round(float(value), 0)
+        return values
+
+    def calc_gini(values: list[float]) -> float:
+        points = sorted(float(v) for v in values if float(v) > 0)
+        if not points:
+            return 0.0
+        total = sum(points)
+        n = len(points)
+        weighted = sum((idx + 1) * value for idx, value in enumerate(points))
+        return round((2 * weighted) / (n * total) - (n + 1) / n, 4)
+
+    branches: dict[str, dict] = defaultdict(lambda: {"members": []})
+    total_prod_analysis: dict[str, dict] = {}
+    products = set()
+
+    for rep_id, month_stats in rep_month.items():
+        meta = rep_meta.get(rep_id, {
+            "rep_name": rep_id,
+            "branch_name": "UNASSIGNED",
+            "branch_id": "UNASSIGNED",
+        })
+        monthly_actual = month_series({month: vals["sales"] for month, vals in month_stats.items()})
+        monthly_target = month_series({month: vals["target"] for month, vals in month_stats.items()})
+        total_actual = sum(monthly_actual)
+        total_target = sum(monthly_target)
+        total_visits = sum(vals["visits"] for vals in month_stats.values())
+        total_detail_calls = sum(vals["detail_calls"] for vals in month_stats.values())
+        total_active_days = sum(vals["active_days"] for vals in month_stats.values())
+        total_next_actions = sum(vals["next_actions"] for vals in month_stats.values())
+        weighted_sum = sum(vals["weighted_sum"] for vals in month_stats.values())
+        weighted_count = sum(vals["weighted_count"] for vals in month_stats.values())
+        sentiment_sum = sum(vals["sentiment_sum"] for vals in month_stats.values())
+        sentiment_count = sum(vals["sentiment_count"] for vals in month_stats.values())
+        quality_sum = sum(vals["quality_sum"] for vals in month_stats.values())
+        quality_count = sum(vals["quality_count"] for vals in month_stats.values())
+        impact_sum = sum(vals["impact_sum"] for vals in month_stats.values())
+        impact_count = sum(vals["impact_count"] for vals in month_stats.values())
+
+        hir = round(((weighted_sum / weighted_count) * 55.0) if weighted_count else ((total_detail_calls / max(total_visits, 1)) * 100.0), 1)
+        rtr = round(((sentiment_sum / sentiment_count) * 100.0) if sentiment_count else 0.0, 1)
+        bcr = round((total_active_days / max(len(months) * 20, 1)) * 100.0, 1)
+        phr = round((total_next_actions / max(total_visits, 1)) * 100.0, 1)
+        pi = round((total_actual / total_target) * 100.0, 1) if total_target > 0 else 0.0
+        prev_sales = monthly_actual[max(len(months) - 2, 0)] if len(months) >= 2 else 0.0
+        cur_sales = monthly_actual[max(len(months) - 1, 0)] if months else 0.0
+        fgr = round(((cur_sales - prev_sales) / prev_sales) * 100.0, 1) if prev_sales > 0 else 0.0
+        efficiency = round(total_actual / max(total_visits, 1), 0)
+        sustainability = round(min(100.0, (bcr * 0.4) + (phr * 0.35) + (max(pi, 0.0) * 0.25)), 1)
+        gini = calc_gini(list(rep_hospital_sales.get(rep_id, {}).values()))
+
+        product_rows = []
+        for product_id, prod in sorted(rep_product.get(rep_id, {}).items(), key=lambda item: float(item[1]["sales"]), reverse=True):
+            products.add(product_id)
+            prod_monthly_actual = month_series(prod["monthly_sales"])
+            prod_monthly_target = month_series(prod["monthly_target"])
+            prod_total_actual = sum(prod_monthly_actual)
+            prev_prod = prod_monthly_actual[max(len(months) - 2, 0)] if len(months) >= 2 else 0.0
+            cur_prod = prod_monthly_actual[max(len(months) - 1, 0)] if months else 0.0
+            growth = round(((cur_prod - prev_prod) / prev_prod) * 100.0, 1) if prev_prod > 0 else 0.0
+            product_rows.append({
+                "name": str(prod["product_name"] or product_id),
+                "ms": round((prod_total_actual / max(total_actual, 1)) * 100.0, 1) if total_actual > 0 else 0.0,
+                "growth": growth,
+            })
+            total_row = total_prod_analysis.setdefault(product_id, {
+                "achieve": 0.0,
+                "avg": {},
+                "monthly_actual": [0.0] * 12,
+                "monthly_target": [0.0] * 12,
+            })
+            for idx in range(12):
+                total_row["monthly_actual"][idx] += prod_monthly_actual[idx]
+                total_row["monthly_target"][idx] += prod_monthly_target[idx]
+
+        if pi >= 105:
+            coach_scenario = "Lead Driver"
+            coach_action = "실적 상위 흐름이 확인됩니다. 핵심 품목 확대와 신규 병원 전개를 병행하세요."
+        elif pi >= 95:
+            coach_scenario = "Growth Builder"
+            coach_action = "안정 구간입니다. 방문 주기 유지와 상세콜 전환률 개선으로 초과 달성을 노리세요."
+        else:
+            coach_scenario = "Recovery Focus"
+            coach_action = "목표 미달 병원 중심으로 활동 밀도와 차기액션 이행률을 먼저 끌어올리세요."
+
+        member = {
+            "rep_id": rep_id,
+            "성명": str(meta["rep_name"]),
+            "HIR": round(min(100.0, max(0.0, hir)), 1),
+            "RTR": round(min(100.0, max(0.0, rtr)), 1),
+            "BCR": round(min(100.0, max(0.0, bcr)), 1),
+            "PHR": round(min(100.0, max(0.0, phr)), 1),
+            "PI": pi,
+            "FGR": fgr,
+            "처방금액": round(total_actual, 0),
+            "목표금액": round(total_target, 0),
+            "efficiency": efficiency,
+            "sustainability": sustainability,
+            "gini": gini,
+            "coach_scenario": coach_scenario,
+            "coach_action": coach_action,
+            "shap": {
+                "PT": round((impact_sum / impact_count), 2) if impact_count else 0.0,
+                "시연": round((quality_sum / quality_count), 2) if quality_count else 0.0,
+                "클로징": round((total_detail_calls / max(total_visits, 1)), 2),
+                "니즈환기": round((total_visits / max(len(months) * 30, 1)), 2),
+                "대면": round((total_active_days / max(len(months) * 20, 1)), 2),
+                "컨택": round((total_next_actions / max(total_visits, 1)), 2),
+                "접근": round((sentiment_sum / sentiment_count), 2) if sentiment_count else 0.0,
+                "피드백": round((weighted_sum / weighted_count), 2) if weighted_count else 0.0,
+            },
+            "prod_matrix": product_rows[:8] if product_rows else [{"name": "NO_PRODUCT", "ms": 0.0, "growth": 0.0}],
+            "monthly_actual": monthly_actual,
+            "monthly_target": monthly_target,
+        }
+        branches[str(meta["branch_name"])]["members"].append(member)
+
+    all_members = []
+    for branch_name, branch in branches.items():
+        members = branch["members"]
+        members.sort(key=lambda item: item["처방금액"], reverse=True)
+        for idx, member in enumerate(members, start=1):
+            member["지점순위"] = idx
+            all_members.append(member)
+        branch_actual = [sum(member["monthly_actual"][i] for member in members) for i in range(12)]
+        branch_target = [sum(member["monthly_target"][i] for member in members) for i in range(12)]
+        branch["avg"] = {
+            "HIR": round(sum(member["HIR"] for member in members) / len(members), 1) if members else 0.0,
+            "RTR": round(sum(member["RTR"] for member in members) / len(members), 1) if members else 0.0,
+            "BCR": round(sum(member["BCR"] for member in members) / len(members), 1) if members else 0.0,
+            "PHR": round(sum(member["PHR"] for member in members) / len(members), 1) if members else 0.0,
+            "PI": round(sum(member["PI"] for member in members) / len(members), 1) if members else 0.0,
+            "FGR": round(sum(member["FGR"] for member in members) / len(members), 1) if members else 0.0,
+        }
+        branch["achieve"] = round((sum(branch_actual) / sum(branch_target)) * 100.0, 1) if sum(branch_target) > 0 else 0.0
+        branch["monthly_actual"] = branch_actual
+        branch["monthly_target"] = branch_target
+        branch["analysis"] = {"importance": {}, "correlation": {}, "adj_correlation": {}, "ccf": []}
+        branch["prod_analysis"] = {}
+
+    total_monthly_actual = [sum(member["monthly_actual"][i] for member in all_members) for i in range(12)]
+    total_monthly_target = [sum(member["monthly_target"][i] for member in all_members) for i in range(12)]
+    total_avg = {
+        "HIR": round(sum(member["HIR"] for member in all_members) / len(all_members), 1) if all_members else 0.0,
+        "RTR": round(sum(member["RTR"] for member in all_members) / len(all_members), 1) if all_members else 0.0,
+        "BCR": round(sum(member["BCR"] for member in all_members) / len(all_members), 1) if all_members else 0.0,
+        "PHR": round(sum(member["PHR"] for member in all_members) / len(all_members), 1) if all_members else 0.0,
+        "PI": round(sum(member["PI"] for member in all_members) / len(all_members), 1) if all_members else 0.0,
+        "FGR": round(sum(member["FGR"] for member in all_members) / len(all_members), 1) if all_members else 0.0,
+    }
+
+    for product_id, total_row in total_prod_analysis.items():
+        actual_sum = sum(total_row["monthly_actual"])
+        target_sum = sum(total_row["monthly_target"])
+        total_row["achieve"] = round((actual_sum / target_sum) * 100.0, 1) if target_sum > 0 else 0.0
+        total_row["avg"] = total_avg
+        total_row["monthly_actual"] = [round(v, 0) for v in total_row["monthly_actual"]]
+        total_row["monthly_target"] = [round(v, 0) for v in total_row["monthly_target"]]
+
+    missing_data = []
+    if join_quality.orphan_sales_hospitals > 0:
+        missing_data.append({"지점": "OPS", "성명": "UNMAPPED", "품목": "orphan_sales_hospitals"})
+    if join_quality.orphan_crm_hospitals > 0:
+        missing_data.append({"지점": "OPS", "성명": "UNMAPPED", "품목": "orphan_crm_hospitals"})
+
+    integrity_score = round(
+        min(
+            100.0,
+            (join_quality.crm_sales_join_rate * 50.0)
+            + (join_quality.full_join_rate * 40.0)
+            + (10.0 if domain_quality.target_record_count > 0 else 0.0),
+        ),
+        1,
+    )
+
+    return {
+        "branches": dict(branches),
+        "products": sorted(products),
+        "total_prod_analysis": total_prod_analysis,
+        "total": {
+            "achieve": round((sum(total_monthly_actual) / sum(total_monthly_target)) * 100.0, 1) if sum(total_monthly_target) > 0 else 0.0,
+            "avg": total_avg,
+            "monthly_actual": total_monthly_actual,
+            "monthly_target": total_monthly_target,
+            "analysis": {"importance": {}, "correlation": {}, "adj_correlation": {}, "ccf": []},
+        },
+        "total_avg": total_avg,
+        "data_health": {
+            "integrity_score": integrity_score,
+            "mapped_fields": {
+                "병원ID": "hospital_id",
+                "담당자ID": "rep_id",
+                "지점ID": "branch_id",
+                "품목ID": "product_id",
+                "실적금액": "sales_amount",
+                "목표금액": "target_amount",
+                "방문수": "total_visits",
+            },
+            "missing_fields": [],
+        },
+        "missing_data": missing_data,
+    }
 
 
 def _evaluate_handoff_candidates(

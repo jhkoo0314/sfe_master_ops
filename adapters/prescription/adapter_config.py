@@ -219,3 +219,28 @@ class CompanyPrescriptionAdapterConfig(BaseModel):
             transaction_date_col="transaction_date",
             hospital_name_col="hospital_name",
         )
+
+    @classmethod
+    def hangyeol_fact_ship_example(cls) -> "CompanyPrescriptionAdapterConfig":
+        """
+        한결제약 회사 원본형 fact_ship 파일 기준 설정.
+
+        파일:
+          data/raw/company_source/hangyeol_pharma/company/hangyeol_fact_ship_raw.csv
+        """
+        return cls(
+            record_type_value="wholesaler_shipment",
+            wholesaler_name_col="wholesaler_name (도매상명)",
+            wholesaler_region_col="wholesaler_region_key (도매시도)",
+            pharmacy_name_col="pharmacy_name (약국명)",
+            pharmacy_region_col="pharmacy_region_key (약국시도)",
+            pharmacy_sub_region_col="pharmacy_sub_region_key (약국시군구)",
+            pharmacy_postal_col="pharmacy_account_id (약국거래처ID)",
+            product_name_col="brand (브랜드)",
+            ingredient_code_col="sku (SKU)",
+            dosage_form_col="formulation (제형)",
+            quantity_col="qty (수량)",
+            amount_col="amount_ship (출고금액)",
+            unit_col="pack_size (포장단위)",
+            transaction_date_col="ship_date (출고일)",
+        )

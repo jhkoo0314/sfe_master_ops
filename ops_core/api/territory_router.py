@@ -15,7 +15,28 @@ POST /ops/territory/evaluate
 
 from datetime import datetime
 from typing import Optional
-from fastapi import APIRouter, HTTPException
+try:
+    from fastapi import APIRouter, HTTPException
+except ModuleNotFoundError:  # pragma: no cover - 로컬 스크립트 실행 fallback
+    class APIRouter:  # type: ignore[override]
+        def __init__(self, *args, **kwargs):
+            pass
+
+        def post(self, *args, **kwargs):
+            def decorator(func):
+                return func
+            return decorator
+
+        def get(self, *args, **kwargs):
+            def decorator(func):
+                return func
+            return decorator
+
+    class HTTPException(Exception):
+        def __init__(self, status_code: int, detail: str):
+            self.status_code = status_code
+            self.detail = detail
+            super().__init__(detail)
 from pydantic import BaseModel
 
 from result_assets.territory_result_asset import TerritoryResultAsset

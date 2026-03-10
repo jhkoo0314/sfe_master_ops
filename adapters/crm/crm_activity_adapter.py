@@ -13,7 +13,12 @@ CRM Activity Adapter - CRM 활동 파일 → CrmStandardActivity 변환
 
 from datetime import date
 from pathlib import Path
-import polars as pl
+from typing import Any
+try:
+    import polars as pl
+except ModuleNotFoundError:  # pragma: no cover - 환경 의존 fallback
+    pl = None
+import pandas as pd
 
 from modules.crm.schemas import CompanyMasterStandard, CrmStandardActivity
 from adapters.crm.adapter_config import CrmActivityAdapterConfig
@@ -53,9 +58,15 @@ def load_crm_activity_from_file(
 
     try:
         if path.suffix.lower() in (".xlsx", ".xls"):
-            df = pl.read_excel(str(path))
+            if pl is not None:
+                df = pl.read_excel(str(path))
+            else:
+                df = pd.read_excel(str(path))
         else:
-            df = pl.read_csv(str(path), encoding="utf-8-sig")
+            if pl is not None:
+                df = pl.read_csv(str(path), encoding="utf-8-sig")
+            else:
+                df = pd.read_csv(str(path), encoding="utf-8-sig")
     except Exception as e:
         raise AdapterInputError(f"파일 읽기 실패: {path}", detail=str(e))
 
@@ -93,12 +104,12 @@ def load_crm_activity_from_records(
                 row[k] = ",".join(str(x) for x in v)
         str_records.append(row)
 
-    df = pl.DataFrame(str_records)
+    df = pl.DataFrame(str_records) if pl is not None else pd.DataFrame(str_records)
     return _convert_dataframe_to_standard_activity(df, config, company_master)
 
 
 def _convert_dataframe_to_standard_activity(
-    df: pl.DataFrame,
+    df: Any,
     config: CrmActivityAdapterConfig,
     company_master: list[CompanyMasterStandard],
 ) -> tuple[list[CrmStandardActivity], list[dict]]:
@@ -110,30 +121,29 @@ def _convert_dataframe_to_standard_activity(
         "activity_date": config.activity_date_col,
         "activity_type": config.activity_type_col,
     }
-    missing = [
-        f"{field}({col})" for field, col in required_cols.items()
-        if col not in df.columns
-    ]
+    columns = list(df.columns)
+    missing = [f"{field}({col})" for field, col in required_cols.items() if col not in columns]
     if missing:
         raise AdapterInputError(
             "필수 컬럼이 파일에 없습니다.",
-            detail=f"누락 항목: {missing} | 파일 컬럼: {list(df.columns)}"
+            detail=f"누락 항목: {missing} | 파일 컬럼: {columns}"
         )
 
     # 활동 유형 표준화 맵 (Config 우선, 없으면 기본 맵)
     act_type_map = config.activity_type_map or _DEFAULT_ACTIVITY_TYPE_MAP
 
-    # 회사 마스터 인덱스: (rep_id, normalized_hospital_name) → (hospital_id, branch_id)
-    master_index: dict[tuple[str, str], tuple[str, str]] = {}
+    # 회사 마스터 인덱스: (rep_id, normalized_hospital_name) → (hospital_id, branch_id, rep_name, branch_name)
+    master_index: dict[tuple[str, str], tuple[str, str, str, str]] = {}
     for m in company_master:
         key = (m.rep_id, m.hospital_name.replace(" ", "").lower())
-        master_index[key] = (m.hospital_id, m.branch_id)
+        master_index[key] = (m.hospital_id, m.branch_id, m.rep_name, m.branch_name)
 
     result: list[CrmStandardActivity] = []
     unmapped: list[dict] = []
     row_index = 0
 
-    for row in df.iter_rows(named=True):
+    rows = df.iter_rows(named=True) if pl is not None and isinstance(df, pl.DataFrame) else df.to_dict(orient="records")
+    for row in rows:
         row_index += 1
         rep_id = str(row.get(config.rep_id_col, "")).strip()
         raw_hospital_name = str(row.get(config.hospital_name_col, "")).strip()
@@ -151,7 +161,7 @@ def _convert_dataframe_to_standard_activity(
             })
             continue
 
-        hospital_id, branch_id = mapping
+        hospital_id, branch_id, rep_name, branch_name = mapping
 
         # 날짜 파싱 (다양한 포맷 지원)
         try:
@@ -173,7 +183,7 @@ def _convert_dataframe_to_standard_activity(
 
         # 방문 건수
         visit_count = 1
-        if config.visit_count_col and config.visit_count_col in df.columns:
+        if config.visit_count_col and config.visit_count_col in columns:
             try:
                 visit_count = int(row.get(config.visit_count_col) or 1)
             except (ValueError, TypeError):
@@ -181,28 +191,57 @@ def _convert_dataframe_to_standard_activity(
 
         # 디테일 여부
         has_detail = False
-        if config.has_detail_call_col and config.has_detail_call_col in df.columns:
+        if config.has_detail_call_col and config.has_detail_call_col in columns:
             detail_raw = str(row.get(config.has_detail_call_col, "N")).strip().upper()
             has_detail = detail_raw in ("Y", "TRUE", "1", "예", "YES")
 
         # 제품 목록 파싱 (쉼표 구분 문자열 또는 이미 파싱된 형태)
         products: list[str] = []
-        if config.products_mentioned_col and config.products_mentioned_col in df.columns:
+        if config.products_mentioned_col and config.products_mentioned_col in columns:
             products_raw = row.get(config.products_mentioned_col, "")
             if isinstance(products_raw, str) and products_raw.strip():
                 products = [p.strip() for p in products_raw.split(",") if p.strip()]
 
         # 비고
         notes = None
-        if config.notes_col and config.notes_col in df.columns:
+        if config.notes_col and config.notes_col in columns:
             notes_raw = str(row.get(config.notes_col, "") or "").strip()
             notes = notes_raw if notes_raw else None
+
+        trust_level = None
+        if config.trust_level_col and config.trust_level_col in columns:
+            trust_raw = str(row.get(config.trust_level_col, "") or "").strip()
+            trust_level = trust_raw or None
+
+        def _to_float(col_name: str | None) -> float | None:
+            if not col_name or col_name not in columns:
+                return None
+            raw = row.get(col_name)
+            if raw is None or raw == "":
+                return None
+            try:
+                return float(raw)
+            except (TypeError, ValueError):
+                return None
+
+        sentiment_score = _to_float(config.sentiment_score_col)
+        quality_factor = _to_float(config.quality_factor_col)
+        impact_factor = _to_float(config.impact_factor_col)
+        activity_weight = _to_float(config.activity_weight_col)
+        weighted_activity_score = _to_float(config.weighted_activity_score_col)
+
+        next_action_text = None
+        if config.next_action_text_col and config.next_action_text_col in columns:
+            next_action_raw = str(row.get(config.next_action_text_col, "") or "").strip()
+            next_action_text = next_action_raw or None
 
         try:
             activity = CrmStandardActivity(
                 hospital_id=hospital_id,
                 rep_id=rep_id,
                 branch_id=branch_id,
+                rep_name=rep_name,
+                branch_name=branch_name,
                 activity_date=act_date,
                 metric_month=metric_month,
                 activity_type=activity_type,
@@ -210,6 +249,13 @@ def _convert_dataframe_to_standard_activity(
                 products_mentioned=products,
                 has_detail_call=has_detail,
                 notes=notes,
+                trust_level=trust_level,
+                sentiment_score=sentiment_score,
+                quality_factor=quality_factor,
+                impact_factor=impact_factor,
+                activity_weight=activity_weight,
+                weighted_activity_score=weighted_activity_score,
+                next_action_text=next_action_text,
                 raw_row_index=row_index,
             )
             result.append(activity)

@@ -41,6 +41,11 @@ class SalesDomainRecord(BaseModel):
     sales_amount: float             # 매출액 (원)
     sales_quantity: Optional[float] = None  # 수량
     channel: Optional[str] = None   # 채널 구분 (직판/병원/약국 등)
+    hospital_name: Optional[str] = None
+    rep_name: Optional[str] = None
+    branch_id: Optional[str] = None
+    branch_name: Optional[str] = None
+    product_name: Optional[str] = None
     source_label: str = "unknown"   # 어느 파일/회사 데이터인지 (추적용)
 
 
@@ -56,6 +61,11 @@ class TargetDomainRecord(BaseModel):
     product_id: str
     target_amount: float            # 목표액 (원)
     hospital_id: Optional[str] = None  # 병원 단위 목표인 경우
+    hospital_name: Optional[str] = None
+    rep_name: Optional[str] = None
+    branch_id: Optional[str] = None
+    branch_name: Optional[str] = None
+    product_name: Optional[str] = None
     source_label: str = "unknown"
 
 
@@ -69,6 +79,15 @@ class CrmDomainRecord(BaseModel):
     metric_month: str
     total_visits: int
     detail_call_count: int
+    rep_name: Optional[str] = None
+    branch_id: Optional[str] = None
+    branch_name: Optional[str] = None
+    active_day_count: int = 0
+    avg_sentiment_score: Optional[float] = None
+    avg_quality_factor: Optional[float] = None
+    avg_impact_factor: Optional[float] = None
+    avg_weighted_activity_score: Optional[float] = None
+    next_action_count: int = 0
     activity_types: list[str] = Field(default_factory=list)
 
 
@@ -234,6 +253,7 @@ class DashboardPayload(BaseModel):
     top_performers: list[dict] = Field(default_factory=list)
     bottom_performers: list[dict] = Field(default_factory=list)
     insight_messages: list[str] = Field(default_factory=list)
+    template_payload: dict[str, Any] = Field(default_factory=dict)
 
 
 class DomainQualitySummary(BaseModel):
