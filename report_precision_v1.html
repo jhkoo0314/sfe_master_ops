@@ -410,14 +410,61 @@
 
     <!-- CORE LOGIC: SYNCHRONIZED WITH MASTER ENGINE -->
     <script>
-        const db = /*DATA_JSON_PLACEHOLDER*/ {
-            branches: {},
-            total: {}
+        const db = {
+            branches: {
+                "서울1지점": {
+                    members: [
+                        {
+                            "성명": "홍길동", "HIR": 82.5, "RTR": 74.2, "BCR": 78.5, "PHR": 80.1, "PI": 105.4, "FGR": 12.6,
+                            "처방금액": 154000000, "목표금액": 142000000, "지점순위": 1, "efficiency": 380000, "sustainability": 88.5, "gini": 0.28,
+                            "coach_scenario": "The Strategic Builder",
+                            "coach_action": "핵심 거래처 집중도를 안정적으로 유지하면서 신규 기여 품목의 비중을 15% 이상 확대하여 포트폴리오 안전성을 확보하십시오.",
+                            "activity_counts": { "PT": 45, "Demo": 30, "Closing": 12, "Needs": 28, "FaceToFace": 110, "Contact": 85, "Access": 40, "Feedback": 22 },
+                            "prod_matrix": [
+                                { "name": "글리메피리드", "ms": 42.0, "growth": 12.5 },
+                                { "name": "메트포르민", "ms": 28.0, "growth": -3.2 },
+                                { "name": "DPP-4i", "ms": 25.0, "growth": 25.4 },
+                                { "name": "SGLT-2i", "ms": 15.0, "growth": 45.1 }
+                            ],
+                            "monthly_actual": [120, 130, 140, 135, 145, 150, 148, 152, 157, 159, 162, 164].map(x=>x*1000000),
+                            "monthly_target": [125, 132, 138, 139, 148, 147, 140, 143, 146, 150, 153, 155].map(x=>x*1000000)
+                        },
+                        {
+                            "성명": "이순신", "HIR": 65.0, "RTR": 60.5, "BCR": 58.2, "PHR": 62.0, "PI": 88.4, "FGR": -2.1,
+                            "처방금액": 98000000, "목표금액": 115000000, "지점순위": 12, "efficiency": 210000, "sustainability": 55.2, "gini": 0.52,
+                            "coach_scenario": "The Ghost Hunter",
+                            "coach_action": "행동 지표가 실적 대비 급격히 하락하고 있습니다. 가상 처방 의심 거래처를 클렌징하고 실제 대면 활동량을 20% 이상 복구하십시오.",
+                            "activity_counts": { "PT": 15, "Demo": 10, "Closing": 5, "Needs": 12, "FaceToFace": 45, "Contact": 30, "Access": 15, "Feedback": 8 },
+                            "prod_matrix": [ { "name": "글리메피리드", "ms": 15.0, "growth": -5.5 } ],
+                            "monthly_actual": [100, 95, 90, 85, 92, 88, 85, 80, 78, 82, 85, 88].map(x=>x*1000000),
+                            "monthly_target": [110, 110, 110, 110, 110, 110, 110, 110, 110, 110, 110, 110].map(x=>x*1000000)
+                        }
+                    ],
+                    avg: { "HIR": 72.0, "RTR": 67.0, "BCR": 70.0, "PHR": 68.0, "PI": 94.0, "FGR": 5.2 },
+                    monthly_actual: [520, 540, 560, 545, 565, 570, 558, 562, 567, 569, 572, 574].map(x=>x*1000000),
+                    monthly_target: [550, 552, 558, 559, 568, 567, 560, 563, 566, 570, 573, 575].map(x=>x*1000000),
+                    analysis: { 
+                        importance: { 'PT': 0.35, 'Demo': 0.15, 'Closing': 0.25, 'Needs': -0.10, 'FaceToFace': 0.10, 'Contact': -0.25, 'Access': 0.20, 'Feedback': -0.05 },
+                        correlation: { 'PI':{'PI':1,'HIR':0.4,'RTR':0.3}, 'HIR':{'PI':0.4,'HIR':1,'BCR':0.2}, 'RTR':{'PI':0.3,'HIR':0.2,'RTR':1} },
+                        adj_correlation: { 'PI':{'PI':1,'HIR':0.6,'RTR':0.5}, 'HIR':{'PI':0.6,'HIR':1,'BCR':0.4}, 'RTR':{'PI':0.5,'HIR':0.4,'RTR':1} }
+                    }
+                }
+            },
+            total: {
+                achieve: 98.2,
+                avg: { "HIR": 74.0, "RTR": 68.0, "BCR": 72.0, "PHR": 70.0, "PI": 96.0, "FGR": 6.1 },
+                monthly_actual: [2520, 2540, 2560, 2545, 2565, 2570, 2558, 2562, 2567, 2569, 2572, 2574].map(x=>x*1000000),
+                monthly_target: [2550, 2552, 2558, 2559, 2568, 2567, 2560, 2563, 2566, 2570, 2573, 2575].map(x=>x*1000000),
+                analysis: { 
+                    importance: { 'PT': 0.35, 'Demo': 0.15, 'Closing': 0.25, 'Needs': -0.10, 'FaceToFace': 0.10, 'Contact': -0.25, 'Access': 0.20, 'Feedback': -0.05 },
+                    correlation: { 'PI':{'PI':1,'HIR':0.45}, 'HIR':{'PI':0.45,'HIR':1} },
+                    adj_correlation: { 'PI':{'PI':1,'HIR':0.6}, 'HIR':{'PI':0.6,'HIR':1} }
+                }
+            }
         };
 
         let charts = {};
         const bSel = document.getElementById('bSel');
-        const pSel = document.getElementById('pSel');
         const rSel = document.getElementById('rSel');
         const periodMonthly = document.getElementById('periodMonthly');
         const periodQuarterly = document.getElementById('periodQuarterly');
@@ -439,47 +486,10 @@
             return charts[key];
         }
 
-        function clamp(value, min, max) {
-            return Math.max(min, Math.min(max, value));
-        }
-
         function normalizeMonthly(series) {
             const src = (series || []).slice(0, 12);
             while (src.length < 12) src.push(0);
             return src.map(v => Number(v || 0));
-        }
-
-        function getSelectedProduct() {
-            return pSel.value || 'ALL';
-        }
-
-        function getScopedGroupData(branchKey) {
-            const productKey = getSelectedProduct();
-            if (branchKey === 'TOTAL') {
-                if (productKey !== 'ALL' && db.total_prod_analysis && db.total_prod_analysis[productKey]) {
-                    return db.total_prod_analysis[productKey];
-                }
-                return db.total;
-            }
-            const branchData = db.branches[branchKey];
-            if (!branchData) return db.total;
-            if (productKey !== 'ALL' && branchData.prod_analysis && branchData.prod_analysis[productKey]) {
-                return branchData.prod_analysis[productKey];
-            }
-            return branchData;
-        }
-
-        function getScopedMemberData(memberData) {
-            const productKey = getSelectedProduct();
-            if (productKey !== 'ALL' && memberData.prod_analysis && memberData.prod_analysis[productKey]) {
-                return {
-                    ...memberData,
-                    monthly_actual: memberData.prod_analysis[productKey].monthly_actual || memberData.monthly_actual,
-                    monthly_target: memberData.prod_analysis[productKey].monthly_target || memberData.monthly_target,
-                    prod_matrix: (memberData.prod_matrix || []).filter(p => p.name === productKey),
-                };
-            }
-            return memberData;
         }
 
         function buildPeriodSeries(actualSeries, targetSeries) {
@@ -534,7 +544,7 @@
             if(rep === 'NONE') {
                 document.getElementById('groupView').classList.remove('hidden');
                 document.getElementById('indivView').classList.add('hidden');
-                const data = getScopedGroupData(br);
+                const data = (br === 'TOTAL') ? db.total : db.branches[br];
                 const pSeries = buildPeriodSeries(data.monthly_actual, data.monthly_target);
                 renderGroup(data, pSeries, dataIdx);
                 updateMetrics('group', data, pSeries, dataIdx);
@@ -542,7 +552,7 @@
                 document.getElementById('groupView').classList.add('hidden');
                 document.getElementById('indivView').classList.remove('hidden');
                 const brData = db.branches[br];
-                const mData = getScopedMemberData(brData.members.find(x => x.성명 === rep));
+                const mData = brData.members.find(x => x.성명 === rep);
                 const pSeries = buildPeriodSeries(mData.monthly_actual, mData.monthly_target);
                 renderIndividual(mData, brData.avg, pSeries, dataIdx);
                 updateMetrics('individual', { member: mData, branchAvg: brData.avg }, pSeries, dataIdx);
@@ -599,7 +609,7 @@
                 options: { responsive: true, maintainAspectRatio: false, scales: { r: { min: 0, max: 100, ticks: { display: false } } }, plugins: { legend: { display: false }, datalabels: { display: true, align: 'top', font: { weight: 'bold', size: 9 }, formatter: Math.round } } }
             });
 
-            const imp = (data.analysis && data.analysis.importance) ? data.analysis.importance : {};
+            const imp = data.analysis.importance;
             const sorted = Object.entries(imp).sort((a,b)=>a[1]-b[1]);
             const behaviorMap = { 'PT':'제품설명','Demo':'시연','Closing':'클로징','Needs':'니즈파악','FaceToFace':'대면활동','Contact':'연락','Access':'접근성','Feedback':'피드백' };
             safeNewChart('gTornado', 'chart_g_tornado', {
@@ -614,8 +624,8 @@
                 document.getElementById(id).innerHTML = '<tr><th>Metric</th>' + keys.map(k=>`<th>${k}</th>`).join('') + '</tr>' +
                 keys.map(k=>`<tr><td class='font-bold bg-slate-50'>${k}</td>`+keys.map(k2=>`<td>${(c[k][k2]||0).toFixed(2)}</td>`).join('')+'</tr>').join('');
             };
-            fillT('table_old', (data.analysis && data.analysis.correlation) ? data.analysis.correlation : {});
-            fillT('table_new', (data.analysis && data.analysis.adj_correlation) ? data.analysis.adj_correlation : {});
+            fillT('table_old', data.analysis.correlation);
+            fillT('table_new', data.analysis.adj_correlation);
         }
 
         function renderIndividual(m, brAvg, pSeries, idx) {
@@ -646,14 +656,14 @@
             });
 
             const behaviorMap = { 'PT':'제품설명','Demo':'시연','Closing':'클로징','Needs':'니즈파악','FaceToFace':'대면활동','Contact':'연락','Access':'접근성','Feedback':'피드백' };
-            const sorted = Object.entries(m.activity_counts || {}).sort((a,b)=>a[1]-b[1]);
+            const sorted = Object.entries(m.activity_counts).sort((a,b)=>a[1]-b[1]);
             safeNewChart('rTornado', 'chart_r_tornado', {
                 type: 'bar',
                 data: { labels: sorted.map(e=>behaviorMap[e[0]] || e[0]), datasets: [{ data: sorted.map(e=>e[1]), backgroundColor: '#1e293b' }] },
                 options: { indexAxis:'y', responsive: true, maintainAspectRatio: false, plugins:{ legend:{display:false}, datalabels: { display: true, anchor: 'end', align: 'right', font: { weight: 'bold', size: 10 }, formatter: Math.round } } }
             });
 
-            document.getElementById('activity_breakdown').innerHTML = Object.entries(m.activity_counts || {}).map(([k,v])=>`
+            document.getElementById('activity_breakdown').innerHTML = Object.entries(m.activity_counts).map(([k,v])=>`
                 <div class='bg-slate-50 border border-slate-200 p-2'>
                     <p class='text-[9px] font-black text-slate-400 uppercase'>${behaviorMap[k]||k}</p>
                     <p class='text-xs font-black text-slate-900'>${v}</p>
@@ -683,7 +693,6 @@
         }
 
         bSel.innerHTML = '<option value="TOTAL">전체 지점</option>' + Object.keys(db.branches).map(b=>`<option value="${b}">${b}</option>`).join('');
-        pSel.innerHTML = '<option value="ALL">모든 품목</option>' + (db.products || []).map(product => `<option value="${product}">${product}</option>`).join('');
         bSel.onchange = () => {
             const b = bSel.value;
             rSel.innerHTML = '<option value="NONE">담당자 선택</option>';
@@ -691,7 +700,6 @@
             update();
         };
         rSel.onchange = update;
-        pSel.onchange = update;
         monthSel.onchange = update;
         quarterSel.onchange = update;
         const setPeriodBtn = (mode) => {
@@ -713,4 +721,3 @@
     </script>
 </body>
 </html>
-

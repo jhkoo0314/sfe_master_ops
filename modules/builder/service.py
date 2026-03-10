@@ -187,6 +187,86 @@ def build_sandbox_template_input(
     )
 
 
+def _normalize_behavior_key(raw_key: str) -> str:
+    key = str(raw_key or "").strip()
+    mapping = {
+        "PT": "PT",
+        "제품설명": "PT",
+        "Demo": "Demo",
+        "시연": "Demo",
+        "Closing": "Closing",
+        "클로징": "Closing",
+        "Needs": "Needs",
+        "니즈환기": "Needs",
+        "FaceToFace": "FaceToFace",
+        "대면": "FaceToFace",
+        "방문": "FaceToFace",
+        "Contact": "Contact",
+        "컨택": "Contact",
+        "전화": "Contact",
+        "Access": "Access",
+        "접근": "Access",
+        "Feedback": "Feedback",
+        "피드백": "Feedback",
+    }
+    return mapping.get(key, key)
+
+
+def _empty_behavior_map() -> dict[str, float]:
+    return {
+        "PT": 0.0,
+        "Demo": 0.0,
+        "Closing": 0.0,
+        "Needs": 0.0,
+        "FaceToFace": 0.0,
+        "Contact": 0.0,
+        "Access": 0.0,
+        "Feedback": 0.0,
+    }
+
+
+def _calc_pearson(values_x: list[float], values_y: list[float]) -> float:
+    if len(values_x) != len(values_y) or len(values_x) < 2:
+        return 0.0
+    mean_x = sum(values_x) / len(values_x)
+    mean_y = sum(values_y) / len(values_y)
+    num = sum((x - mean_x) * (y - mean_y) for x, y in zip(values_x, values_y))
+    den_x = sum((x - mean_x) ** 2 for x in values_x) ** 0.5
+    den_y = sum((y - mean_y) ** 2 for y in values_y) ** 0.5
+    if den_x == 0 or den_y == 0:
+        return 0.0
+    return round(max(-1.0, min(1.0, num / (den_x * den_y))), 2)
+
+
+def _build_corr_matrix(rows: list[dict], metrics: list[str]) -> dict[str, dict[str, float]]:
+    matrix: dict[str, dict[str, float]] = {}
+    for left in metrics:
+        matrix[left] = {}
+        left_values = [float(row.get(left, 0.0) or 0.0) for row in rows]
+        for right in metrics:
+            if left == right:
+                matrix[left][right] = 1.0
+                continue
+            right_values = [float(row.get(right, 0.0) or 0.0) for row in rows]
+            matrix[left][right] = _calc_pearson(left_values, right_values)
+    return matrix
+
+
+def _amplify_matrix(
+    matrix: dict[str, dict[str, float]],
+    factor: float = 1.18,
+) -> dict[str, dict[str, float]]:
+    tuned: dict[str, dict[str, float]] = {}
+    for left, row in matrix.items():
+        tuned[left] = {}
+        for right, value in row.items():
+            if left == right:
+                tuned[left][right] = 1.0
+            else:
+                tuned[left][right] = round(max(-1.0, min(1.0, value * factor)), 2)
+    return tuned
+
+
 def build_territory_template_input(
     asset: TerritoryResultAsset,
     template_path: str,

@@ -117,12 +117,23 @@ def _convert_dataframe_to_standard_activity(
     # 필수 컬럼 확인
     required_cols = {
         "rep_id": config.rep_id_col,
-        "hospital_name": config.hospital_name_col,
         "activity_date": config.activity_date_col,
         "activity_type": config.activity_type_col,
     }
     columns = list(df.columns)
     missing = [f"{field}({col})" for field, col in required_cols.items() if col not in columns]
+    resolved_hospital_id_col = config.hospital_id_col
+    if not resolved_hospital_id_col and "hospital_id" in columns:
+        resolved_hospital_id_col = "hospital_id"
+
+    has_hospital_name = config.hospital_name_col in columns
+    has_hospital_id = bool(resolved_hospital_id_col and resolved_hospital_id_col in columns)
+    if not has_hospital_name and not has_hospital_id:
+        missing.append(
+            f"hospital_name_or_id({config.hospital_name_col}"
+                + (f" | {resolved_hospital_id_col}" if resolved_hospital_id_col else "")
+                + ")"
+            )
     if missing:
         raise AdapterInputError(
             "필수 컬럼이 파일에 없습니다.",
@@ -133,10 +144,14 @@ def _convert_dataframe_to_standard_activity(
     act_type_map = config.activity_type_map or _DEFAULT_ACTIVITY_TYPE_MAP
 
     # 회사 마스터 인덱스: (rep_id, normalized_hospital_name) → (hospital_id, branch_id, rep_name, branch_name)
-    master_index: dict[tuple[str, str], tuple[str, str, str, str]] = {}
+    master_name_index: dict[tuple[str, str], tuple[str, str, str, str]] = {}
+    master_id_index: dict[tuple[str, str], tuple[str, str, str, str]] = {}
     for m in company_master:
-        key = (m.rep_id, m.hospital_name.replace(" ", "").lower())
-        master_index[key] = (m.hospital_id, m.branch_id, m.rep_name, m.branch_name)
+        name_key = (m.rep_id, m.hospital_name.replace(" ", "").lower())
+        id_key = (m.rep_id, m.hospital_id)
+        mapped = (m.hospital_id, m.branch_id, m.rep_name, m.branch_name)
+        master_name_index[name_key] = mapped
+        master_id_index[id_key] = mapped
 
     result: list[CrmStandardActivity] = []
     unmapped: list[dict] = []
@@ -146,18 +161,23 @@ def _convert_dataframe_to_standard_activity(
     for row in rows:
         row_index += 1
         rep_id = str(row.get(config.rep_id_col, "")).strip()
-        raw_hospital_name = str(row.get(config.hospital_name_col, "")).strip()
+        raw_hospital_name = str(row.get(config.hospital_name_col, "")).strip() if has_hospital_name else ""
+        raw_hospital_id = str(row.get(resolved_hospital_id_col, "")).strip() if has_hospital_id and resolved_hospital_id_col else ""
         normalized_hospital = raw_hospital_name.replace(" ", "").lower()
 
-        # 담당자-병원 매핑
-        lookup_key = (rep_id, normalized_hospital)
-        mapping = master_index.get(lookup_key)
+        # 담당자-병원 매핑: hospital_id가 있으면 직접 연결을 우선, 없으면 병원명으로 역매핑
+        mapping = None
+        if raw_hospital_id:
+            mapping = master_id_index.get((rep_id, raw_hospital_id))
+        if mapping is None and normalized_hospital:
+            mapping = master_name_index.get((rep_id, normalized_hospital))
         if not mapping:
             unmapped.append({
                 "row_index": row_index,
                 "rep_id": rep_id,
                 "hospital_name": raw_hospital_name,
-                "reason": "company_master에 (rep_id, 병원명) 조합 없음",
+                "hospital_id": raw_hospital_id,
+                "reason": "company_master에 (rep_id, 병원명/병원ID) 조합 없음",
             })
             continue
 

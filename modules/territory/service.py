@@ -140,7 +140,8 @@ def build_territory_result_asset(
         if h not in hosp_agg:
             hosp_agg[h] = {
                 "hospital_id": h,
-                "rep_id": (hospital_rep_map or {}).get(h),
+                # 병원별 담당자 맵이 있으면 우선 사용하고, 없으면 Sandbox 분석 레코드의 rep_id를 그대로 쓴다.
+                "rep_id": (hospital_rep_map or {}).get(h) or rec.rep_id,
                 "total_sales": 0.0,
                 "total_target": 0.0,
                 "total_visits": 0,
@@ -261,8 +262,12 @@ def build_territory_result_asset(
         region_buckets[m.region_key].append(m)
 
     region_zones: list[RegionZone] = []
-    all_sales = [m.total_sales for m in markers if m.total_sales > 0]
-    max_sales = max(all_sales) if all_sales else 1.0
+    region_sales_totals = [
+        sum(marker.total_sales for marker in r_markers)
+        for r_markers in region_buckets.values()
+        if sum(marker.total_sales for marker in r_markers) > 0
+    ]
+    max_region_sales = max(region_sales_totals) if region_sales_totals else 1.0
 
     for region_key, r_markers in region_buckets.items():
         total_s = sum(m.total_sales for m in r_markers)
@@ -279,7 +284,7 @@ def build_territory_result_asset(
             avg_attainment=round(sum(atts)/len(atts), 4) if atts else None,
             total_visits=sum(m.total_visits for m in r_markers),
             rep_count=len(reps),
-            heat_intensity=round(total_s / max_sales, 4),
+            heat_intensity=round(total_s / max_region_sales, 4),
         ))
 
     # ── 4. 커버리지 요약 ──────────────────────────────────

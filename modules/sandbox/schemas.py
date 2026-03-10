@@ -198,6 +198,7 @@ class HospitalAnalysisRecord(BaseModel):
     """병원 단위 통합 분석 레코드 (Sandbox 핵심 산출물)."""
     hospital_id: str
     metric_month: str
+    rep_id: Optional[str] = None
 
     # CRM 지표
     total_visits: int = 0

@@ -10,7 +10,8 @@ Territory 통합 테스트
 """
 
 import pytest
-from modules.territory.schemas import HospitalAnalysisRecord, SIDO_CENTROIDS
+from modules.sandbox.schemas import HospitalAnalysisRecord
+from modules.territory.schemas import SIDO_CENTROIDS
 from modules.territory.templates import TerritoryMapContract
 from modules.territory.service import build_territory_result_asset
 from ops_core.api.territory_router import evaluate_territory_asset

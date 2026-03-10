@@ -248,6 +248,7 @@ class CrmActivityAdapterConfig(BaseModel):
     # 핵심 키 컬럼 (필수)
     rep_id_col: str           # 활동 담당자 ID 컬럼명
     hospital_name_col: str    # 방문 병원명 컬럼명 (company_master와 연결)
+    hospital_id_col: Optional[str] = None  # 병원 ID 컬럼명 (있으면 직접 매핑 우선)
     activity_date_col: str    # 활동 일자 컬럼명
 
     # 활동 상세 (필수)
@@ -329,6 +330,7 @@ class CrmActivityAdapterConfig(BaseModel):
         return cls(
             rep_id_col="rep_id",
             hospital_name_col="hospital_name",
+            hospital_id_col="hospital_id",
             activity_date_col="activity_date",
             activity_type_col="activity_type",
             visit_count_col="visit_count",
@@ -349,6 +351,7 @@ class CrmActivityAdapterConfig(BaseModel):
             rep_id_col="영업사원코드",
             hospital_name_col="방문기관",
             activity_date_col="실행일",
+            hospital_id_col="거래처코드",
             activity_type_col="액션유형",
             visit_count_col="방문횟수",
             has_detail_call_col="상세콜여부",
