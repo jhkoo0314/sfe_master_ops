@@ -68,6 +68,7 @@
 - Prescription
   - `prescription_result_asset.json`
   - `prescription_builder_payload.json`
+  - `prescription_builder_payload_assets/*.js`
   - `prescription_flow_preview.html`
 - Territory
   - `territory_result_asset.json`

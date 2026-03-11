@@ -11,6 +11,7 @@ from pathlib import Path
 import shutil
 
 from common.asset_versions import build_source_version_snapshot, extract_source_version_snapshot
+from modules.prescription.builder_payload import build_chunked_prescription_payload
 from modules.territory.builder_payload import build_chunked_territory_payload
 from modules.builder.schemas import (
     BuilderInputReference,
@@ -291,10 +292,11 @@ def _summarize_payload(builder_payload: BuilderPayloadStandard) -> dict:
             "default_rep": default_selection.get("rep_id"),
         }
     if builder_payload.template_key == "prescription_flow":
+        detail_counts = payload.get("detail_asset_counts", {})
         return {
-            "claim_count": len(payload.get("claims", [])),
-            "gap_count": len(payload.get("gaps", [])),
-            "hospital_trace_count": len(payload.get("hospital_traces", [])),
+            "claim_count": int(detail_counts.get("claims", len(payload.get("claims", []))) or 0),
+            "gap_count": int(detail_counts.get("gaps", len(payload.get("gaps", []))) or 0),
+            "hospital_trace_count": int(detail_counts.get("hospital_traces", len(payload.get("hospital_traces", []))) or 0),
         }
     if builder_payload.template_key == "crm_analysis":
         default_scope = payload.get("scope_data", {}).get("ALL|ALL", {})
@@ -351,6 +353,48 @@ def prepare_territory_chunk_assets(
                 f"window.__TERRITORY_REP_DATA__[{json.dumps(cache_key, ensure_ascii=False)}] = "
                 f"{json.dumps(chunk_payload, ensure_ascii=False)};\n"
             )
+        (target_asset_dir / chunk_name).write_text(chunk_script, encoding="utf-8")
+
+    manifest["asset_base"] = target_asset_dir.name
+    builder_payload.payload = manifest
+
+
+def prepare_prescription_chunk_assets(
+    builder_payload: BuilderPayloadStandard,
+    payload_source_path: str,
+    output_root: str,
+) -> None:
+    if builder_payload.template_key != "prescription_flow":
+        return
+
+    target_asset_dir = Path(output_root) / f"{Path(builder_payload.output_name).stem}_assets"
+    target_asset_dir.mkdir(parents=True, exist_ok=True)
+
+    for existing in target_asset_dir.glob("*.js"):
+        existing.unlink()
+
+    payload = builder_payload.payload
+    if str(payload.get("data_mode") or "").startswith("chunked_"):
+        source_path = Path(payload_source_path)
+        source_asset_dir = source_path.with_name(f"{source_path.stem}_assets")
+        if not source_asset_dir.exists():
+            payload["asset_base"] = target_asset_dir.name
+            return
+        for chunk_file in source_asset_dir.glob("*.js"):
+            shutil.copy2(chunk_file, target_asset_dir / chunk_file.name)
+        payload["asset_base"] = target_asset_dir.name
+        return
+
+    manifest, asset_chunks = build_chunked_prescription_payload(payload)
+    for chunk_name, chunk_payload in asset_chunks.items():
+        bucket_json = json.dumps(str(chunk_payload.get("bucket") or ""), ensure_ascii=False)
+        cache_key_json = json.dumps(str(chunk_payload.get("cache_key") or "ALL"), ensure_ascii=False)
+        chunk_script = (
+            "window.__PRESCRIPTION_DETAIL_DATA__ = window.__PRESCRIPTION_DETAIL_DATA__ || {};\n"
+            f"window.__PRESCRIPTION_DETAIL_DATA__[{bucket_json}] = window.__PRESCRIPTION_DETAIL_DATA__[{bucket_json}] || {{}};\n"
+            f"window.__PRESCRIPTION_DETAIL_DATA__[{bucket_json}][{cache_key_json}] = "
+            f"{json.dumps(chunk_payload.get('rows', []), ensure_ascii=False)};\n"
+        )
         (target_asset_dir / chunk_name).write_text(chunk_script, encoding="utf-8")
 
     manifest["asset_base"] = target_asset_dir.name

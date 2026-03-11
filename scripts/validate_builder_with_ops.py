@@ -13,6 +13,7 @@ from modules.builder.service import (
     build_crm_template_input,
     build_html_builder_asset,
     build_prescription_template_input,
+    prepare_prescription_chunk_assets,
     prepare_territory_chunk_assets,
     build_sandbox_template_input,
     build_template_payload,
@@ -200,6 +201,12 @@ def main() -> None:
             source_asset_path=str(PRESCRIPTION_ASSET_PATH),
         )
         prescription_payload = build_template_payload(prescription_input)
+        prepare_prescription_chunk_assets(
+            prescription_payload,
+            payload_source_path=str(PRESCRIPTION_BUILDER_PAYLOAD_PATH),
+            output_root=str(OUTPUT_ROOT),
+        )
+        prescription_input.payload_seed = prescription_payload.payload
         prescription_html = render_builder_html(prescription_payload)
         prescription_result_asset = build_html_builder_asset(prescription_input, prescription_html)
         summary["prescription_flow"] = write_builder_output(

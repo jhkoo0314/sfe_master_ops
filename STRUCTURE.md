@@ -176,9 +176,11 @@ OPS 판단과 파이프라인 실행을 담당합니다.
 현재 중요한 점:
 - CRM 검증 스크립트가 `crm_builder_payload.json` 생성
 - Prescription 검증 스크립트가 `prescription_builder_payload.json` 생성
+- Prescription 검증 스크립트는 필요 시 `prescription_builder_payload_assets/*.js`도 같이 생성
 - Territory 정규화 스크립트가 `ops_territory_activity.xlsx` 생성
 - Territory 검증 스크립트가 `territory_builder_payload.json`과 `territory_builder_payload_assets/*.js` 생성
 - Builder 검증 스크립트는 이 payload를 읽어 HTML 생성
+- Prescription Builder 결과에도 `prescription_flow_preview_assets/*.js`가 같이 복사될 수 있음
 - Territory Builder 결과에는 `territory_map_preview_assets/*.js`가 같이 복사됨
 - 코드상으로는 CRM / Sandbox / Territory / Prescription / Total Valid 5종 생성 가능
 - 실제 저장된 HTML은 회사별 마지막 실행 시점에 따라 일부만 있을 수 있음

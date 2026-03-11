@@ -13,7 +13,7 @@ TERRITORY_RESULT_SCHEMA_VERSION = "territory_result_asset_v1"
 HTML_BUILDER_RESULT_SCHEMA_VERSION = "html_builder_result_asset_v1"
 
 CRM_BUILDER_PAYLOAD_VERSION = "crm_builder_payload_v1"
-PRESCRIPTION_BUILDER_PAYLOAD_VERSION = "prescription_builder_payload_v1"
+PRESCRIPTION_BUILDER_PAYLOAD_VERSION = "prescription_builder_payload_chunked_v1"
 TERRITORY_BUILDER_PAYLOAD_VERSION = "territory_builder_payload_v1"
 
 BUILDER_INPUT_SCHEMA_VERSION = "builder_input_standard_v1"

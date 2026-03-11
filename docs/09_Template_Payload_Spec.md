@@ -386,6 +386,57 @@ payload 필수 키:
 
 ---
 
+## 3.3 `prescription_flow_template.html`
+
+대상 파일:
+
+- `templates/prescription_flow_template.html`
+
+현재 `render_mode`:
+
+- `prescription_window_vars`
+
+주입 방식:
+
+- `window.__PRESCRIPTION_DATA__`
+
+미리보기 seed에 남기는 핵심 키:
+
+- `overview`
+- `pipeline_steps`
+- `flow_summary`
+- `flow_series`
+- `flow_series_by_territory`
+- `diagnostics`
+- `filters`
+- `console_rows`
+- `trace_logs`
+- `download_files`
+
+무거운 상세표 규칙:
+
+- `claims`
+- `gaps`
+- `hospital_traces`
+- `rep_kpis`
+
+2026-03-11 기준 Prescription는 `chunked_prescription_detail_assets_v1` 모드에서 위 4개를 바깥 asset으로 분리할 수 있다.
+
+이때 추가되는 키:
+
+- `data_mode`
+- `asset_base`
+- `detail_asset_manifest`
+- `detail_asset_counts`
+
+쉽게 말하면:
+
+- Prescription HTML은 먼저 summary 중심으로 열린다.
+- 큰 상세표는 버튼을 눌렀을 때 quarter 기준 asset을 나중에 읽는다.
+- 전체 원본 확인은 계속 엑셀 다운로드가 기본이다.
+
+---
+
 ## 4. 새 회사 / 새 템플릿 추가 방법
 
 새 회사가 들어와도 OPS 원칙은 그대로다.

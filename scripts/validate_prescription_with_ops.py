@@ -19,7 +19,7 @@ from common.company_profile import get_company_ops_profile
 from common.company_runtime import get_active_company_key, get_active_company_name, get_company_root
 from modules.prescription.schemas import CompanyPrescriptionStandard
 from modules.prescription.flow_builder import build_hospital_region_index, build_prescription_standard_flow
-from modules.prescription.builder_payload import build_prescription_builder_payload
+from modules.prescription.builder_payload import build_chunked_prescription_payload, build_prescription_builder_payload
 from modules.prescription.service import build_prescription_result_asset
 from ops_core.api.prescription_router import evaluate_prescription_asset
 
@@ -533,6 +533,8 @@ def build_claim_validation_frame(flow_report_df: pd.DataFrame) -> pd.DataFrame:
 
 def main() -> None:
     OUTPUT_ROOT.mkdir(parents=True, exist_ok=True)
+    chunk_root = OUTPUT_ROOT / "prescription_builder_payload_assets"
+    chunk_root.mkdir(parents=True, exist_ok=True)
 
     hospitals = load_hospital_master_from_file(
         ACCOUNT_MASTER_PATH,
@@ -612,6 +614,7 @@ def main() -> None:
         rep_kpi_df=quarter_kpi_df,
         download_files=summary["output_files"],
     )
+    builder_payload, asset_chunks = build_chunked_prescription_payload(builder_payload)
     builder_payload = attach_builder_payload_version(
         builder_payload,
         payload_version=PRESCRIPTION_BUILDER_PAYLOAD_VERSION,
@@ -621,6 +624,18 @@ def main() -> None:
         json.dumps(summary, ensure_ascii=False, indent=2),
         encoding="utf-8",
     )
+    for existing in chunk_root.glob("*.js"):
+        existing.unlink()
+    for chunk_name, chunk_payload in asset_chunks.items():
+        bucket_json = json.dumps(str(chunk_payload.get("bucket") or ""), ensure_ascii=False)
+        cache_key_json = json.dumps(str(chunk_payload.get("cache_key") or "ALL"), ensure_ascii=False)
+        chunk_script = (
+            "window.__PRESCRIPTION_DETAIL_DATA__ = window.__PRESCRIPTION_DETAIL_DATA__ || {};\n"
+            f"window.__PRESCRIPTION_DETAIL_DATA__[{bucket_json}] = window.__PRESCRIPTION_DETAIL_DATA__[{bucket_json}] || {{}};\n"
+            f"window.__PRESCRIPTION_DETAIL_DATA__[{bucket_json}][{cache_key_json}] = "
+            f"{json.dumps(chunk_payload.get('rows', []), ensure_ascii=False)};\n"
+        )
+        (chunk_root / chunk_name).write_text(chunk_script, encoding="utf-8")
     (OUTPUT_ROOT / "prescription_builder_payload.json").write_text(
         json.dumps(builder_payload, ensure_ascii=False, indent=2),
         encoding="utf-8",

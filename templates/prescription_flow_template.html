@@ -232,6 +232,31 @@ td {
     </div>
   </div>
 
+  <section class="glass-panel mt-6 p-5">
+    <div class="flex justify-between items-center gap-4 flex-wrap">
+      <div>
+        <h3 class="text-sm font-bold text-white uppercase tracking-tight flex items-center gap-2">
+          <i class="fas fa-box-open text-blue-500"></i> On-demand Detail Loader
+        </h3>
+        <p class="text-[10px] text-slate-500 mt-1">무거운 비교표와 추적 상세는 버튼을 눌렀을 때만 읽습니다.</p>
+      </div>
+      <span id="detailStatus" class="text-[10px] font-mono text-slate-500">요약만 먼저 로드됨</span>
+    </div>
+    <div class="flex gap-2 flex-wrap mt-4">
+      <select id="detailDatasetSel" class="bg-slate-900 border border-slate-700 text-[11px] font-bold px-3 py-1.5 focus:border-blue-500 outline-none"></select>
+      <button id="detailLoadBtn" type="button" class="text-[11px] font-bold bg-blue-600 hover:bg-blue-500 text-white px-4 py-1.5 border border-blue-500 disabled:opacity-40 disabled:cursor-default">
+        선택 상세 불러오기
+      </button>
+    </div>
+    <p id="detailSummary" class="text-[10px] text-slate-500 mt-3"></p>
+    <div class="overflow-x-auto mt-4">
+      <table>
+        <thead id="detailTableHead"></thead>
+        <tbody id="detailTableBody"></tbody>
+      </table>
+    </div>
+  </section>
+
   <footer class="mt-12 pt-6 border-t border-slate-900 flex justify-between items-center text-[10px] font-mono text-slate-600 gap-3 flex-wrap">
     <p>© 2026 SFE STRATEGIC INTEL ENGINE. RX-CONSOLE_v1</p>
     <div class="flex gap-4 flex-wrap">
@@ -242,8 +267,10 @@ td {
 
   <script>
     window.__PRESCRIPTION_DATA__ = {};
+    window.__PRESCRIPTION_DETAIL_DATA__ = window.__PRESCRIPTION_DETAIL_DATA__ || {};
 
     const data = window.__PRESCRIPTION_DATA__ || {};
+    const detailData = window.__PRESCRIPTION_DETAIL_DATA__ || {};
     const quarterSel = document.getElementById('quarterSel');
     const territorySel = document.getElementById('territorySel');
     const repTableBody = document.getElementById('repTableBody');
@@ -265,10 +292,48 @@ td {
     const highSeverityValue = document.getElementById('highSeverityValue');
     const warningValue = document.getElementById('warningValue');
     const logicNote = document.getElementById('logicNote');
+    const detailDatasetSel = document.getElementById('detailDatasetSel');
+    const detailLoadBtn = document.getElementById('detailLoadBtn');
+    const detailStatus = document.getElementById('detailStatus');
+    const detailSummary = document.getElementById('detailSummary');
+    const detailTableHead = document.getElementById('detailTableHead');
+    const detailTableBody = document.getElementById('detailTableBody');
 
     let flowChart;
     let repPage = 1;
     const repPageSize = 20;
+    const detailLoadPromises = {};
+    const detailBucketLabels = {
+      claims: 'Claim Validation',
+      hospital_traces: 'Hospital Trace',
+      rep_kpis: 'Rep KPI',
+      gaps: 'Gap Records',
+    };
+    const detailBucketColumns = {
+      claims: ['year_quarter', 'rep_name', 'hospital_name', 'product_name', 'claimed_amount', 'tracked_amount', 'verdict'],
+      hospital_traces: ['year_quarter', 'rep_name', 'hospital_name', 'product_name', 'total_amount', 'flow_count'],
+      rep_kpis: ['year_quarter', 'rep_name', 'territory', 'brand', 'pre_share_amount', 'post_share_amount', 'status'],
+      gaps: ['year_quarter', 'pharmacy_name', 'product_name', 'quantity', 'gap_reason'],
+    };
+    const detailColumnLabels = {
+      year_quarter: 'Quarter',
+      rep_name: 'Rep',
+      hospital_name: 'Hospital',
+      product_name: 'Brand',
+      claimed_amount: '주장금액',
+      tracked_amount: '추적금액',
+      verdict: '판정',
+      total_amount: '금액',
+      flow_count: 'Flow',
+      territory: 'Territory',
+      brand: 'Brand',
+      pre_share_amount: 'Pre-Share',
+      post_share_amount: 'Post-Share',
+      status: 'Status',
+      pharmacy_name: 'Pharmacy',
+      quantity: '수량',
+      gap_reason: 'Gap Reason',
+    };
 
     function escapeHtml(value) {
       return String(value ?? '')
@@ -291,6 +356,13 @@ td {
       return `${(Number(value || 0) * 100).toFixed(1)}%`;
     }
 
+    function fmtDetailValue(column, value) {
+      const moneyColumns = ['claimed_amount', 'tracked_amount', 'total_amount', 'pre_share_amount', 'post_share_amount'];
+      if (moneyColumns.includes(column)) return fmtMoney(value);
+      if (column === 'quantity') return Number(value || 0).toLocaleString('ko-KR');
+      return escapeHtml(value);
+    }
+
     function getStatusStyle(status) {
       if (status === 'PASS') return 'bg-emerald-900/40 text-emerald-400';
       if (status === 'WARNING') return 'bg-amber-900/40 text-amber-400';
@@ -302,6 +374,23 @@ td {
       if (status === 'pass') return ['bg-emerald-500', 'text-emerald-500', 'SYSTEM_VALIDATED'];
       if (status === 'warn') return ['bg-amber-500', 'text-amber-500', 'SYSTEM_REVIEW_REQUIRED'];
       return ['bg-rose-500', 'text-rose-500', 'SYSTEM_CHECK_REQUIRED'];
+    }
+
+    function loadScriptAsset(src, errorMessage) {
+      return new Promise((resolve, reject) => {
+        const script = document.createElement('script');
+        script.src = src;
+        script.async = true;
+        script.onload = () => {
+          script.remove();
+          resolve();
+        };
+        script.onerror = () => {
+          script.remove();
+          reject(new Error(errorMessage));
+        };
+        document.head.appendChild(script);
+      });
     }
 
     function currentFilters() {
@@ -508,6 +597,134 @@ td {
       `).join('');
     }
 
+    function getDetailBucketLabel(bucket) {
+      return detailBucketLabels[bucket] || bucket || 'Detail';
+    }
+
+    function getDetailManifest(bucket) {
+      return (data.detail_asset_manifest || {})[bucket] || {};
+    }
+
+    function resolveDetailKey(bucket) {
+      const manifest = getDetailManifest(bucket);
+      const selectedQuarter = quarterSel.value || '';
+      if (selectedQuarter && manifest[selectedQuarter]) return selectedQuarter;
+      if (manifest.ALL) return 'ALL';
+      const defaultQuarter = (data.filters || {}).default_quarter || '';
+      if (defaultQuarter && manifest[defaultQuarter]) return defaultQuarter;
+      return Object.keys(manifest)[0] || '';
+    }
+
+    function updateDetailSummary() {
+      const bucket = detailDatasetSel.value || '';
+      if (!bucket) {
+        detailSummary.textContent = '추가 상세 자산이 없습니다.';
+        return;
+      }
+      const count = Number((data.detail_asset_counts || {})[bucket] || 0);
+      const key = resolveDetailKey(bucket);
+      const scopeLabel = key && key !== 'ALL' ? `${key} 기준` : '전체 기준';
+      detailSummary.textContent = `${getDetailBucketLabel(bucket)} ${count.toLocaleString('ko-KR')}건이 준비돼 있습니다. ${scopeLabel} 상세는 버튼을 눌렀을 때만 읽습니다.`;
+    }
+
+    function ensureDetailRows(bucket, cacheKey) {
+      if (!bucket || !cacheKey) return Promise.resolve([]);
+      detailData[bucket] = detailData[bucket] || {};
+      if (detailData[bucket][cacheKey]) {
+        return Promise.resolve(detailData[bucket][cacheKey]);
+      }
+
+      const manifest = getDetailManifest(bucket);
+      const fileName = manifest[cacheKey];
+      if (!fileName) {
+        return Promise.resolve([]);
+      }
+
+      const promiseKey = `${bucket}|${cacheKey}`;
+      if (detailLoadPromises[promiseKey]) {
+        return detailLoadPromises[promiseKey];
+      }
+
+      const assetBase = data.asset_base || '';
+      const assetPath = assetBase ? `${assetBase}/${fileName}` : fileName;
+      detailStatus.textContent = `${getDetailBucketLabel(bucket)} 불러오는 중`;
+
+      detailLoadPromises[promiseKey] = loadScriptAsset(assetPath, `${getDetailBucketLabel(bucket)} 자산을 불러오지 못했습니다.`)
+        .then(() => ((detailData[bucket] || {})[cacheKey] || []))
+        .finally(() => {
+          delete detailLoadPromises[promiseKey];
+        });
+
+      return detailLoadPromises[promiseKey];
+    }
+
+    function renderDetailTable(bucket, rows, cacheKey) {
+      const columns = detailBucketColumns[bucket] || [];
+      const pageRows = rows.slice(0, 20);
+      detailTableHead.innerHTML = `
+        <tr>
+          ${columns.map((column) => `<th>${escapeHtml(detailColumnLabels[column] || column)}</th>`).join('')}
+        </tr>
+      `;
+
+      if (!rows.length) {
+        detailTableBody.innerHTML = `
+          <tr class="data-row">
+            <td colspan="${Math.max(columns.length, 1)}" class="text-slate-500">불러온 상세 행이 없습니다.</td>
+          </tr>
+        `;
+        detailStatus.textContent = `${getDetailBucketLabel(bucket)} 데이터 없음`;
+        return;
+      }
+
+      detailTableBody.innerHTML = pageRows.map((row) => `
+        <tr class="data-row">
+          ${columns.map((column) => `<td>${fmtDetailValue(column, row[column])}</td>`).join('')}
+        </tr>
+      `).join('');
+
+      const scopeLabel = cacheKey && cacheKey !== 'ALL' ? cacheKey : '전체';
+      detailStatus.textContent = `${getDetailBucketLabel(bucket)} ${pageRows.length}건 표시 중`;
+      detailSummary.textContent = `${getDetailBucketLabel(bucket)} ${rows.length.toLocaleString('ko-KR')}건 중 ${pageRows.length.toLocaleString('ko-KR')}건을 표시합니다. 기준 범위: ${scopeLabel}`;
+    }
+
+    function initDetailControls() {
+      const detailCounts = data.detail_asset_counts || {};
+      const buckets = ['claims', 'hospital_traces', 'rep_kpis', 'gaps']
+        .filter((bucket) => Number(detailCounts[bucket] || 0) > 0);
+
+      if (!buckets.length) {
+        detailDatasetSel.disabled = true;
+        detailLoadBtn.disabled = true;
+        detailStatus.textContent = '추가 상세 없음';
+        detailSummary.textContent = '이 화면은 요약 중심 미리보기만 제공합니다.';
+        return;
+      }
+
+      detailDatasetSel.innerHTML = buckets.map((bucket) => `
+        <option value="${escapeHtml(bucket)}">${escapeHtml(getDetailBucketLabel(bucket))} (${Number(detailCounts[bucket] || 0).toLocaleString('ko-KR')}건)</option>
+      `).join('');
+      detailStatus.textContent = '요약만 먼저 로드됨';
+      updateDetailSummary();
+
+      detailDatasetSel.addEventListener('change', updateDetailSummary);
+      detailLoadBtn.addEventListener('click', async () => {
+        const bucket = detailDatasetSel.value || '';
+        const cacheKey = resolveDetailKey(bucket);
+        if (!bucket || !cacheKey) {
+          detailStatus.textContent = '불러올 상세 자산이 없습니다.';
+          return;
+        }
+        try {
+          const rows = await ensureDetailRows(bucket, cacheKey);
+          renderDetailTable(bucket, rows, cacheKey);
+        } catch (error) {
+          detailStatus.textContent = '상세 로드 실패';
+          detailSummary.textContent = error.message || '상세 자산을 읽지 못했습니다.';
+        }
+      });
+    }
+
     function initFilters() {
       const filterConfig = data.filters || {};
       const quarters = filterConfig.quarters || [];
@@ -535,6 +752,7 @@ td {
     renderHeader();
     renderPipeline();
     initFilters();
+    initDetailControls();
     repPrevBtn.addEventListener('click', () => {
       if (repPage <= 1) return;
       repPage -= 1;
@@ -546,6 +764,7 @@ td {
     });
     quarterSel.addEventListener('change', () => {
       repPage = 1;
+      updateDetailSummary();
     });
     territorySel.addEventListener('change', () => {
       repPage = 1;
