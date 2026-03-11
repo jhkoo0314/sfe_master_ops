@@ -1,13 +1,12 @@
 import streamlit as st
 
-from ui.console_shared import (
-    get_active_company_key,
-    get_active_company_name,
+from ops_core.workflow.execution_registry import (
     get_execution_mode_description,
     get_execution_mode_label,
     get_execution_mode_modules,
     get_execution_mode_requirements,
 )
+from ui.console_paths import get_active_company_key, get_active_company_name
 
 
 def render_sidebar() -> None:

@@ -5,7 +5,6 @@ ROOT = Path(__file__).resolve().parents[2]
 if str(ROOT) not in sys.path:
     sys.path.insert(0, str(ROOT))
 
-import ui.console_shared as console_shared
 from ops_core.workflow.execution_registry import (
     get_execution_mode_description,
     get_execution_mode_label,
@@ -14,7 +13,8 @@ from ops_core.workflow.execution_registry import (
     get_mode_pipeline_steps,
     get_mode_required_uploads,
 )
-from ui.console_shared import (
+import ui.console_paths as console_paths
+from ui.console_paths import (
     get_source_target_display_path,
     get_source_target_map,
 )
@@ -47,8 +47,8 @@ def test_crm_to_territory_mode_pipeline_steps():
 
 
 def test_source_target_map_uses_company_profile(monkeypatch):
-    monkeypatch.setattr(console_shared, "get_project_root", lambda: str(ROOT))
-    monkeypatch.setattr(console_shared, "get_active_company_key", lambda: "daon_pharma")
+    monkeypatch.setattr(console_paths, "get_project_root", lambda: str(ROOT))
+    monkeypatch.setattr(console_paths, "get_active_company_key", lambda: "daon_pharma")
 
     source_targets = get_source_target_map()
 

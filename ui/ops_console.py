@@ -13,7 +13,7 @@ import streamlit as st
 
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
-from ui.console_shared import init_console_state
+from ui.console_state import init_console_state
 from ui.console_sidebar import render_sidebar
 from ui.console_tabs import (
     render_artifacts_tab,

@@ -7,30 +7,37 @@ from pathlib import Path
 import pandas as pd
 import streamlit as st
 
-from ui.console_shared import (
-    add_log,
-    collect_artifact_files,
-    get_active_company_key,
-    get_active_company_name,
-    get_crm_package_status,
+from ops_core.workflow.execution_registry import (
     get_execution_mode_label,
     get_execution_mode_modules,
-    get_source_target_rows,
-    get_report_output_path,
+)
+from ui.console_artifacts import (
+    collect_artifact_files,
     get_report_download_paths,
+    get_report_output_path,
     get_report_type_artifacts,
     get_report_type_description,
     get_report_type_options,
-    get_source_target_display_path,
     load_artifact_preview,
+)
+from ui.console_display import (
     render_block_card,
     render_page_hero,
     render_panel_header,
     render_stage_badge,
     render_upload_row,
+)
+from ui.console_paths import (
+    get_active_company_name,
+    get_source_target_display_path,
+)
+from ui.console_runner import (
+    get_crm_package_status,
+    get_source_target_rows,
     run_actual_pipeline,
     save_pipeline_run_history,
 )
+from ui.console_state import add_log
 
 
 def _build_period_filter_defaults(period_mode: str, selected_year: str, selected_sub_period: str) -> dict:

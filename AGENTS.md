@@ -71,6 +71,11 @@
 
 운영 콘솔은 `ui/ops_console.py`를 진입점으로 쓰고, 아래로 분리되어 있다.
 
+- `ui/console_state.py`
+- `ui/console_paths.py`
+- `ui/console_runner.py`
+- `ui/console_artifacts.py`
+- `ui/console_display.py`
 - `ui/console_shared.py`
 - `ui/console_sidebar.py`
 - `ui/console_tabs.py`

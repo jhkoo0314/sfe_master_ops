@@ -141,6 +141,11 @@ data/
 
 운영 콘솔:
 - [ops_console.py](/C:/sfe_master_ops/ui/ops_console.py)
+- [console_state.py](/C:/sfe_master_ops/ui/console_state.py)
+- [console_paths.py](/C:/sfe_master_ops/ui/console_paths.py)
+- [console_runner.py](/C:/sfe_master_ops/ui/console_runner.py)
+- [console_artifacts.py](/C:/sfe_master_ops/ui/console_artifacts.py)
+- [console_display.py](/C:/sfe_master_ops/ui/console_display.py)
 - [console_shared.py](/C:/sfe_master_ops/ui/console_shared.py)
 - [console_sidebar.py](/C:/sfe_master_ops/ui/console_sidebar.py)
 - [console_tabs.py](/C:/sfe_master_ops/ui/console_tabs.py)

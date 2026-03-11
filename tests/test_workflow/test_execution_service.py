@@ -9,7 +9,7 @@ if str(ROOT) not in sys.path:
     sys.path.insert(0, str(ROOT))
 
 import ops_core.workflow.execution_service as execution_service
-import ui.console_shared as console_shared
+import ui.console_runner as console_runner
 from ops_core.workflow.execution_models import (
     ExecutionContext,
     ExecutionRunResult,
@@ -81,7 +81,7 @@ def test_run_execution_mode_reads_shared_summaries(monkeypatch):
         shutil.rmtree(tmp_path, ignore_errors=True)
 
 
-def test_console_shared_run_actual_pipeline_delegates_to_execution_service(monkeypatch):
+def test_console_runner_run_actual_pipeline_delegates_to_execution_service(monkeypatch):
     captured: dict = {}
     fake_context = ExecutionContext(
         project_root=str(ROOT),
@@ -100,11 +100,11 @@ def test_console_shared_run_actual_pipeline_delegates_to_execution_service(monke
         total_duration_ms=123,
     )
 
-    monkeypatch.setattr(console_shared, "get_project_root", lambda: str(ROOT))
-    monkeypatch.setattr(console_shared, "get_active_company_key", lambda: "demo_company")
-    monkeypatch.setattr(console_shared, "get_active_company_name", lambda: "Demo Company")
+    monkeypatch.setattr(console_runner, "get_project_root", lambda: str(ROOT))
+    monkeypatch.setattr(console_runner, "get_active_company_key", lambda: "demo_company")
+    monkeypatch.setattr(console_runner, "get_active_company_name", lambda: "Demo Company")
     monkeypatch.setattr(
-        console_shared,
+        console_runner,
         "get_source_target_map",
         lambda: {"crm_activity": (str(ROOT / "data" / "company_source" / "demo_company" / "crm" / "crm_activity_raw.xlsx"), "excel")},
     )
@@ -117,10 +117,10 @@ def test_console_shared_run_actual_pipeline_delegates_to_execution_service(monke
         captured["run_kwargs"] = kwargs
         return fake_result
 
-    monkeypatch.setattr(console_shared, "build_execution_context", fake_build_execution_context)
-    monkeypatch.setattr(console_shared, "run_execution_mode", fake_run_execution_mode)
+    monkeypatch.setattr(console_runner, "build_execution_context", fake_build_execution_context)
+    monkeypatch.setattr(console_runner, "run_execution_mode", fake_run_execution_mode)
 
-    result = console_shared.run_actual_pipeline("crm_to_sandbox", {"crm_activity": None})
+    result = console_runner.run_actual_pipeline("crm_to_sandbox", {"crm_activity": None})
 
     assert captured["context_kwargs"]["company_key"] == "demo_company"
     assert captured["run_kwargs"]["execution_mode"] == "crm_to_sandbox"

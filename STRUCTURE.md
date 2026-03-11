@@ -113,8 +113,18 @@ OPS 판단과 파이프라인 실행을 담당합니다.
 
 - [ops_console.py](/C:/sfe_master_ops/ui/ops_console.py)
   - Streamlit 진입점
+- [console_state.py](/C:/sfe_master_ops/ui/console_state.py)
+  - 세션 상태, 업로드 캐시, 실행 로그
+- [console_paths.py](/C:/sfe_master_ops/ui/console_paths.py)
+  - 회사 코드 기준 경로와 source target 계산
+- [console_runner.py](/C:/sfe_master_ops/ui/console_runner.py)
+  - 실행 준비 판단, 실행 호출, 실행 이력 저장
+- [console_artifacts.py](/C:/sfe_master_ops/ui/console_artifacts.py)
+  - 산출물 경로, 미리보기, 보고서 파일 탐색
+- [console_display.py](/C:/sfe_master_ops/ui/console_display.py)
+  - 공통 화면 블록, 업로드 행 표시
 - [console_shared.py](/C:/sfe_master_ops/ui/console_shared.py)
-  - 공통 상태, 공통 유틸, 산출물 처리
+  - 얇게 남겨 둔 공통 표시 헬퍼
 - [console_sidebar.py](/C:/sfe_master_ops/ui/console_sidebar.py)
   - 사이드바 렌더링
 - [console_tabs.py](/C:/sfe_master_ops/ui/console_tabs.py)
