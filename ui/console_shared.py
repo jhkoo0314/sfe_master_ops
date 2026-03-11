@@ -10,6 +10,15 @@ import pandas as pd
 import streamlit as st
 from common.company_profile import get_company_ops_profile
 from common.company_runtime import get_active_company_key as env_company_key, get_active_company_name as env_company_name
+from ops_core.workflow.execution_registry import (
+    get_execution_mode_description as workflow_get_execution_mode_description,
+    get_execution_mode_label as workflow_get_execution_mode_label,
+    get_execution_mode_modules as workflow_get_execution_mode_modules,
+    get_execution_mode_requirements as workflow_get_execution_mode_requirements,
+    get_mode_pipeline_steps as workflow_get_mode_pipeline_steps,
+    get_mode_required_uploads as workflow_get_mode_required_uploads,
+)
+from ops_core.workflow.execution_service import build_execution_context, run_execution_mode
 
 
 def init_console_state() -> None:
@@ -204,55 +213,19 @@ def render_upload_row(
 
 
 def get_execution_mode_label(mode: str) -> str:
-    labels = {
-        "crm_to_sandbox": "CRM -> Sandbox",
-        "crm_to_territory": "CRM -> Territory",
-        "sandbox_to_html": "Sandbox -> HTML",
-        "sandbox_to_territory": "Sandbox -> Territory",
-        "crm_to_pdf": "CRM -> PDF",
-        "crm_to_sandbox_to_territory": "CRM -> Sandbox -> Territory",
-        "integrated_full": "통합 실행",
-    }
-    return labels.get(mode, mode)
+    return workflow_get_execution_mode_label(mode)
 
 
 def get_execution_mode_description(mode: str) -> str:
-    descriptions = {
-        "crm_to_sandbox": "CRM 정리 결과를 시작점으로 샌드박스 분석까지 확인하는 흐름입니다.",
-        "crm_to_territory": "CRM 활동을 Territory용 활동 표준으로 바꾸고, 내부 성과 준비 단계를 거쳐 권역 분석까지 바로 확인하는 흐름입니다.",
-        "sandbox_to_html": "샌드박스 결과가 이미 있다고 보고 HTML 보고서 생성 단계만 점검하는 흐름입니다.",
-        "sandbox_to_territory": "샌드박스 결과를 권역 분석으로 넘기는 흐름을 점검합니다.",
-        "crm_to_pdf": "CRM과 Prescription 흐름을 함께 보며 처방 추적 쪽을 점검하는 흐름입니다.",
-        "crm_to_sandbox_to_territory": "CRM에서 시작해 샌드박스와 권역 분석까지 이어지는 대표 검증 흐름입니다.",
-        "integrated_full": "CRM, Prescription, Sandbox, Territory, Builder를 모두 거치는 전체 검증 흐름입니다.",
-    }
-    return descriptions.get(mode, "")
+    return workflow_get_execution_mode_description(mode)
 
 
 def get_execution_mode_requirements(mode: str) -> str:
-    requirements = {
-        "crm_to_sandbox": "필수: CRM 활동 원본, 담당자 마스터 / 권장: 실적, 목표",
-        "crm_to_territory": "필수: CRM 활동 원본, 담당자 마스터, 거래처 담당 배정, 실적, 목표",
-        "sandbox_to_html": "필수: Sandbox 결과 또는 실적, 목표",
-        "sandbox_to_territory": "필수: Sandbox 결과 또는 실적, 목표 / 권장: CRM 활동",
-        "crm_to_pdf": "필수: CRM 활동 원본, 담당자 마스터 / 권장: Prescription fact_ship",
-        "crm_to_sandbox_to_territory": "필수: CRM 활동 원본, 담당자 마스터, 실적, 목표",
-        "integrated_full": "필수: CRM 활동 원본, 담당자 마스터, 실적, 목표 / 권장: Prescription, 담당 배정",
-    }
-    return requirements.get(mode, "")
+    return workflow_get_execution_mode_requirements(mode)
 
 
 def get_execution_mode_modules(mode: str) -> list[str]:
-    flows = {
-        "crm_to_sandbox": ["crm", "sandbox"],
-        "crm_to_territory": ["crm", "territory"],
-        "sandbox_to_html": ["sandbox", "builder"],
-        "sandbox_to_territory": ["sandbox", "territory"],
-        "crm_to_pdf": ["crm", "prescription"],
-        "crm_to_sandbox_to_territory": ["crm", "sandbox", "territory"],
-        "integrated_full": ["crm", "prescription", "sandbox", "territory", "builder"],
-    }
-    return flows.get(mode, ["crm", "sandbox"])
+    return workflow_get_execution_mode_modules(mode)
 
 
 def get_project_root() -> str:
@@ -524,249 +497,28 @@ def save_pipeline_run_history(result: dict, uploaded: dict) -> str:
 
 
 def get_mode_required_uploads(execution_mode: str) -> list[str]:
-    requirements = {
-        "crm_to_sandbox": ["crm_activity", "crm_rep_master", "crm_account_assignment", "sales", "target"],
-        "crm_to_territory": ["crm_activity", "crm_rep_master", "crm_account_assignment", "sales", "target"],
-        "sandbox_to_html": ["crm_activity", "crm_rep_master", "crm_account_assignment", "sales", "target"],
-        "sandbox_to_territory": ["crm_activity", "crm_rep_master", "crm_account_assignment", "sales", "target"],
-        "crm_to_pdf": ["crm_activity", "crm_rep_master", "crm_account_assignment", "prescription"],
-        "crm_to_sandbox_to_territory": ["crm_activity", "crm_rep_master", "crm_account_assignment", "sales", "target"],
-        "integrated_full": ["crm_activity", "crm_rep_master", "crm_account_assignment", "sales", "target", "prescription"],
-    }
-    return requirements.get(execution_mode, [])
-
-
-def _load_upload_frame(info: dict) -> pd.DataFrame:
-    file_bytes = info["file_bytes"]
-    if str(info["name"]).lower().endswith(".csv"):
-        return pd.read_csv(io.BytesIO(file_bytes))
-    return pd.read_excel(io.BytesIO(file_bytes))
-
-
-def _run_territory_pipeline(
-    normalize_territory_main,
-    validate_territory_main,
-) -> None:
-    normalize_territory_main()
-    validate_territory_main()
-
-
-def _run_crm_to_territory_pipeline(
-    normalize_sandbox_main,
-    validate_sandbox_main,
-    normalize_territory_main,
-    validate_territory_main,
-) -> None:
-    normalize_sandbox_main()
-    validate_sandbox_main()
-    _run_territory_pipeline(normalize_territory_main, validate_territory_main)
-
-
-def stage_uploaded_sources(uploaded: dict) -> list[str]:
-    target_map = get_source_target_map()
-    staged_paths: list[str] = []
-    for module_key, info in uploaded.items():
-        if not info or "file_bytes" not in info:
-            continue
-        target_path, target_format = target_map[module_key]
-        Path(target_path).parent.mkdir(parents=True, exist_ok=True)
-        if target_format == "excel":
-            df = _load_upload_frame(info)
-            df.to_excel(target_path, index=False)
-        else:
-            if info.get("file_ext") == ".csv":
-                Path(target_path).write_bytes(info["file_bytes"])
-            else:
-                df = _load_upload_frame(info)
-                df.to_csv(target_path, index=False, encoding="utf-8-sig")
-        staged_paths.append(target_path)
-    return staged_paths
+    return workflow_get_mode_required_uploads(execution_mode)
 
 
 def get_mode_pipeline_steps(execution_mode: str) -> list[dict]:
-    from scripts.normalize_crm_source import main as normalize_crm_main
-    from scripts.validate_crm_with_ops import main as validate_crm_main
-    from scripts.normalize_sandbox_source import main as normalize_sandbox_main
-    from scripts.validate_sandbox_with_ops import main as validate_sandbox_main
-    from scripts.normalize_territory_source import main as normalize_territory_main
-    from scripts.normalize_prescription_source import main as normalize_rx_main
-    from scripts.validate_prescription_with_ops import main as validate_rx_main
-    from scripts.validate_territory_with_ops import main as validate_territory_main
-    from scripts.validate_builder_with_ops import main as validate_builder_main
-
-    return {
-        "crm_to_sandbox": [
-            {"module": "crm", "label": "CRM 정규화 및 검증", "fn": lambda: (normalize_crm_main(), validate_crm_main())},
-            {"module": "sandbox", "label": "Sandbox 정규화 및 검증", "fn": lambda: (normalize_sandbox_main(), validate_sandbox_main())},
-        ],
-        "crm_to_territory": [
-            {"module": "crm", "label": "CRM 정규화 및 검증", "fn": lambda: (normalize_crm_main(), validate_crm_main())},
-            {
-                "module": "territory",
-                "label": "Territory 입력 정규화 및 검증",
-                "fn": lambda: _run_crm_to_territory_pipeline(
-                    normalize_sandbox_main,
-                    validate_sandbox_main,
-                    normalize_territory_main,
-                    validate_territory_main,
-                ),
-            },
-        ],
-        "sandbox_to_html": [
-            {"module": "crm", "label": "CRM 정규화 및 검증", "fn": lambda: (normalize_crm_main(), validate_crm_main())},
-            {"module": "sandbox", "label": "Sandbox 정규화 및 검증", "fn": lambda: (normalize_sandbox_main(), validate_sandbox_main())},
-            {"module": "builder", "label": "Builder HTML 생성", "fn": validate_builder_main},
-        ],
-        "sandbox_to_territory": [
-            {"module": "crm", "label": "CRM 정규화 및 검증", "fn": lambda: (normalize_crm_main(), validate_crm_main())},
-            {"module": "sandbox", "label": "Sandbox 정규화 및 검증", "fn": lambda: (normalize_sandbox_main(), validate_sandbox_main())},
-            {
-                "module": "territory",
-                "label": "Territory 입력 정규화 및 검증",
-                "fn": lambda: _run_territory_pipeline(normalize_territory_main, validate_territory_main),
-            },
-        ],
-        "crm_to_pdf": [
-            {"module": "crm", "label": "CRM 정규화 및 검증", "fn": lambda: (normalize_crm_main(), validate_crm_main())},
-            {"module": "prescription", "label": "Prescription 정규화 및 검증", "fn": lambda: (normalize_rx_main(), validate_rx_main())},
-        ],
-        "crm_to_sandbox_to_territory": [
-            {"module": "crm", "label": "CRM 정규화 및 검증", "fn": lambda: (normalize_crm_main(), validate_crm_main())},
-            {"module": "sandbox", "label": "Sandbox 정규화 및 검증", "fn": lambda: (normalize_sandbox_main(), validate_sandbox_main())},
-            {
-                "module": "territory",
-                "label": "Territory 입력 정규화 및 검증",
-                "fn": lambda: _run_territory_pipeline(normalize_territory_main, validate_territory_main),
-            },
-        ],
-        "integrated_full": [
-            {"module": "crm", "label": "CRM 정규화 및 검증", "fn": lambda: (normalize_crm_main(), validate_crm_main())},
-            {"module": "prescription", "label": "Prescription 정규화 및 검증", "fn": lambda: (normalize_rx_main(), validate_rx_main())},
-            {"module": "sandbox", "label": "Sandbox 정규화 및 검증", "fn": lambda: (normalize_sandbox_main(), validate_sandbox_main())},
-            {
-                "module": "territory",
-                "label": "Territory 입력 정규화 및 검증",
-                "fn": lambda: _run_territory_pipeline(normalize_territory_main, validate_territory_main),
-            },
-            {"module": "builder", "label": "Builder HTML 생성", "fn": validate_builder_main},
-        ],
-    }.get(execution_mode, [])
-
-
-def _read_json(path: str) -> dict:
-    return json.loads(Path(path).read_text(encoding="utf-8"))
-
-
-def _get_summary_path(module: str) -> str | None:
-    root = get_project_root()
-    company_key = get_active_company_key()
-    return {
-        "crm": os.path.join(root, "data", "ops_validation", company_key, "crm", "crm_validation_summary.json"),
-        "prescription": os.path.join(root, "data", "ops_validation", company_key, "prescription", "prescription_validation_summary.json"),
-        "sandbox": os.path.join(root, "data", "ops_validation", company_key, "sandbox", "sandbox_validation_summary.json"),
-        "territory": os.path.join(root, "data", "ops_validation", company_key, "territory", "territory_validation_summary.json"),
-        "builder": os.path.join(root, "data", "ops_validation", company_key, "builder", "builder_validation_summary.json"),
-    }.get(module)
-
-
-def _build_step_result(module: str, label: str, duration_ms: int) -> dict:
-    summary_path = _get_summary_path(module)
-    if module == "builder":
-        if summary_path and os.path.exists(summary_path):
-            summary = _read_json(summary_path)
-            built_count = sum(1 for key in ["crm_analysis", "sandbox_report", "territory_map", "prescription_flow", "total_valid"] if key in summary)
-            return {
-                "module": module,
-                "status": "PASS",
-                "score": 100.0,
-                "duration_ms": duration_ms,
-                "reasoning_note": f"{label} 완료. 생성 보고서 {built_count}건.",
-                "next_modules": [],
-            }
-    elif summary_path and os.path.exists(summary_path):
-        summary = _read_json(summary_path)
-        return {
-            "module": module,
-            "status": str(summary.get("quality_status", "warn")).upper(),
-            "score": float(summary.get("quality_score", 0.0)),
-            "duration_ms": duration_ms,
-            "reasoning_note": f"{label} 완료. 품질 {str(summary.get('quality_status', 'warn')).upper()} / 점수 {float(summary.get('quality_score', 0.0)):.1f}",
-            "next_modules": summary.get("next_modules", []),
-        }
-    return {
-        "module": module,
-        "status": "WARN",
-        "score": 0.0,
-        "duration_ms": duration_ms,
-        "reasoning_note": f"{label}는 실행됐지만 결과 요약 파일을 찾지 못했습니다.",
-        "next_modules": [],
-    }
+    return [
+        {"module": step.module, "label": step.label, "fn": step.runner}
+        for step in workflow_get_mode_pipeline_steps(execution_mode)
+    ]
 
 
 def run_actual_pipeline(execution_mode: str, uploaded: dict) -> dict:
-    os.environ["OPS_COMPANY_KEY"] = get_active_company_key()
-    os.environ["OPS_COMPANY_NAME"] = get_active_company_name()
-    source_targets = get_source_target_map()
-    missing_inputs = []
-    for key in get_mode_required_uploads(execution_mode):
-        target_path, _ = source_targets[key]
-        if uploaded.get(key) is None and not os.path.exists(target_path):
-            missing_inputs.append(key)
-    if missing_inputs:
-        raise ValueError(f"필수 원천 파일이 부족합니다: {', '.join(missing_inputs)}")
-
-    staged_paths = stage_uploaded_sources(uploaded)
-    started_at = datetime.now()
-    steps: list[dict] = []
-    recommended_actions = []
-    final_eligible_modules: list[str] = []
-
-    if staged_paths:
-        recommended_actions.append(f"업로드 파일 {len(staged_paths)}건을 실제 소스 경로에 반영했습니다.")
-    else:
-        recommended_actions.append("새로 업로드한 파일이 없어 기존 company_source 데이터를 사용했습니다.")
-
-    for idx, step in enumerate(get_mode_pipeline_steps(execution_mode), start=1):
-        t0 = time.time()
-        try:
-            step["fn"]()
-            step_result = _build_step_result(step["module"], step["label"], int((time.time() - t0) * 1000))
-        except Exception as exc:
-            step_result = {
-                "module": step["module"],
-                "status": "FAIL",
-                "score": 0.0,
-                "duration_ms": int((time.time() - t0) * 1000),
-                "reasoning_note": f"{step['label']} 실패: {exc}",
-                "next_modules": [],
-                "error": str(exc),
-            }
-        step_result["step"] = idx
-        steps.append(step_result)
-        if step_result["status"] == "FAIL":
-            recommended_actions.append(f"{step['module'].upper()} 단계 오류를 먼저 해결해야 합니다.")
-            break
-        for next_module in step_result.get("next_modules", []):
-            if next_module not in final_eligible_modules:
-                final_eligible_modules.append(next_module)
-
-    statuses = [step["status"] for step in steps]
-    overall_status = "FAIL" if "FAIL" in statuses else "WARN" if "WARN" in statuses else "PASS"
-    scores = [step["score"] for step in steps if step["score"] > 0]
-    completed_at = datetime.now()
-    return {
-        "run_id": str(uuid.uuid4()),
-        "execution_mode": execution_mode,
-        "execution_mode_label": get_execution_mode_label(execution_mode),
-        "company_key": get_active_company_key(),
-        "company_name": get_active_company_name(),
-        "overall_status": overall_status,
-        "overall_score": round(sum(scores) / len(scores), 1) if scores else 0.0,
-        "steps": steps,
-        "final_eligible_modules": final_eligible_modules,
-        "recommended_actions": recommended_actions,
-        "total_duration_ms": int((completed_at - started_at).total_seconds() * 1000),
-    }
+    context = build_execution_context(
+        project_root=get_project_root(),
+        company_key=get_active_company_key(),
+        company_name=get_active_company_name(),
+        source_targets=get_source_target_map(),
+    )
+    return run_execution_mode(
+        context=context,
+        execution_mode=execution_mode,
+        uploaded=uploaded,
+    ).to_dict()
 
 
 def run_mock_pipeline(execution_mode: str, uploaded: dict) -> dict:
