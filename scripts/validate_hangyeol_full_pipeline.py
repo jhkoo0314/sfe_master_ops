@@ -15,6 +15,7 @@ from scripts.normalize_hangyeol_prescription_source import main as normalize_rx_
 from scripts.validate_hangyeol_prescription_with_ops import main as validate_rx_main
 from scripts.normalize_hangyeol_sandbox_source import main as normalize_sandbox_main
 from scripts.validate_hangyeol_sandbox_with_ops import main as validate_sandbox_main
+from scripts.normalize_hangyeol_territory_source import main as normalize_territory_main
 from scripts.validate_hangyeol_territory_with_ops import main as validate_territory_main
 from scripts.validate_hangyeol_builder_with_ops import main as validate_builder_main
 from common.company_runtime import get_active_company_key, get_active_company_name, get_company_root
@@ -48,6 +49,7 @@ def main() -> None:
     validate_rx_main()
     normalize_sandbox_main()
     validate_sandbox_main()
+    normalize_territory_main()
     validate_territory_main()
     validate_builder_main()
 

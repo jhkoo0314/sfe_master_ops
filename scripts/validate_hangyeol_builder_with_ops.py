@@ -13,6 +13,7 @@ from modules.builder.service import (
     build_crm_template_input,
     build_html_builder_asset,
     build_prescription_template_input,
+    prepare_territory_chunk_assets,
     build_sandbox_template_input,
     build_template_payload,
     build_territory_template_input,
@@ -26,7 +27,7 @@ COMPANY_KEY = get_active_company_key()
 COMPANY_NAME = get_active_company_name(COMPANY_KEY)
 CRM_TEMPLATE_PATH = ROOT / "templates" / "crm_analysis_template.html"
 SANDBOX_TEMPLATE_PATH = ROOT / "templates" / "report_template.html"
-TERRITORY_TEMPLATE_PATH = ROOT / "templates" / "Spatial_Preview_260224.html"
+TERRITORY_TEMPLATE_PATH = ROOT / "templates" / "territory_optimizer_template.html"
 PRESCRIPTION_TEMPLATE_PATH = ROOT / "templates" / "prescription_flow_template.html"
 CRM_ASSET_PATH = get_company_root(ROOT, "ops_validation", COMPANY_KEY) / "crm" / "crm_result_asset.json"
 CRM_BUILDER_PAYLOAD_PATH = get_company_root(ROOT, "ops_validation", COMPANY_KEY) / "crm" / "crm_builder_payload.json"
@@ -166,6 +167,12 @@ def main() -> None:
             source_asset_path=str(TERRITORY_ASSET_PATH),
         )
         territory_payload = build_template_payload(territory_input)
+        prepare_territory_chunk_assets(
+            territory_payload,
+            payload_source_path=str(TERRITORY_BUILDER_PAYLOAD_PATH),
+            output_root=str(OUTPUT_ROOT),
+        )
+        territory_input.payload_seed = territory_payload.payload
         territory_html = render_builder_html(territory_payload)
         territory_result_asset = build_html_builder_asset(territory_input, territory_html)
         summary["territory_map"] = write_builder_output(

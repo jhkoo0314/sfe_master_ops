@@ -4,12 +4,6 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>SFE OPS HTML Builder</title>
-    <link
-      rel="stylesheet"
-      href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
-    />
-    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
     <style>
       :root {
         --bg: #0d1117;
@@ -21,7 +15,8 @@
         --primary: #58a6ff;
         --primary2: #1f6feb;
         --font: "Segoe UI", system-ui, sans-serif;
-        --radius: 8px;
+        --radius: 10px;
+        --shadow: 0 14px 28px rgba(0, 0, 0, 0.22);
       }
       * {
         box-sizing: border-box;
@@ -46,6 +41,7 @@
         justify-content: space-between;
         gap: 16px;
         flex-shrink: 0;
+        box-shadow: var(--shadow);
       }
       .logo {
         font-size: 16px;
@@ -81,6 +77,7 @@
         display: flex;
         flex-direction: column;
         overflow: hidden;
+        flex-shrink: 0;
       }
       .sidebar-header {
         padding: 16px;
@@ -113,6 +110,7 @@
         padding: 10px 12px;
         cursor: pointer;
         transition: all 0.2s;
+        box-shadow: var(--shadow);
       }
       .module-card:hover {
         border-color: var(--primary);
@@ -156,23 +154,26 @@
         color: #8b949e;
         background: rgba(139, 148, 158, 0.16);
       }
-      .upload-zone {
+      .guide-box {
         margin: 12px;
-        border: 2px dashed var(--border);
+        border: 1px solid var(--border);
         border-radius: var(--radius);
         padding: 16px;
         text-align: center;
         transition: all 0.2s;
+        background: rgba(88, 166, 255, 0.05);
       }
-      .upload-zone p {
+      .guide-box p {
         font-size: 12px;
         color: var(--muted);
         margin-top: 6px;
+        line-height: 1.6;
       }
       .ops-main {
         flex: 1;
         overflow-y: auto;
-        padding: 24px;
+        padding: 20px;
+        min-width: 0;
       }
       .actions {
         display: flex;
@@ -200,7 +201,7 @@
         background: var(--primary);
       }
       .report-section {
-        margin-bottom: 24px;
+        margin-bottom: 20px;
       }
       .report-section h3 {
         font-size: 13px;
@@ -230,17 +231,64 @@
       }
       .frame-shell {
         width: 100%;
-        min-height: 780px;
+        height: calc(100vh - 180px);
+        min-height: 520px;
         border: 1px solid var(--border);
         border-radius: 12px;
         overflow: hidden;
         background: #fff;
+        box-shadow: var(--shadow);
       }
       .frame-shell iframe {
         width: 100%;
-        height: 780px;
+        height: 100%;
         border: none;
         background: #fff;
+      }
+      @media (max-width: 1080px) {
+        .layer {
+          flex-direction: column;
+        }
+        .ops-sidebar {
+          width: 100%;
+          border-right: none;
+          border-bottom: 1px solid var(--border);
+          max-height: 320px;
+        }
+        .ops-main {
+          padding: 16px;
+        }
+        .frame-shell {
+          height: calc(100vh - 430px);
+          min-height: 440px;
+        }
+      }
+      @media (max-width: 720px) {
+        .header {
+          padding: 12px 16px;
+          flex-direction: column;
+          align-items: flex-start;
+        }
+        .header-meta {
+          text-align: left;
+        }
+        .sidebar-header,
+        .module-list,
+        .guide-box,
+        .ops-main {
+          padding-left: 14px;
+          padding-right: 14px;
+        }
+        .module-list {
+          gap: 8px;
+        }
+        .actions {
+          margin-bottom: 14px;
+        }
+        .frame-shell {
+          height: calc(100vh - 470px);
+          min-height: 380px;
+        }
       }
     </style>
   </head>
@@ -261,8 +309,8 @@
             <p>통합 실행으로 생성된 4개 결과 보고서를 한 화면에서 확인하는 보고서 허브입니다.</p>
           </div>
           <div id="moduleList" class="module-list"></div>
-          <div class="upload-zone">
-            <div>📂</div>
+          <div class="guide-box">
+            <div>HTML HUB</div>
             <p>개별 결과 HTML을<br />통합 미리보기로 확인합니다</p>
           </div>
         </div>

@@ -1,0 +1,1062 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Territory Optimizer</title>
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/leaflet@1.9.4/dist/leaflet.css" />
+  <style>
+    :root {
+      --bg: #0d1117;
+      --surface: #161b22;
+      --surface2: #21262d;
+      --surface3: #0f1724;
+      --border: #30363d;
+      --text: #e6edf3;
+      --muted: #8b949e;
+      --primary: #58a6ff;
+      --primary2: #1f6feb;
+      --accent: #7ee787;
+      --font: "Segoe UI", system-ui, sans-serif;
+      --radius: 10px;
+      --shadow: 0 14px 28px rgba(0, 0, 0, 0.22);
+    }
+
+    * {
+      box-sizing: border-box;
+    }
+
+    html, body {
+      margin: 0;
+      padding: 0;
+      width: 100%;
+      height: 100%;
+      background:
+        radial-gradient(circle at top left, rgba(88, 166, 255, 0.12), transparent 32%),
+        var(--bg);
+      color: var(--text);
+      font-family: var(--font);
+    }
+
+    body {
+      overflow: hidden;
+    }
+
+    #app {
+      width: 100%;
+      height: 100%;
+      padding: 12px;
+      display: grid;
+      grid-template-columns: minmax(0, 1fr) 280px;
+      gap: 12px;
+    }
+
+    .workspace {
+      min-width: 0;
+      display: grid;
+      grid-template-rows: auto auto auto minmax(0, 1fr);
+      gap: 8px;
+    }
+
+    .top-shell,
+    .control-shell,
+    .metric-shell,
+    .detail-card,
+    .map-status {
+      background: rgba(22, 27, 34, 0.92);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      box-shadow: var(--shadow);
+      backdrop-filter: blur(12px);
+    }
+
+    .top-shell {
+      padding: 12px 14px;
+      display: grid;
+      grid-template-columns: minmax(0, 1fr) 260px;
+      gap: 12px;
+      align-items: end;
+    }
+
+    .eyebrow {
+      font-size: 11px;
+      font-weight: 700;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      color: var(--primary);
+      margin-bottom: 8px;
+    }
+
+    .hero-title {
+      margin: 0;
+      font-size: 22px;
+      font-weight: 700;
+      line-height: 1.2;
+      letter-spacing: -0.02em;
+      color: var(--text);
+    }
+
+    .hero-copy {
+      margin: 6px 0 0;
+      font-size: 12px;
+      line-height: 1.4;
+      color: var(--muted);
+      max-width: 620px;
+    }
+
+    .overview-strip {
+      display: grid;
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+      gap: 6px;
+    }
+
+    .overview-card,
+    .metric-card {
+      background: linear-gradient(180deg, rgba(33, 38, 45, 0.96), rgba(15, 23, 36, 0.98));
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+    }
+
+    .overview-card {
+      padding: 8px 10px;
+    }
+
+    .overview-label,
+    .metric-label,
+    .detail-label,
+    .field-tag {
+      font-size: 11px;
+      font-weight: 700;
+      color: var(--muted);
+      text-transform: uppercase;
+      letter-spacing: 0.06em;
+    }
+
+    .overview-value,
+    .metric-value {
+      margin-top: 8px;
+      font-size: 17px;
+      font-weight: 700;
+      color: var(--text);
+      letter-spacing: -0.03em;
+    }
+
+    .control-shell {
+      padding: 10px 12px;
+      display: grid;
+      grid-template-columns: minmax(0, 1fr) 0.85fr;
+      gap: 10px;
+      align-items: center;
+    }
+
+    .filter-bar {
+      display: grid;
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+      gap: 6px;
+    }
+
+    .field {
+      display: flex;
+      flex-direction: column;
+      gap: 3px;
+    }
+
+    .field select {
+      width: 100%;
+      height: 34px;
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      background: var(--surface3);
+      color: var(--text);
+      padding: 0 9px;
+      font-size: 12px;
+      outline: none;
+    }
+
+    .field select:focus {
+      border-color: var(--primary);
+      box-shadow: 0 0 0 3px rgba(88, 166, 255, 0.12);
+    }
+
+    .scope-inline {
+      min-width: 0;
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      gap: 3px;
+    }
+
+    .scope-title {
+      margin: 0;
+      font-size: 14px;
+      font-weight: 700;
+      letter-spacing: -0.02em;
+    }
+
+    .scope-caption,
+    .scope-meta,
+    .insight-copy,
+    .empty-copy {
+      font-size: 11px;
+      line-height: 1.35;
+      color: var(--muted);
+    }
+
+    .scope-meta strong,
+    .insight-copy strong {
+      color: var(--text);
+    }
+
+    .metric-shell {
+      padding: 6px;
+    }
+
+    .metric-grid {
+      display: grid;
+      grid-template-columns: repeat(6, minmax(0, 1fr));
+      gap: 6px;
+    }
+
+    .metric-card {
+      padding: 8px 9px;
+      min-height: 62px;
+    }
+
+    .metric-card.highlight {
+      border-color: rgba(88, 166, 255, 0.46);
+      background:
+        radial-gradient(circle at top right, rgba(88, 166, 255, 0.14), transparent 42%),
+        linear-gradient(180deg, rgba(33, 38, 45, 0.98), rgba(15, 23, 36, 0.98));
+    }
+
+    .metric-sub {
+      margin-top: 3px;
+      font-size: 10px;
+      line-height: 1.25;
+      color: var(--muted);
+    }
+
+    .map-shell {
+      position: relative;
+      min-width: 0;
+      min-height: 0;
+      overflow: hidden;
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      box-shadow: var(--shadow);
+    }
+
+    #map {
+      width: 100%;
+      height: 100%;
+      min-height: 0;
+      background: #0b1320;
+    }
+
+    .map-status {
+      position: absolute;
+      top: 8px;
+      right: 8px;
+      z-index: 900;
+      max-width: 260px;
+      padding: 7px 9px;
+      font-size: 11px;
+      line-height: 1.35;
+      color: var(--text);
+      background: rgba(22, 27, 34, 0.88);
+    }
+
+    .detail-panel {
+      min-width: 0;
+      display: grid;
+      grid-template-rows: auto minmax(0, 1fr);
+      gap: 8px;
+    }
+
+    .detail-card {
+      padding: 10px 12px;
+      min-width: 0;
+    }
+
+    .detail-title {
+      margin-top: 4px;
+      font-size: 15px;
+      font-weight: 700;
+      letter-spacing: -0.02em;
+    }
+
+    .timeline-card {
+      display: flex;
+      flex-direction: column;
+      min-height: 0;
+    }
+
+    .timeline {
+      margin-top: 8px;
+      flex: 1;
+      min-height: 0;
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+      overflow: auto;
+      padding-right: 4px;
+    }
+
+    .timeline-item {
+      position: relative;
+      padding: 0 0 8px 14px;
+      border-left: 1px solid rgba(139, 148, 158, 0.32);
+    }
+
+    .timeline-item::before {
+      content: "";
+      position: absolute;
+      left: -5px;
+      top: 3px;
+      width: 7px;
+      height: 7px;
+      border-radius: 50%;
+      background: var(--primary);
+      box-shadow: 0 0 0 4px rgba(88, 166, 255, 0.12);
+    }
+
+    .timeline-item:last-child {
+      padding-bottom: 0;
+      border-left-color: transparent;
+    }
+
+    .timeline-seq {
+      font-size: 11px;
+      font-weight: 700;
+      letter-spacing: 0.06em;
+      text-transform: uppercase;
+      color: var(--primary);
+    }
+
+    .timeline-title {
+      margin-top: 5px;
+      font-size: 12px;
+      font-weight: 600;
+    }
+
+    .timeline-meta {
+      margin-top: 2px;
+      font-size: 11px;
+      color: var(--muted);
+    }
+
+    .leaflet-control-zoom a {
+      background: var(--surface2) !important;
+      color: var(--text) !important;
+      border-color: var(--border) !important;
+    }
+
+    .leaflet-popup-content-wrapper,
+    .leaflet-popup-tip {
+      background: var(--surface2);
+      color: var(--text);
+      border: 1px solid var(--border);
+    }
+
+    .popup-title {
+      font-size: 14px;
+      font-weight: 700;
+      margin-bottom: 8px;
+    }
+
+    .popup-row {
+      font-size: 12px;
+      color: var(--muted);
+      margin-top: 4px;
+    }
+
+    .popup-row strong {
+      color: var(--text);
+    }
+
+    @media (max-width: 1320px) {
+      #app {
+        grid-template-columns: 1fr;
+      }
+
+      .detail-panel {
+        grid-template-columns: 1fr 1fr;
+        grid-template-rows: auto;
+      }
+    }
+
+    @media (max-width: 980px) {
+      body {
+        overflow: auto;
+      }
+
+      #app {
+        height: auto;
+        min-height: 100%;
+      }
+
+      .workspace {
+        grid-template-rows: auto auto auto 56vh;
+      }
+
+      .top-shell,
+      .control-shell {
+        grid-template-columns: 1fr;
+      }
+
+      .overview-strip,
+      .metric-grid,
+      .filter-bar,
+      .detail-panel {
+        grid-template-columns: 1fr;
+      }
+
+      .detail-panel {
+        grid-template-rows: auto auto;
+      }
+
+      .timeline-card {
+        min-height: 300px;
+      }
+    }
+  </style>
+  <script>
+    window.__TERRITORY_DATA__ = {};
+  </script>
+</head>
+<body>
+  <div id="app">
+    <section class="workspace">
+      <section class="top-shell">
+        <div>
+          <div class="eyebrow">Territory Optimizer</div>
+          <h1 class="hero-title" id="hero-title">Spatial Route Console</h1>
+          <p class="hero-copy" id="hero-copy">담당자별 이동 효율과 선택 방문처 누적 실적을 한 화면에서 확인합니다.</p>
+        </div>
+        <div class="overview-strip">
+          <div class="overview-card">
+            <div class="overview-label">Coverage</div>
+            <div class="overview-value" id="overview-coverage">-</div>
+          </div>
+          <div class="overview-card">
+            <div class="overview-label">Reps</div>
+            <div class="overview-value" id="overview-reps">-</div>
+          </div>
+          <div class="overview-card">
+            <div class="overview-label">Routes</div>
+            <div class="overview-value" id="overview-routes">-</div>
+          </div>
+        </div>
+      </section>
+
+      <section class="control-shell">
+        <div class="filter-bar">
+          <div class="field">
+            <div class="field-tag">담당자</div>
+            <select id="rep-select"></select>
+          </div>
+          <div class="field">
+            <div class="field-tag">월</div>
+            <select id="month-select"></select>
+          </div>
+          <div class="field">
+            <div class="field-tag">일</div>
+            <select id="date-select"></select>
+          </div>
+        </div>
+        <div class="scope-inline">
+          <h2 class="scope-title" id="scope-title">선택 대기</h2>
+          <div class="scope-caption" id="scope-caption">담당자와 날짜를 고르면 해당 담당자 마커만 지도에 표시됩니다.</div>
+          <div class="scope-meta" id="scope-meta"></div>
+        </div>
+      </section>
+
+      <section class="metric-shell">
+        <div class="metric-grid">
+          <div class="metric-card highlight">
+            <div class="metric-label">Km / Visit</div>
+            <div class="metric-value" id="metric-efficiency">-</div>
+            <div class="metric-sub">방문당 이동거리</div>
+          </div>
+          <div class="metric-card">
+            <div class="metric-label">Radius</div>
+            <div class="metric-value" id="metric-radius">-</div>
+            <div class="metric-sub">권역 반경</div>
+          </div>
+          <div class="metric-card">
+            <div class="metric-label">Distance</div>
+            <div class="metric-value" id="metric-distance">-</div>
+            <div class="metric-sub">총 이동거리</div>
+          </div>
+          <div class="metric-card">
+            <div class="metric-label">Visits</div>
+            <div class="metric-value" id="metric-visits">-</div>
+            <div class="metric-sub">총 방문 수</div>
+          </div>
+          <div class="metric-card">
+            <div class="metric-label">Sales</div>
+            <div class="metric-value" id="metric-sales">-</div>
+            <div class="metric-sub">선택 병원 누적 매출</div>
+          </div>
+          <div class="metric-card">
+            <div class="metric-label">Attainment</div>
+            <div class="metric-value" id="metric-attainment">-</div>
+            <div class="metric-sub">선택 병원 누적 달성률</div>
+          </div>
+        </div>
+      </section>
+
+      <section class="map-shell">
+        <div id="map"></div>
+        <div class="map-status" id="map-status">초기화 중입니다.</div>
+      </section>
+    </section>
+
+    <aside class="detail-panel">
+      <section class="detail-card">
+        <div class="detail-label">Insight</div>
+        <div class="detail-title">Route Interpretation</div>
+        <div class="insight-copy" id="insight-copy" style="margin-top: 12px;">데이터를 불러오는 중입니다.</div>
+      </section>
+
+      <section class="detail-card timeline-card">
+        <div class="detail-label">Timeline</div>
+        <div class="detail-title">Execution Sequence</div>
+        <div class="timeline" id="timeline"></div>
+        <div class="empty-copy" id="timeline-empty" style="display:none;">선택된 날짜에 방문 동선이 없습니다.</div>
+      </section>
+    </aside>
+  </div>
+
+  <script src="https://cdn.jsdelivr.net/npm/leaflet@1.9.4/dist/leaflet.js"></script>
+    <script>
+    (function () {
+      const territoryData = window.__TERRITORY_DATA__ || {};
+      window.__TERRITORY_REP_DATA__ = window.__TERRITORY_REP_DATA__ || {};
+      window.__TERRITORY_MONTH_DATA__ = window.__TERRITORY_MONTH_DATA__ || {};
+      const territoryRepData = window.__TERRITORY_REP_DATA__;
+      const territoryMonthData = window.__TERRITORY_MONTH_DATA__;
+      const ALL_DATES_KEY = "__ALL__";
+      const repSelect = document.getElementById("rep-select");
+      const monthSelect = document.getElementById("month-select");
+      const dateSelect = document.getElementById("date-select");
+      const mapStatus = document.getElementById("map-status");
+      const timelineEl = document.getElementById("timeline");
+      const timelineEmptyEl = document.getElementById("timeline-empty");
+
+      const state = {
+        repId: "",
+        monthKey: "",
+        dateKey: "",
+      };
+
+      let map;
+      let markerLayer;
+      let routeLayer;
+      const repLoadPromises = {};
+      const monthLoadPromises = {};
+
+      function setMapStatus(message) {
+        mapStatus.textContent = message;
+      }
+
+      function formatNumber(value, digits) {
+        const num = Number(value);
+        if (!Number.isFinite(num)) return "-";
+        return digits != null ? num.toFixed(digits) : num.toLocaleString("ko-KR");
+      }
+
+      function formatCurrency(value) {
+        const num = Number(value);
+        if (!Number.isFinite(num)) return "-";
+        if (Math.abs(num) >= 100000000) {
+          return (num / 100000000).toFixed(1) + "억";
+        }
+        return num.toLocaleString("ko-KR");
+      }
+
+      function formatRate(value) {
+        const num = Number(value);
+        if (!Number.isFinite(num)) return "-";
+        return (num * 100).toFixed(1) + "%";
+      }
+
+      function optionMarkup(value, label) {
+        return "<option value=\"" + String(value || "").replace(/\"/g, "&quot;") + "\">" + label + "</option>";
+      }
+
+      function getRepIndex(repId) {
+        const repIndex = territoryData.rep_index || {};
+        return repIndex[repId] || null;
+      }
+
+      function getRepPayload(repId) {
+        const repIndex = getRepIndex(repId);
+        if (!repIndex) return null;
+        return {
+          rep_id: repIndex.rep_id || repId,
+          rep_name: repIndex.rep_name || repId,
+          portfolio_summary: repIndex.portfolio_summary || {},
+          months: repIndex.months || [],
+          dates_by_month: repIndex.dates_by_month || {},
+        };
+      }
+
+      function getMonthCacheKey(repId, monthKey) {
+        return String(repId || "") + "|" + String(monthKey || "");
+      }
+
+      function getLoadedRepPayload(repId) {
+        return territoryRepData[String(repId || "")] || null;
+      }
+
+      function getLoadedMonthPayload(repId, monthKey) {
+        return territoryMonthData[getMonthCacheKey(repId, monthKey)] || null;
+      }
+
+      async function ensureRepPayloadLoaded(repId) {
+        if (!repId) return null;
+
+        if (territoryRepData[repId]) {
+          return territoryRepData[repId];
+        }
+        if (repLoadPromises[repId]) {
+          return repLoadPromises[repId];
+        }
+
+        const repIndex = getRepIndex(repId);
+        const fileName = repIndex ? repIndex.rep_asset || "" : "";
+        if (!fileName) {
+          return null;
+        }
+
+        const assetBase = territoryData.asset_base || "";
+        const assetPath = assetBase ? assetBase + "/" + fileName : fileName;
+        setMapStatus("선택한 담당자 지도를 준비하는 중입니다.");
+
+        repLoadPromises[repId] = loadScriptAsset(assetPath)
+          .then(function () {
+            return territoryRepData[repId] || null;
+          })
+          .finally(function () {
+            delete repLoadPromises[repId];
+          });
+
+        return repLoadPromises[repId];
+      }
+
+      function loadScriptAsset(src) {
+        return new Promise(function (resolve, reject) {
+          const script = document.createElement("script");
+          script.src = src;
+          script.async = true;
+          script.onload = function () {
+            script.remove();
+            resolve();
+          };
+          script.onerror = function () {
+            script.remove();
+            reject(new Error("선택 월 데이터를 불러오지 못했습니다."));
+          };
+          document.head.appendChild(script);
+        });
+      }
+
+      async function ensureMonthPayloadLoaded(repId, monthKey) {
+        if (!repId || !monthKey) return null;
+
+        const cacheKey = getMonthCacheKey(repId, monthKey);
+        if (territoryMonthData[cacheKey]) {
+          return territoryMonthData[cacheKey];
+        }
+        if (monthLoadPromises[cacheKey]) {
+          return monthLoadPromises[cacheKey];
+        }
+
+        const repIndex = getRepIndex(repId);
+        const fileName = repIndex && repIndex.month_assets ? repIndex.month_assets[monthKey] : "";
+        if (!fileName) {
+          return null;
+        }
+
+        const assetBase = territoryData.asset_base || "";
+        const assetPath = assetBase ? assetBase + "/" + fileName : fileName;
+        setMapStatus("선택한 담당자의 월별 동선을 불러오는 중입니다.");
+
+        monthLoadPromises[cacheKey] = loadScriptAsset(assetPath)
+          .then(function () {
+            return territoryMonthData[cacheKey] || null;
+          })
+          .finally(function () {
+            delete monthLoadPromises[cacheKey];
+          });
+
+        return monthLoadPromises[cacheKey];
+      }
+
+      function getCurrentSelection() {
+        const monthPayload = getLoadedMonthPayload(state.repId, state.monthKey);
+        if (!monthPayload) return null;
+        const key = state.monthKey + "|" + state.dateKey;
+        return monthPayload.views ? monthPayload.views[key] || null : null;
+      }
+
+      function getActiveHospitalCatalog(repId) {
+        const repPayload = getLoadedRepPayload(repId);
+        if (repPayload && repPayload.hospital_catalog) {
+          return repPayload.hospital_catalog;
+        }
+        return territoryData.hospital_catalog || {};
+      }
+
+      function flattenSelectionPoints(selection) {
+        if (!selection) return [];
+        if (Array.isArray(selection.points) && selection.points.length) {
+          return selection.points.slice();
+        }
+        if (!Array.isArray(selection.route_groups)) {
+          return [];
+        }
+        const flattened = [];
+        selection.route_groups.forEach(function (group) {
+          (group.points || []).forEach(function (point) {
+            flattened.push({
+              seq: point.seq,
+              hospital_id: point.hospital_id,
+              visit_count: point.visit_count,
+              date_key: group.date_key || "",
+            });
+          });
+        });
+        return flattened;
+      }
+
+      function resolveSelectionPoints(selection) {
+        const catalog = getActiveHospitalCatalog(state.repId);
+        const rawPoints = flattenSelectionPoints(selection);
+        if (!rawPoints.length) return [];
+        return rawPoints.map(function (point) {
+          const meta = catalog[point.hospital_id] || {};
+          return {
+            hospital_id: point.hospital_id,
+            hospital: meta.hospital || point.hospital_id,
+            lat: Number(meta.lat),
+            lon: Number(meta.lon),
+            sales: Number(meta.sales || 0),
+            target: Number(meta.target || 0),
+            attainment_rate: meta.attainment_rate,
+            region: meta.region || "",
+            sub_region: meta.sub_region || "",
+            insight: meta.insight || "",
+            seq: Number(point.seq || 0),
+            visit_count: Number(point.visit_count || 0),
+            rep_id: selection.scope ? selection.scope.rep_id : "",
+            rep_name: selection.scope ? selection.scope.rep_name : "",
+            month: selection.scope ? selection.scope.month_key : "",
+            date: point.date_key || (selection.scope ? selection.scope.date_key : ""),
+          };
+        }).filter(function (point) {
+          return Number.isFinite(point.lat) && Number.isFinite(point.lon);
+        });
+      }
+
+      function populateRepSelect() {
+        const repOptions = (territoryData.filters && territoryData.filters.rep_options) || [];
+        repSelect.innerHTML = [optionMarkup("", "담당자 선택")].concat(repOptions.map(function (row) {
+          return optionMarkup(row.value, row.label);
+        })).join("");
+        repSelect.value = state.repId || "";
+      }
+
+      function populateMonthSelect() {
+        if (!state.repId) {
+          state.monthKey = "";
+          monthSelect.disabled = true;
+          monthSelect.innerHTML = optionMarkup("", "월 선택");
+          monthSelect.value = "";
+          return;
+        }
+
+        const repIndex = getRepIndex(state.repId);
+        const months = repIndex ? (repIndex.months || []) : [];
+        monthSelect.disabled = !months.length;
+        monthSelect.innerHTML = [optionMarkup("", "월 선택")].concat(months.map(function (row) {
+          return optionMarkup(row.value, row.label + " (" + row.day_count + "일)");
+        })).join("");
+        if (!months.some(function (row) { return row.value === state.monthKey; })) {
+          state.monthKey = months.length ? months[0].value : "";
+        }
+        monthSelect.value = state.monthKey;
+      }
+
+      function populateDateSelect() {
+        if (!state.repId || !state.monthKey) {
+          state.dateKey = "";
+          dateSelect.disabled = true;
+          dateSelect.innerHTML = optionMarkup("", "일 선택");
+          dateSelect.value = "";
+          return;
+        }
+
+        const repIndex = getRepIndex(state.repId);
+        const dateRows = repIndex && repIndex.dates_by_month ? (repIndex.dates_by_month[state.monthKey] || []) : [];
+        dateSelect.disabled = !dateRows.length;
+        dateSelect.innerHTML = [optionMarkup("", "일 선택")].concat(dateRows.map(function (row) {
+          if (row.value === ALL_DATES_KEY) {
+            return optionMarkup(row.value, row.label + " (" + formatNumber(row.day_count) + "일)");
+          }
+          return optionMarkup(row.value, row.label + " (" + row.stop_count + "곳)");
+        })).join("");
+        if (!dateRows.some(function (row) { return row.value === state.dateKey; })) {
+          state.dateKey = dateRows.length ? dateRows[0].value : "";
+        }
+        dateSelect.value = state.dateKey;
+      }
+
+      function updateOverview() {
+        const overview = territoryData.overview || {};
+        document.getElementById("hero-title").textContent = overview.map_title || "Territory Optimizer";
+        document.getElementById("hero-copy").textContent =
+          "선택된 담당자 마커만 지도에 올려서 로딩을 줄이고, 같은 화면에서 동선과 누적 성과를 함께 봅니다.";
+        document.getElementById("overview-coverage").textContent = formatRate(overview.coverage_rate);
+        document.getElementById("overview-reps").textContent = formatNumber(overview.total_reps);
+        document.getElementById("overview-routes").textContent = formatNumber(overview.route_selection_count);
+      }
+
+      function ensureMap() {
+        if (map) return;
+        map = L.map("map", { zoomControl: false, preferCanvas: true }).setView([36.5, 127.8], 7);
+        L.control.zoom({ position: "topright" }).addTo(map);
+        L.tileLayer("https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png", {
+          attribution: "&copy; OpenStreetMap &copy; CARTO",
+          subdomains: "abcd",
+          maxZoom: 20,
+        }).addTo(map);
+        markerLayer = L.layerGroup().addTo(map);
+        routeLayer = L.layerGroup().addTo(map);
+        setTimeout(function () {
+          map.invalidateSize();
+        }, 0);
+      }
+
+      function clearMap() {
+        markerLayer.clearLayers();
+        routeLayer.clearLayers();
+      }
+
+      function renderTimeline(selection) {
+        const points = resolveSelectionPoints(selection);
+        if (!points.length) {
+          timelineEl.innerHTML = "";
+          timelineEmptyEl.textContent = state.repId
+            ? "선택된 날짜에 방문 동선이 없습니다."
+            : "담당자를 선택하면 방문 순서가 표시됩니다.";
+          timelineEmptyEl.style.display = "block";
+          return;
+        }
+
+        timelineEmptyEl.style.display = "none";
+        timelineEl.innerHTML = points.map(function (row) {
+          const dateLabel = row.date && row.date !== ALL_DATES_KEY ? row.date + " · " : "";
+          return (
+            "<div class=\"timeline-item\">" +
+              "<div class=\"timeline-seq\">Stop " + row.seq + "</div>" +
+              "<div class=\"timeline-title\">" + row.hospital + "</div>" +
+              "<div class=\"timeline-meta\">" +
+                dateLabel + (row.region || "-") + " · 매출 " + formatCurrency(row.sales) +
+              "</div>" +
+            "</div>"
+          );
+        }).join("");
+      }
+
+      function updateMetrics(selection, repPayload) {
+        const summary = (selection && selection.summary) || {};
+        const portfolio = (repPayload && repPayload.portfolio_summary) || {};
+
+        document.getElementById("metric-efficiency").textContent = formatNumber(summary.km_per_visit, 1) + " km";
+        document.getElementById("metric-radius").textContent = formatNumber(summary.radius_km, 1) + " km";
+        document.getElementById("metric-distance").textContent = formatNumber(summary.distance_km, 1) + " km";
+        document.getElementById("metric-visits").textContent = formatNumber(summary.visit_count);
+        document.getElementById("metric-sales").textContent = formatCurrency(summary.sales_total);
+        document.getElementById("metric-attainment").textContent = formatRate(summary.attainment_rate);
+
+        document.getElementById("scope-title").textContent = selection ? selection.scope.label : "선택 대기";
+        document.getElementById("scope-caption").textContent = selection
+          ? (
+            selection.scope && selection.scope.is_month_aggregate
+              ? "지금 지도에는 선택한 담당자의 월 전체 마커만 표시됩니다."
+              : "지금 지도에는 선택한 담당자와 날짜의 마커만 표시됩니다."
+          )
+          : "담당자와 날짜를 고르면 해당 담당자 마커만 지도에 표시됩니다.";
+        document.getElementById("scope-meta").innerHTML = selection
+          ? "<strong>담당 포트폴리오</strong> " + formatNumber(portfolio.hospital_count) + "개 병원 · " +
+            "<strong>커버리지</strong> " + formatRate(portfolio.coverage_score) + " · " +
+            "<strong>선택 방문처</strong> " + formatNumber(summary.selected_hospital_count) + "곳"
+          : "";
+        document.getElementById("insight-copy").textContent = selection ? (selection.insight_text || "-") : "데이터를 고르면 이동 해석 문구가 표시됩니다.";
+      }
+
+      function renderMapSelection(selection) {
+        clearMap();
+        if (!selection) {
+          if (map) {
+            map.setView([36.5, 127.8], 7);
+          }
+          setMapStatus(state.repId ? "선택한 범위의 담당자 동선이 없습니다." : "담당자를 선택하면 해당 담당자의 동선만 불러옵니다.");
+          return;
+        }
+
+        const points = resolveSelectionPoints(selection);
+        const routeGroups = Array.isArray(selection.route_groups) ? selection.route_groups : [];
+        const bounds = [];
+        const markerMap = new Map();
+
+        if (routeGroups.length) {
+          routeGroups.forEach(function (group) {
+            const groupPoints = resolveSelectionPoints({
+              points: group.points || [],
+              scope: Object.assign({}, selection.scope || {}, {
+                date_key: group.date_key || "",
+                date_label: group.label || group.date_key || "",
+              }),
+            });
+            if (groupPoints.length >= 2) {
+              const latLngs = groupPoints.map(function (row) {
+                return [Number(row.lat), Number(row.lon)];
+              });
+              L.polyline(latLngs, {
+                color: "#58a6ff",
+                weight: 3,
+                opacity: 0.88,
+                dashArray: "6 6",
+              }).addTo(routeLayer);
+              latLngs.forEach(function (row) { bounds.push(row); });
+            }
+          });
+        } else if (points.length >= 2) {
+          const latLngs = points.map(function (row) {
+            return [Number(row.lat), Number(row.lon)];
+          });
+          L.polyline(latLngs, {
+            color: "#58a6ff",
+            weight: 3,
+            opacity: 0.88,
+            dashArray: "6 6",
+          }).addTo(routeLayer);
+          latLngs.forEach(function (row) { bounds.push(row); });
+        }
+
+        points.forEach(function (marker) {
+          if (!markerMap.has(marker.hospital_id)) {
+            markerMap.set(marker.hospital_id, marker);
+          }
+        });
+
+        Array.from(markerMap.values()).forEach(function (marker) {
+          const lat = Number(marker.lat);
+          const lon = Number(marker.lon);
+          if (!Number.isFinite(lat) || !Number.isFinite(lon)) return;
+          const circle = L.circleMarker([lat, lon], {
+            radius: 6,
+            color: "#0d1117",
+            weight: 2,
+            fillColor: "#7ee787",
+            fillOpacity: 0.96,
+          }).addTo(markerLayer);
+          circle.bindPopup(
+            "<div class=\"popup-title\">" + marker.hospital + "</div>" +
+            "<div class=\"popup-row\"><strong>담당자</strong> " + marker.rep_name + "</div>" +
+            "<div class=\"popup-row\"><strong>선택범위</strong> " + (selection.scope && selection.scope.date_label ? selection.scope.date_label : marker.date) + "</div>" +
+            "<div class=\"popup-row\"><strong>방문순서</strong> " + marker.seq + "</div>" +
+            "<div class=\"popup-row\"><strong>누적 매출</strong> " + formatCurrency(marker.sales) + "</div>" +
+            "<div class=\"popup-row\"><strong>누적 목표</strong> " + formatCurrency(marker.target) + "</div>" +
+            "<div class=\"popup-row\"><strong>권역</strong> " + (marker.region || "-") + "</div>"
+          );
+          bounds.push([lat, lon]);
+        });
+
+        if (bounds.length) {
+          map.fitBounds(bounds, { padding: [48, 48], maxZoom: 12 });
+        }
+
+        setMapStatus(selection.status_line || "선택된 담당자 데이터만 표시 중입니다.");
+      }
+
+      function renderCurrentSelection() {
+        if (!state.repId) {
+          updateMetrics(null, null);
+          renderTimeline(null);
+          renderMapSelection(null);
+          return;
+        }
+        const repPayload = getRepPayload(state.repId);
+        const selection = getCurrentSelection();
+        updateMetrics(selection, repPayload);
+        renderTimeline(selection);
+        renderMapSelection(selection);
+      }
+
+      async function applyState(nextState) {
+        if (Object.prototype.hasOwnProperty.call(nextState, "repId")) {
+          state.repId = nextState.repId || "";
+        }
+        if (Object.prototype.hasOwnProperty.call(nextState, "monthKey")) {
+          state.monthKey = nextState.monthKey || "";
+        }
+        if (Object.prototype.hasOwnProperty.call(nextState, "dateKey")) {
+          state.dateKey = nextState.dateKey || "";
+        }
+        populateMonthSelect();
+        populateDateSelect();
+        await ensureRepPayloadLoaded(state.repId);
+        await ensureMonthPayloadLoaded(state.repId, state.monthKey);
+        renderCurrentSelection();
+      }
+
+      function bindEvents() {
+        repSelect.addEventListener("change", function (event) {
+          state.repId = event.target.value;
+          state.monthKey = "";
+          state.dateKey = "";
+          applyState({ repId: state.repId, monthKey: "", dateKey: "" });
+        });
+        monthSelect.addEventListener("change", function (event) {
+          state.monthKey = event.target.value;
+          state.dateKey = "";
+          applyState({ monthKey: state.monthKey, dateKey: "" });
+        });
+        dateSelect.addEventListener("change", function (event) {
+          state.dateKey = event.target.value;
+          applyState({ dateKey: state.dateKey });
+        });
+      }
+
+      function initState() {
+        const defaultSelection = territoryData.default_selection || {};
+        state.repId = defaultSelection.rep_id || "";
+        state.monthKey = defaultSelection.month_key || "";
+        state.dateKey = defaultSelection.date_key || "";
+      }
+
+      async function init() {
+        updateOverview();
+        ensureMap();
+        populateRepSelect();
+        initState();
+        bindEvents();
+        window.addEventListener("resize", function () {
+          if (map) map.invalidateSize();
+        });
+
+        repSelect.value = state.repId || "";
+        await applyState({ repId: state.repId, monthKey: state.monthKey, dateKey: state.dateKey });
+      }
+
+      document.addEventListener("DOMContentLoaded", function () {
+        init();
+      });
+    })();
+  </script>
+</body>
+</html>

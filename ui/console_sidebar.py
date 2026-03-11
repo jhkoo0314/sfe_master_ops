@@ -61,6 +61,7 @@ def render_sidebar() -> None:
             "실행 모드",
             [
                 "crm_to_sandbox",
+                "crm_to_territory",
                 "sandbox_to_html",
                 "sandbox_to_territory",
                 "crm_to_pdf",

@@ -8,7 +8,9 @@ from __future__ import annotations
 import json
 import re
 from pathlib import Path
+import shutil
 
+from modules.territory.builder_payload import build_chunked_territory_payload
 from modules.builder.schemas import (
     BuilderInputReference,
     BuilderInputStandard,
@@ -61,7 +63,7 @@ def build_territory_template_input(
         source_module="territory",
         asset_type="territory_result_asset",
         source_asset_path=source_asset_path,
-        description="Territory builder payload -> Spatial_Preview_260224 주입",
+        description="Territory builder payload -> territory_optimizer_template 주입",
     )
     return BuilderInputStandard(
         template_key="territory_map",
@@ -201,24 +203,12 @@ def render_builder_html(builder_payload: BuilderPayloadStandard) -> str:
         )
 
     if builder_payload.render_mode == "territory_window_vars":
-        rendered = template_text
-        replacements = [
-            (
-                r'window\.__INITIAL_MODE__ = "[^"]*";',
-                f'window.__INITIAL_MODE__ = "{builder_payload.payload.get("mode", "hospital")}";',
-            ),
-            (
-                r"window\.__INITIAL_MARKERS__ = [\s\S]*?;",
-                f"window.__INITIAL_MARKERS__ = {json.dumps(builder_payload.payload.get('markers', []), ensure_ascii=False)};",
-            ),
-            (
-                r"window\.__INITIAL_ROUTES__ = [\s\S]*?;",
-                f"window.__INITIAL_ROUTES__ = {json.dumps(builder_payload.payload.get('routes', []), ensure_ascii=False)};",
-            ),
-        ]
-        for pattern, replacement in replacements:
-            rendered = re.sub(pattern, replacement, rendered, count=1)
-        return rendered
+        return re.sub(
+            r"window\.__TERRITORY_DATA__ = [\s\S]*?;",
+            f"window.__TERRITORY_DATA__ = {json.dumps(builder_payload.payload, ensure_ascii=False)};",
+            template_text,
+            count=1,
+        )
 
     if builder_payload.render_mode == "prescription_window_vars":
         rendered = re.sub(
@@ -274,10 +264,13 @@ def _summarize_payload(builder_payload: BuilderPayloadStandard) -> dict:
             "missing_data_count": len(payload.get("missing_data", [])),
         }
     if builder_payload.template_key == "territory_map":
+        rep_index = payload.get("rep_index", {})
+        rep_payloads = payload.get("rep_payloads", {})
+        default_selection = payload.get("default_selection", {})
         return {
-            "marker_count": len(payload.get("markers", [])),
-            "route_count": len(payload.get("routes", [])),
-            "mode": payload.get("mode"),
+            "rep_count": len(rep_index) or len(rep_payloads),
+            "selection_count": int(payload.get("overview", {}).get("route_selection_count", 0) or 0),
+            "default_rep": default_selection.get("rep_id"),
         }
     if builder_payload.template_key == "prescription_flow":
         return {
@@ -293,3 +286,54 @@ def _summarize_payload(builder_payload: BuilderPayloadStandard) -> dict:
             "matrix_row_count": len(default_scope.get("matrix_rows", [])),
         }
     return {}
+
+
+def prepare_territory_chunk_assets(
+    builder_payload: BuilderPayloadStandard,
+    payload_source_path: str,
+    output_root: str,
+) -> None:
+    if builder_payload.template_key != "territory_map":
+        return
+
+    target_asset_dir = Path(output_root) / f"{Path(builder_payload.output_name).stem}_assets"
+    target_asset_dir.mkdir(parents=True, exist_ok=True)
+
+    for existing in target_asset_dir.glob("*.js"):
+        existing.unlink()
+
+    payload = builder_payload.payload
+    if str(payload.get("data_mode") or "").startswith("chunked_"):
+        source_path = Path(payload_source_path)
+        source_asset_dir = source_path.with_name(f"{source_path.stem}_assets")
+        if not source_asset_dir.exists():
+            payload["asset_base"] = target_asset_dir.name
+            return
+        for chunk_file in source_asset_dir.glob("*.js"):
+            shutil.copy2(chunk_file, target_asset_dir / chunk_file.name)
+        payload["asset_base"] = target_asset_dir.name
+        return
+
+    if not payload.get("rep_payloads"):
+        return
+
+    manifest, asset_chunks = build_chunked_territory_payload(payload)
+    for chunk_name, chunk_payload in asset_chunks.items():
+        if "views" in chunk_payload:
+            cache_key = f"{chunk_payload.get('rep_id')}|{chunk_payload.get('month_key')}"
+            chunk_script = (
+                "window.__TERRITORY_MONTH_DATA__ = window.__TERRITORY_MONTH_DATA__ || {};\n"
+                f"window.__TERRITORY_MONTH_DATA__[{json.dumps(cache_key, ensure_ascii=False)}] = "
+                f"{json.dumps(chunk_payload, ensure_ascii=False)};\n"
+            )
+        else:
+            cache_key = str(chunk_payload.get("rep_id", "")).strip()
+            chunk_script = (
+                "window.__TERRITORY_REP_DATA__ = window.__TERRITORY_REP_DATA__ || {};\n"
+                f"window.__TERRITORY_REP_DATA__[{json.dumps(cache_key, ensure_ascii=False)}] = "
+                f"{json.dumps(chunk_payload, ensure_ascii=False)};\n"
+            )
+        (target_asset_dir / chunk_name).write_text(chunk_script, encoding="utf-8")
+
+    manifest["asset_base"] = target_asset_dir.name
+    builder_payload.payload = manifest

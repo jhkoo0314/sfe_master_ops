@@ -205,6 +205,7 @@ def render_upload_row(
 def get_execution_mode_label(mode: str) -> str:
     labels = {
         "crm_to_sandbox": "CRM -> Sandbox",
+        "crm_to_territory": "CRM -> Territory",
         "sandbox_to_html": "Sandbox -> HTML",
         "sandbox_to_territory": "Sandbox -> Territory",
         "crm_to_pdf": "CRM -> PDF",
@@ -217,6 +218,7 @@ def get_execution_mode_label(mode: str) -> str:
 def get_execution_mode_description(mode: str) -> str:
     descriptions = {
         "crm_to_sandbox": "CRM 정리 결과를 시작점으로 샌드박스 분석까지 확인하는 흐름입니다.",
+        "crm_to_territory": "CRM 활동을 Territory용 활동 표준으로 바꾸고, 내부 성과 준비 단계를 거쳐 권역 분석까지 바로 확인하는 흐름입니다.",
         "sandbox_to_html": "샌드박스 결과가 이미 있다고 보고 HTML 보고서 생성 단계만 점검하는 흐름입니다.",
         "sandbox_to_territory": "샌드박스 결과를 권역 분석으로 넘기는 흐름을 점검합니다.",
         "crm_to_pdf": "CRM과 Prescription 흐름을 함께 보며 처방 추적 쪽을 점검하는 흐름입니다.",
@@ -229,6 +231,7 @@ def get_execution_mode_description(mode: str) -> str:
 def get_execution_mode_requirements(mode: str) -> str:
     requirements = {
         "crm_to_sandbox": "필수: CRM 활동 원본, 담당자 마스터 / 권장: 실적, 목표",
+        "crm_to_territory": "필수: CRM 활동 원본, 담당자 마스터, 거래처 담당 배정, 실적, 목표",
         "sandbox_to_html": "필수: Sandbox 결과 또는 실적, 목표",
         "sandbox_to_territory": "필수: Sandbox 결과 또는 실적, 목표 / 권장: CRM 활동",
         "crm_to_pdf": "필수: CRM 활동 원본, 담당자 마스터 / 권장: Prescription fact_ship",
@@ -241,6 +244,7 @@ def get_execution_mode_requirements(mode: str) -> str:
 def get_execution_mode_modules(mode: str) -> list[str]:
     flows = {
         "crm_to_sandbox": ["crm", "sandbox"],
+        "crm_to_territory": ["crm", "territory"],
         "sandbox_to_html": ["sandbox", "builder"],
         "sandbox_to_territory": ["sandbox", "territory"],
         "crm_to_pdf": ["crm", "prescription"],
@@ -278,7 +282,10 @@ def get_artifact_directories(module: str) -> list[tuple[str, str]]:
             ("정규화 파일", os.path.join(root, "data", "ops_standard", company, "sandbox")),
             ("검증 산출물", os.path.join(root, "data", "ops_validation", company, "sandbox")),
         ],
-        "territory": [("검증 산출물", os.path.join(root, "data", "ops_validation", company, "territory"))],
+        "territory": [
+            ("정규화 파일", os.path.join(root, "data", "ops_standard", company, "territory")),
+            ("검증 산출물", os.path.join(root, "data", "ops_validation", company, "territory")),
+        ],
         "builder": [("Builder 결과", os.path.join(root, "data", "ops_validation", company, "builder"))],
     }
     return mapping.get(module, [])
@@ -517,6 +524,7 @@ def save_pipeline_run_history(result: dict, uploaded: dict) -> str:
 def get_mode_required_uploads(execution_mode: str) -> list[str]:
     requirements = {
         "crm_to_sandbox": ["crm_activity", "crm_rep_master", "crm_account_assignment", "sales", "target"],
+        "crm_to_territory": ["crm_activity", "crm_rep_master", "crm_account_assignment", "sales", "target"],
         "sandbox_to_html": ["crm_activity", "crm_rep_master", "crm_account_assignment", "sales", "target"],
         "sandbox_to_territory": ["crm_activity", "crm_rep_master", "crm_account_assignment", "sales", "target"],
         "crm_to_pdf": ["crm_activity", "crm_rep_master", "crm_account_assignment", "prescription"],
@@ -531,6 +539,25 @@ def _load_upload_frame(info: dict) -> pd.DataFrame:
     if str(info["name"]).lower().endswith(".csv"):
         return pd.read_csv(io.BytesIO(file_bytes))
     return pd.read_excel(io.BytesIO(file_bytes))
+
+
+def _run_territory_pipeline(
+    normalize_territory_main,
+    validate_territory_main,
+) -> None:
+    normalize_territory_main()
+    validate_territory_main()
+
+
+def _run_crm_to_territory_pipeline(
+    normalize_sandbox_main,
+    validate_sandbox_main,
+    normalize_territory_main,
+    validate_territory_main,
+) -> None:
+    normalize_sandbox_main()
+    validate_sandbox_main()
+    _run_territory_pipeline(normalize_territory_main, validate_territory_main)
 
 
 def stage_uploaded_sources(uploaded: dict) -> list[str]:
@@ -559,6 +586,7 @@ def get_mode_pipeline_steps(execution_mode: str) -> list[dict]:
     from scripts.validate_hangyeol_crm_with_ops import main as validate_crm_main
     from scripts.normalize_hangyeol_sandbox_source import main as normalize_sandbox_main
     from scripts.validate_hangyeol_sandbox_with_ops import main as validate_sandbox_main
+    from scripts.normalize_hangyeol_territory_source import main as normalize_territory_main
     from scripts.normalize_hangyeol_prescription_source import main as normalize_rx_main
     from scripts.validate_hangyeol_prescription_with_ops import main as validate_rx_main
     from scripts.validate_hangyeol_territory_with_ops import main as validate_territory_main
@@ -569,6 +597,19 @@ def get_mode_pipeline_steps(execution_mode: str) -> list[dict]:
             {"module": "crm", "label": "CRM 정규화 및 검증", "fn": lambda: (normalize_crm_main(), validate_crm_main())},
             {"module": "sandbox", "label": "Sandbox 정규화 및 검증", "fn": lambda: (normalize_sandbox_main(), validate_sandbox_main())},
         ],
+        "crm_to_territory": [
+            {"module": "crm", "label": "CRM 정규화 및 검증", "fn": lambda: (normalize_crm_main(), validate_crm_main())},
+            {
+                "module": "territory",
+                "label": "Territory 입력 정규화 및 검증",
+                "fn": lambda: _run_crm_to_territory_pipeline(
+                    normalize_sandbox_main,
+                    validate_sandbox_main,
+                    normalize_territory_main,
+                    validate_territory_main,
+                ),
+            },
+        ],
         "sandbox_to_html": [
             {"module": "crm", "label": "CRM 정규화 및 검증", "fn": lambda: (normalize_crm_main(), validate_crm_main())},
             {"module": "sandbox", "label": "Sandbox 정규화 및 검증", "fn": lambda: (normalize_sandbox_main(), validate_sandbox_main())},
@@ -577,7 +618,11 @@ def get_mode_pipeline_steps(execution_mode: str) -> list[dict]:
         "sandbox_to_territory": [
             {"module": "crm", "label": "CRM 정규화 및 검증", "fn": lambda: (normalize_crm_main(), validate_crm_main())},
             {"module": "sandbox", "label": "Sandbox 정규화 및 검증", "fn": lambda: (normalize_sandbox_main(), validate_sandbox_main())},
-            {"module": "territory", "label": "Territory 검증", "fn": validate_territory_main},
+            {
+                "module": "territory",
+                "label": "Territory 입력 정규화 및 검증",
+                "fn": lambda: _run_territory_pipeline(normalize_territory_main, validate_territory_main),
+            },
         ],
         "crm_to_pdf": [
             {"module": "crm", "label": "CRM 정규화 및 검증", "fn": lambda: (normalize_crm_main(), validate_crm_main())},
@@ -586,13 +631,21 @@ def get_mode_pipeline_steps(execution_mode: str) -> list[dict]:
         "crm_to_sandbox_to_territory": [
             {"module": "crm", "label": "CRM 정규화 및 검증", "fn": lambda: (normalize_crm_main(), validate_crm_main())},
             {"module": "sandbox", "label": "Sandbox 정규화 및 검증", "fn": lambda: (normalize_sandbox_main(), validate_sandbox_main())},
-            {"module": "territory", "label": "Territory 검증", "fn": validate_territory_main},
+            {
+                "module": "territory",
+                "label": "Territory 입력 정규화 및 검증",
+                "fn": lambda: _run_territory_pipeline(normalize_territory_main, validate_territory_main),
+            },
         ],
         "integrated_full": [
             {"module": "crm", "label": "CRM 정규화 및 검증", "fn": lambda: (normalize_crm_main(), validate_crm_main())},
             {"module": "prescription", "label": "Prescription 정규화 및 검증", "fn": lambda: (normalize_rx_main(), validate_rx_main())},
             {"module": "sandbox", "label": "Sandbox 정규화 및 검증", "fn": lambda: (normalize_sandbox_main(), validate_sandbox_main())},
-            {"module": "territory", "label": "Territory 검증", "fn": validate_territory_main},
+            {
+                "module": "territory",
+                "label": "Territory 입력 정규화 및 검증",
+                "fn": lambda: _run_territory_pipeline(normalize_territory_main, validate_territory_main),
+            },
             {"module": "builder", "label": "Builder HTML 생성", "fn": validate_builder_main},
         ],
     }.get(execution_mode, [])

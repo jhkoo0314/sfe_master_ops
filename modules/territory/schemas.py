@@ -19,6 +19,7 @@ Template-Driven 설계 (Sandbox와 동일 원칙):
 """
 
 from __future__ import annotations
+from datetime import date
 from typing import Optional, Any
 from pydantic import BaseModel, Field
 
@@ -108,6 +109,32 @@ class RepRoute(BaseModel):
 
     # 동선 효율 (단순화: 담당 병원 수 / 권역 수)
     coverage_score: float = 0.0     # 0.0 ~ 1.0
+
+
+class TerritoryActivityStandard(BaseModel):
+    """
+    Territory가 날짜 필터와 실제 동선을 만들 때 쓰는 표준 활동 행.
+
+    핵심 목적:
+    - CRM 표준 활동과 회사 거래처 좌표를 한 줄로 합친다.
+    - Territory 화면은 이 표준 행만 보고 담당자/월/일 필터를 만든다.
+    """
+    hospital_id: str
+    hospital_name: str
+    rep_id: str
+    rep_name: str
+    branch_id: str = ""
+    branch_name: str = ""
+    activity_date: date
+    month_key: str
+    date_key: str
+    latitude: float
+    longitude: float
+    region_key: str = ""
+    sub_region_key: Optional[str] = None
+    activity_type: str = "방문"
+    visit_count: int = 1
+    route_order: int = 0
 
 
 class RegionZone(BaseModel):

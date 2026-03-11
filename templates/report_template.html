@@ -10,9 +10,6 @@
     <script src='https://cdn.jsdelivr.net/npm/chartjs-plugin-datalabels'></script>
     <link href='https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css' rel='stylesheet'>
     <style>
-        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap');
-        @import url('https://fonts.googleapis.com/gh/orioncactus/pretendard/dist/web/static/pretendard.css');
-
         :root {
             --primary: #0f172a;
             --accent: #2563eb;
@@ -24,49 +21,53 @@
             --border-color: #e2e8f0;
             --text-main: #1e293b;
             --text-muted: #64748b;
+            --font: "Segoe UI", system-ui, sans-serif;
+            --radius: 10px;
+            --shadow: 0 14px 28px rgba(15, 23, 42, 0.08);
+            --shadow-hover: 0 18px 32px rgba(15, 23, 42, 0.12);
         }
 
         body { 
             background-color: var(--bg-main); 
             color: var(--text-main); 
-            font-family: 'Inter', 'Pretendard', sans-serif; 
-            padding: 1.5rem;
+            font-family: var(--font); 
+            padding: 1.25rem;
             letter-spacing: -0.01em;
         }
 
-        .max-w-custom { max-width: 1600px; margin: 0 auto; }
+        .max-w-custom { max-width: 1560px; margin: 0 auto; }
 
         /* Clinical Precision Card Style */
         .card { 
             background: var(--card-bg); 
-            border-radius: 4px; 
-            box-shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.1), 0 1px 2px 0 rgba(0, 0, 0, 0.06);
+            border-radius: var(--radius); 
+            box-shadow: var(--shadow);
             border: 1px solid var(--border-color); 
-            padding: 1.25rem; 
-            margin-bottom: 1.5rem;
+            padding: 1rem; 
+            margin-bottom: 1rem;
             position: relative;
             overflow: hidden;
             transition: transform 0.2s ease, box-shadow 0.2s ease;
         }
         .card:hover {
-            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+            box-shadow: var(--shadow-hover);
         }
 
         /* High Density Typography */
         .metric-label { 
             font-size: 0.7rem; 
-            font-weight: 800; 
+            font-weight: 700; 
             color: var(--text-muted); 
             text-transform: uppercase; 
             letter-spacing: 0.05em;
-            margin-bottom: 0.25rem;
+            margin-bottom: 0.35rem;
             display: block;
         }
         .metric-value { 
-            font-size: 1.75rem; 
-            font-weight: 900; 
+            font-size: 1.5rem; 
+            font-weight: 700; 
             line-height: 1; 
-            letter-spacing: -0.03em;
+            letter-spacing: -0.02em;
             font-variant-numeric: tabular-nums;
         }
 
@@ -74,8 +75,8 @@
         select { 
             background: #fff; 
             border: 1px solid #cbd5e1; 
-            padding: 6px 12px; 
-            border-radius: 2px; 
+            padding: 7px 12px; 
+            border-radius: var(--radius); 
             font-size: 0.8rem;
             font-weight: 700; 
             color: var(--primary); 
@@ -87,7 +88,7 @@
         
         button {
             transition: all 0.2s;
-            border-radius: 2px !important;
+            border-radius: var(--radius) !important;
         }
 
         /* Chart Containers */
@@ -98,15 +99,15 @@
             display: flex;
             align-items: center;
             gap: 0.75rem;
-            margin-bottom: 1.25rem;
+            margin-bottom: 1rem;
             padding-bottom: 0.5rem;
-            border-bottom: 2px solid var(--primary);
+            border-bottom: 1px solid var(--border-color);
         }
         .section-header h3 {
-            font-size: 1.1rem;
-            font-weight: 900;
+            font-size: 1rem;
+            font-weight: 700;
             text-transform: uppercase;
-            letter-spacing: 0.02em;
+            letter-spacing: 0.03em;
         }
 
         /* Swiss Grid Patterns */
@@ -147,11 +148,11 @@
 <body>
     <div class='max-w-custom'>
         <!-- MASTER HEADER -->
-        <header class='flex justify-between items-end pb-6 mb-6 border-b-4 border-slate-900'>
+        <header class='flex justify-between items-end pb-5 mb-5 border-b-2 border-slate-900'>
             <div>
-                <p class='text-blue-600 font-black text-xs uppercase tracking-[0.3em] mb-1'>Strategic Sales Force Effectiveness</p>
-                <h1 class='text-4xl font-black text-slate-900 tracking-tighter leading-none'>
-                    INTELLIGENCE <span class='text-slate-400 font-light'>CORE</span> <span class='bg-slate-900 text-white px-2 py-0.5 ml-1'>V1.0</span>
+                <p class='text-blue-600 font-bold text-xs uppercase tracking-[0.24em] mb-1'>Strategic Sales Force Effectiveness</p>
+                <h1 class='text-3xl font-bold text-slate-900 tracking-tight leading-none'>
+                    INTELLIGENCE <span class='text-slate-400 font-normal'>CORE</span> <span class='bg-slate-900 text-white px-2 py-0.5 ml-1 rounded-[10px]'>V1.0</span>
                 </h1>
                 <p id='viewTitle' class='text-slate-500 font-bold text-xs mt-2 uppercase'>Global Pharmaceutical Master Intelligence Report (KOR)</p>
             </div>
@@ -169,11 +170,11 @@
         </header>
 
         <!-- TOOLBAR -->
-        <div class='flex justify-between items-center mb-6'>
-            <div class='flex gap-1 p-1 bg-slate-200 rounded-px'>
-                <button id='periodMonthly' class='px-4 py-1.5 text-[10px] font-black uppercase bg-slate-900 text-white shadow-sm'>월간</button>
-                <button id='periodQuarterly' class='px-4 py-1.5 text-[10px] font-black uppercase text-slate-600 hover:bg-slate-300'>분기</button>
-                <button id='periodYearly' class='px-4 py-1.5 text-[10px] font-black uppercase text-slate-600 hover:bg-slate-300'>연간</button>
+        <div class='flex justify-between items-center mb-5'>
+            <div class='flex gap-1 p-1 bg-slate-200 rounded-[10px]'>
+                <button id='periodMonthly' class='px-4 py-1.5 text-[10px] font-bold uppercase bg-slate-900 text-white shadow-sm rounded-[8px]'>월간</button>
+                <button id='periodQuarterly' class='px-4 py-1.5 text-[10px] font-bold uppercase text-slate-600 hover:bg-slate-300 rounded-[8px]'>분기</button>
+                <button id='periodYearly' class='px-4 py-1.5 text-[10px] font-bold uppercase text-slate-600 hover:bg-slate-300 rounded-[8px]'>연간</button>
             </div>
             <div class='flex gap-2 items-center'>
                 <select id='monthSel' class='border-slate-300'>
@@ -209,7 +210,7 @@
             </div>
             <div id='card_metric_2' class='card border-l-4 border-l-slate-400 !mb-0'>
                 <span id='l_metric_2' class='metric-label'>목표 대비 편차</span>
-                <div id='v_metric_2' class='text-xl font-black text-slate-800 break-all'>-</div>
+                <div id='v_metric_2' class='text-xl font-bold text-slate-800 break-all'>-</div>
             </div>
             <div id='card_metric_3' class='card border-l-4 border-l-amber-600 !mb-0'>
                 <span id='l_metric_3' class='metric-label'>성과 지수 (PI)</span>
@@ -221,16 +222,16 @@
             </div>
             <div id='card_metric_5' class='card border-l-4 border-l-slate-800 !mb-0'>
                 <span id='l_metric_5' class='metric-label'>효율성 점수</span>
-                <div id='v_metric_5' class='text-xl font-black text-slate-800'>-</div>
+                <div id='v_metric_5' class='text-xl font-bold text-slate-800'>-</div>
             </div>
             <div id='card_metric_6' class='card border-l-4 border-l-slate-300 !mb-0'>
                 <span id='l_metric_6' class='metric-label'>데이터 정합성</span>
-                <div id='v_metric_6' class='text-xl font-black text-slate-500'>CHECKING</div>
+                <div id='v_metric_6' class='text-xl font-bold text-slate-500'>CHECKING</div>
             </div>
         </div>
 
         <!-- INTEGRITY SYSTEM -->
-        <div id='integritySimple' class='hidden card !p-3 border-l-4 border-amber-500 bg-amber-50/50 flex items-center justify-between mb-3 rounded-none'>
+        <div id='integritySimple' class='hidden card !p-3 border-l-4 border-amber-500 bg-amber-50/50 flex items-center justify-between mb-3'>
             <div class='flex items-center gap-3'>
                 <i id='integrityIcon' class='fas fa-microchip text-amber-600 animate-pulse'></i>
                 <p id='integritySummaryText' class='text-[11px] font-black text-amber-900 uppercase tracking-tight'>System Data Mapping Analysis in progress...</p>
@@ -239,14 +240,14 @@
         </div>
 
         <div id='integrityDetailPanel' class='hidden space-y-3 mb-6'>
-            <div id='qualityAlert' class='hidden card border-l-4 border-rose-600 bg-rose-50 rounded-none'>
+            <div id='qualityAlert' class='hidden card border-l-4 border-rose-600 bg-rose-50'>
                 <div class='flex items-center gap-2 mb-2'>
                     <i class='fas fa-exclamation-square text-rose-600'></i>
                     <h4 class='text-rose-900 font-black text-xs uppercase'>Critical Integrity Alert: Target Missing</h4>
                 </div>
                 <div class='grid grid-cols-4 gap-1' id='missingList'></div>
             </div>
-            <div id='healthSection' class='hidden card border-l-4 border-blue-600 bg-blue-50/50 rounded-none'>
+            <div id='healthSection' class='hidden card border-l-4 border-blue-600 bg-blue-50/50'>
                 <div class='flex justify-between items-center mb-3'>
                     <h4 class='text-slate-800 font-black text-xs uppercase'>Data Infrastructure Mapping</h4>
                     <div id='healthScore' class='px-2 py-0.5 bg-blue-600 text-white font-black text-[10px]'>SC: 100</div>
@@ -263,8 +264,8 @@
             </div>
             <div class='grid grid-cols-12 gap-4 mb-8'>
                 <div class='col-span-12 md:col-span-4 card flex flex-col items-center justify-center p-8 bg-slate-900 text-white'>
-                    <p class='text-[10px] font-black text-slate-400 uppercase tracking-widest mb-4'>목표 달성 지표</p>
-                    <h2 id='v_achieve_layer1' class='text-7xl font-black tracking-tighter'>-</h2>
+                    <p class='text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-4'>목표 달성 지표</p>
+                    <h2 id='v_achieve_layer1' class='text-6xl font-bold tracking-tight'>-</h2>
                     <div class='w-full bg-slate-800 h-1 mt-6 mb-2'>
                         <div id='v_achieve_bar' class='bg-blue-500 h-full transition-all duration-1000' style='width: 0%'></div>
                     </div>
@@ -338,7 +339,7 @@
                 </div>
                 <div class='card p-6 flex flex-col items-center justify-center bg-slate-50'>
                     <span class='metric-label'>소속 지점</span>
-                    <h2 id='v_indiv_branch' class='text-sm font-black text-slate-600 uppercase tracking-tighter truncate w-full text-center'>-</h2>
+                    <h2 id='v_indiv_branch' class='text-sm font-bold text-slate-600 uppercase tracking-tight truncate w-full text-center'>-</h2>
                 </div>
             </div>
 
@@ -364,16 +365,16 @@
             </div>
             <div class='card border-slate-900 border-2 bg-slate-50 mb-8'>
                 <div class='flex items-center gap-4 mb-6'>
-                    <div class='bg-slate-900 text-white w-10 h-10 flex items-center justify-center rounded-none'>
+                    <div class='bg-slate-900 text-white w-10 h-10 flex items-center justify-center rounded-[10px]'>
                         <i class='fas fa-robot'></i>
                     </div>
                     <div>
-                        <p class='text-[10px] font-black text-slate-400 uppercase tracking-widest'>엔진 진단 결과</p>
-                        <h2 id='v_coach_scenario' class='text-xl font-black text-slate-900 uppercase tracking-tight'>데이터 분석 중...</h2>
+                        <p class='text-[10px] font-bold text-slate-400 uppercase tracking-widest'>엔진 진단 결과</p>
+                        <h2 id='v_coach_scenario' class='text-lg font-bold text-slate-900 uppercase tracking-tight'>데이터 분석 중...</h2>
                     </div>
                 </div>
                 <div class='bg-white p-6 border border-slate-200 shadow-sm'>
-                    <p class='text-[11px] font-black text-blue-600 mb-2 uppercase tracking-tighter'>맞춤형 전략 가이드</p>
+                    <p class='text-[11px] font-bold text-blue-600 mb-2 uppercase tracking-tight'>맞춤형 전략 가이드</p>
                     <p id='v_coach_action' class='text-lg font-bold text-slate-800 leading-snug'>데이터 동기화 대기 중...</p>
                 </div>
             </div>
@@ -387,7 +388,7 @@
                     <h4 class='text-[11px] font-black text-slate-500 uppercase mb-6'>채널 집중도 분석 (Gini)</h4>
                     <div class='flex flex-col justify-center h-full gap-6 px-4'>
                         <div class='flex items-end justify-between'>
-                            <h1 id='v_gini' class='text-6xl font-black text-slate-900 tracking-tighter'>-</h1>
+                            <h1 id='v_gini' class='text-5xl font-bold text-slate-900 tracking-tight'>-</h1>
                             <span id='giniRiskBadge' class='px-2 py-1 text-[9px] font-black uppercase border'>-</span>
                         </div>
                         <div class='w-full'>
@@ -427,7 +428,7 @@
         let periodMode = 'monthly';
 
         if (typeof window.ChartDataLabels !== 'undefined') Chart.register(ChartDataLabels);
-        Chart.defaults.font.family = "'Inter', 'Pretendard', sans-serif";
+        Chart.defaults.font.family = '"Segoe UI", system-ui, sans-serif';
         Chart.defaults.color = '#64748b';
 
         function safeDestroyChart(key){ if (charts[key]) charts[key].destroy(); charts[key] = null; }
@@ -567,8 +568,8 @@
                 setMetric(2, '목표 대비 편차 (백만)', (gap >= 0 ? '+' : '') + gap.toFixed(1), gap >= 0 ? 'text-emerald-600' : 'text-rose-600', gap >= 0 ? '#10b981' : '#ef4444');
                 setMetric(3, '성과 지수 (PI)', Math.round(perf.pi), 'text-amber-600', '#d97706');
                 setMetric(4, '성장률 (FGR)', Math.round(perf.fgr), 'text-emerald-600', '#059669');
-                setMetric(5, '지점 평균 효율', 'CLUSTER', 'text-slate-800 text-xl font-black mt-2', '#1e293b');
-                setMetric(6, '데이터 정합성', 'STABLE', 'text-slate-400 text-xl font-black mt-2', '#cbd5e1');
+                setMetric(5, '지점 평균 효율', 'CLUSTER', 'text-slate-800 text-xl font-bold mt-2', '#1e293b');
+                setMetric(6, '데이터 정합성', 'STABLE', 'text-slate-400 text-xl font-bold mt-2', '#cbd5e1');
             } else {
                 const m = payload.member;
                 setMetric(1, '성과 지수 (PI)', Math.round(perf.pi), 'text-blue-700', '#2563eb');
@@ -655,8 +656,8 @@
 
             document.getElementById('activity_breakdown').innerHTML = Object.entries(m.activity_counts || {}).map(([k,v])=>`
                 <div class='bg-slate-50 border border-slate-200 p-2'>
-                    <p class='text-[9px] font-black text-slate-400 uppercase'>${behaviorMap[k]||k}</p>
-                    <p class='text-xs font-black text-slate-900'>${v}</p>
+                    <p class='text-[9px] font-bold text-slate-400 uppercase'>${behaviorMap[k]||k}</p>
+                    <p class='text-xs font-bold text-slate-900'>${v}</p>
                 </div>
             `).join('');
 
@@ -664,7 +665,7 @@
             document.getElementById('v_gini').innerText = g.toFixed(2);
             document.getElementById('giniGaugeFill').style.width = (g * 100) + "%";
             document.getElementById('giniRiskBadge').innerText = g > 0.4 ? '고집중 리스크' : '안정적 분산';
-            document.getElementById('giniRiskBadge').className = 'px-2 py-1 text-[9px] font-black uppercase border ' + (g > 0.4 ? 'border-rose-600 text-rose-600' : 'border-emerald-600 text-emerald-600');
+            document.getElementById('giniRiskBadge').className = 'px-2 py-1 text-[9px] font-bold uppercase border rounded-[10px] ' + (g > 0.4 ? 'border-rose-600 text-rose-600' : 'border-emerald-600 text-emerald-600');
             document.getElementById('coverage_text').innerText = `시장 장악력: ${(100 - g*100).toFixed(1)}%`;
 
             safeNewChart('rPm', 'chart_r_pm', {
@@ -698,7 +699,7 @@
             periodMode = mode;
             [periodMonthly, periodQuarterly, periodYearly].forEach(btn => {
                 const isActive = btn.id === 'period' + mode.charAt(0).toUpperCase() + mode.slice(1);
-                btn.className = 'px-4 py-1.5 text-[10px] font-black uppercase ' + (isActive ? 'bg-slate-900 text-white shadow-sm' : 'text-slate-600 hover:bg-slate-300');
+                btn.className = 'px-4 py-1.5 text-[10px] font-bold uppercase rounded-[8px] ' + (isActive ? 'bg-slate-900 text-white shadow-sm' : 'text-slate-600 hover:bg-slate-300');
             });
             monthSel.classList.toggle('hidden', mode !== 'monthly');
             quarterSel.classList.toggle('hidden', mode !== 'quarterly');

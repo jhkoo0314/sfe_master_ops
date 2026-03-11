@@ -83,9 +83,8 @@ def _materialize_periodized_report(report_output_path: str, report_period: str, 
 
 def render_dashboard_tab() -> None:
     render_page_hero(
-        "SFE OPS 엔진 가동 지표",
-        "html_builder의 다크 콘솔 톤을 그대로 가져와, 운영 상태와 전략 흐름이 한눈에 들어오도록 재구성한 메인 대시보드입니다.",
-        "LIVE CONSOLE",
+        "SFE OPERATION SYSTEM",
+        "",
     )
     result = st.session_state.pipeline_result
 
@@ -121,7 +120,7 @@ def render_dashboard_tab() -> None:
             <div class="flow-arrow">→</div>
             <div class="decision-core">
               <div class="core-icon">🔬</div>
-              <div class="core-title">Sandbox Decision Engine</div>
+              <div class="core-title">Operation System Engine</div>
               <div class="core-copy">정규화된 데이터를 검증하고, 점수와 이유를 만든 뒤 다음 모듈 핸드오프 여부를 결정합니다.</div>
               <div class="decision-badges"><span>Normalize</span><span>Scoring</span><span>Handoff</span></div>
             </div>

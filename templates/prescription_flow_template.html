@@ -8,8 +8,6 @@
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
 <style>
-@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&family=JetBrains+Mono:wght@400;700&family=Noto+Sans+KR:wght@300;400;500;700;900&display=swap');
-
 :root {
   --bg: #0a0e1a;
   --surface: #111827;
@@ -21,13 +19,16 @@
   --danger: #ef4444;
   --text: #f1f5f9;
   --text-muted: #94a3b8;
-  --mono: 'JetBrains Mono', monospace;
+  --font: "Segoe UI", system-ui, sans-serif;
+  --mono: "Segoe UI", system-ui, sans-serif;
+  --radius: 10px;
+  --shadow: 0 14px 28px rgba(0, 0, 0, 0.22);
 }
 
 body {
   background-color: var(--bg);
   color: var(--text);
-  font-family: 'Inter', 'Noto Sans KR', sans-serif;
+  font-family: var(--font);
   letter-spacing: -0.01em;
 }
 
@@ -40,12 +41,15 @@ body {
 .glass-panel {
   background: var(--surface);
   border: 1px solid var(--border);
-  border-radius: 2px;
+  border-radius: var(--radius);
+  box-shadow: var(--shadow);
 }
 
 .pipeline-step {
   position: relative;
   transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  border-radius: 8px;
+  overflow: hidden;
 }
 
 .pipeline-step::after {
@@ -65,7 +69,8 @@ body {
 .stat-value {
   font-family: var(--mono);
   font-variant-numeric: tabular-nums;
-  letter-spacing: -0.05em;
+  letter-spacing: -0.03em;
+  font-weight: 700;
 }
 
 .data-row:hover { background: var(--surface-alt); }
@@ -73,14 +78,14 @@ body {
 table { width: 100%; border-collapse: collapse; }
 th {
   text-align: left;
-  padding: 12px 16px;
+  padding: 10px 14px;
   font-size: 0.75rem;
   color: var(--text-muted);
   text-transform: uppercase;
   border-bottom: 2px solid var(--border);
 }
 td {
-  padding: 12px 16px;
+  padding: 10px 14px;
   border-bottom: 1px solid var(--border);
   font-size: 0.85rem;
 }
@@ -98,16 +103,16 @@ td {
 .chart-container { position: relative; width: 100%; height: 280px; }
 </style>
 </head>
-<body class="p-6">
+<body class="p-5">
 
-  <header class="flex justify-between items-end mb-8 pb-6 border-b border-slate-800 gap-4 flex-wrap">
+  <header class="flex justify-between items-end mb-6 pb-4 border-b border-slate-800 gap-4 flex-wrap">
     <div>
       <div class="flex items-center gap-2 mb-2 flex-wrap">
-        <span class="bg-blue-600 text-white px-2 py-0.5 text-[10px] font-black tracking-widest uppercase">Operational</span>
-        <span id="companyBadge" class="bg-slate-800 text-slate-200 px-2 py-0.5 text-[10px] font-black tracking-widest uppercase"></span>
+        <span class="bg-blue-600 text-white px-2 py-0.5 text-[10px] font-bold tracking-widest uppercase rounded-[8px]">Operational</span>
+        <span id="companyBadge" class="bg-slate-800 text-slate-200 px-2 py-0.5 text-[10px] font-bold tracking-widest uppercase rounded-[8px]"></span>
         <span class="text-slate-500 font-mono text-[10px]" id="qualityBadge"></span>
       </div>
-      <h1 class="text-4xl font-black tracking-tighter text-white">PRESCRIPTION DATA <span class="text-blue-500">FLOW</span></h1>
+      <h1 class="text-3xl font-bold tracking-tight text-white">PRESCRIPTION DATA <span class="text-blue-500">FLOW</span></h1>
       <p class="text-slate-400 font-bold text-xs mt-1 uppercase tracking-wider">도매 -> 약국 -> 병원 -> 담당자 흐름 검증 콘솔</p>
     </div>
     <div class="flex flex-col items-end gap-3">
@@ -128,15 +133,15 @@ td {
 
     <div class="col-span-12 lg:col-span-8 space-y-6">
 
-      <div class="glass-panel p-6">
-        <div class="flex justify-between items-center mb-6 gap-4 flex-wrap">
-          <h3 class="text-sm font-black text-white uppercase tracking-tighter flex items-center gap-2">
+      <div class="glass-panel p-5">
+        <div class="flex justify-between items-center mb-5 gap-4 flex-wrap">
+          <h3 class="text-sm font-bold text-white uppercase tracking-tight flex items-center gap-2">
             <i class="fas fa-stream text-blue-500"></i> Data Flow Distribution
           </h3>
           <span class="text-[10px] font-mono text-slate-500">Unit: Million KRW</span>
         </div>
 
-        <div class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-4 mb-8" id="flowSummaryCards"></div>
+        <div class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-3 mb-6" id="flowSummaryCards"></div>
 
         <div class="chart-container">
           <canvas id="flowChart"></canvas>
@@ -146,7 +151,7 @@ td {
       <div class="glass-panel overflow-hidden">
         <div class="p-4 border-b border-slate-800 flex justify-between items-center bg-slate-900/30 gap-3 flex-wrap">
           <div>
-            <h3 class="text-xs font-black text-white uppercase tracking-tighter">Rep Individual KPI Post-Share</h3>
+            <h3 class="text-xs font-bold text-white uppercase tracking-tight">Rep Individual KPI Post-Share</h3>
             <p id="tableMeta" class="text-[10px] text-slate-500 mt-1"></p>
           </div>
           <button class="text-[10px] bg-slate-800 px-2 py-1 flex items-center gap-1 cursor-default">
@@ -180,8 +185,8 @@ td {
 
     <div class="col-span-12 lg:col-span-4 space-y-6">
 
-      <div class="glass-panel p-6">
-        <h3 class="text-sm font-black text-white uppercase tracking-tighter mb-4 flex items-center gap-2">
+      <div class="glass-panel p-5">
+        <h3 class="text-sm font-bold text-white uppercase tracking-tight mb-4 flex items-center gap-2">
           <i class="fas fa-shield-virus text-amber-500"></i> Integrity Diagnostic
         </h3>
         <div class="space-y-4">
@@ -203,13 +208,13 @@ td {
         </div>
 
         <div class="mt-8 grid grid-cols-2 gap-4">
-          <div class="p-3 bg-slate-900 border border-slate-800 rounded-px text-center">
+          <div class="p-3 bg-slate-900 border border-slate-800 rounded-[10px] text-center">
             <p class="text-[9px] font-bold text-slate-500 uppercase">High Severity</p>
-            <p id="highSeverityValue" class="text-xl font-black text-rose-500 pt-1"></p>
+            <p id="highSeverityValue" class="text-xl font-bold text-rose-500 pt-1"></p>
           </div>
-          <div class="p-3 bg-slate-900 border border-slate-800 rounded-px text-center">
+          <div class="p-3 bg-slate-900 border border-slate-800 rounded-[10px] text-center">
             <p class="text-[9px] font-bold text-slate-500 uppercase">Warnings</p>
-            <p id="warningValue" class="text-xl font-black text-amber-500 pt-1"></p>
+            <p id="warningValue" class="text-xl font-bold text-amber-500 pt-1"></p>
           </div>
         </div>
 
@@ -218,7 +223,7 @@ td {
 
       <div class="glass-panel h-[400px] flex flex-col">
         <div class="p-4 border-b border-slate-800 bg-slate-900/30">
-          <h3 class="text-xs font-black text-white uppercase tracking-tighter">Trace Case Log</h3>
+          <h3 class="text-xs font-bold text-white uppercase tracking-tight">Trace Case Log</h3>
           <p class="text-[9px] text-slate-500 mt-1">Claim variance / unmapped / rule miss summary</p>
         </div>
         <div id="traceLog" class="flex-1 overflow-y-auto p-4 font-mono text-[10px] space-y-2"></div>
@@ -370,7 +375,7 @@ td {
       pipelineTrail.innerHTML = steps.map((step) => `
         <div class="pipeline-step ${escapeHtml(step.status || '')} bg-slate-900/50 p-4">
           <span class="text-[9px] font-mono text-slate-500">${escapeHtml(step.step || '')}</span>
-          <h4 class="text-xs font-black uppercase mt-1 ${step.status === 'active' ? 'text-blue-400' : step.status === 'error' ? 'text-rose-400' : 'text-slate-300'}">${escapeHtml(step.title || '')}</h4>
+          <h4 class="text-xs font-bold uppercase mt-1 ${step.status === 'active' ? 'text-blue-400' : step.status === 'error' ? 'text-rose-400' : 'text-slate-300'}">${escapeHtml(step.title || '')}</h4>
           <p class="text-[10px] mt-2 ${step.status === 'complete' ? 'text-slate-500' : step.status === 'active' ? 'text-blue-500 font-bold' : step.status === 'error' ? 'text-rose-500 font-bold' : 'text-slate-700'}">${escapeHtml(step.metric || '')}</p>
         </div>
       `).join('');
@@ -385,7 +390,7 @@ td {
         ['Pre-KPI Final', summary.pre_kpi_final_amount, 'border-amber-600'],
       ];
       flowSummaryCards.innerHTML = cards.map(([label, value, tone]) => `
-        <div class="bg-slate-900/80 p-4 border-l-2 ${tone}">
+        <div class="bg-slate-900/80 p-4 border-l-2 ${tone} rounded-[10px] border border-slate-800/80">
           <span class="text-[9px] text-slate-500 font-bold uppercase block mb-1">${label}</span>
           <span class="stat-value text-xl font-bold">${fmtMillion(value)}</span>
         </div>

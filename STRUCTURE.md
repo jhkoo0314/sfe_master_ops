@@ -49,6 +49,10 @@ sfe_master_ops/
 - Sandbox
 - Territory
 
+현재 상태 메모:
+- `adapters/territory/`는 이제 CRM 표준 활동과 거래처 좌표를 합쳐 `ops_territory_activity.xlsx`를 만드는 역할을 합니다.
+- Territory는 `Sandbox result asset`을 중심으로 돌고, 날짜별 실제 동선은 Territory 표준 활동 파일로 붙습니다.
+
 ### `modules/`
 
 실제 계산과 Builder용 재료 생성을 담당하는 층입니다.
@@ -65,8 +69,10 @@ sfe_master_ops/
 - `modules/territory/`
   - Territory Result Asset 생성
   - `builder_payload.py`에서 지도 보고서용 payload 생성
+  - 현재는 `manifest + 담당자/월 asset` 구조로 Territory Builder 데이터를 분리 생성
 - `modules/builder/`
   - 모듈이 만든 payload를 읽어 HTML로 주입
+  - Territory처럼 큰 payload는 Builder 단계에서도 분리 asset 구조를 유지하도록 보정
   - 직접 계산 엔진 역할은 하지 않음
 
 ### `ops_core/`
@@ -122,12 +128,13 @@ OPS 판단과 파이프라인 실행을 담당합니다.
 
 - [report_template.html](/C:/sfe_master_ops/templates/report_template.html)
 - [crm_analysis_template.html](/C:/sfe_master_ops/templates/crm_analysis_template.html)
-- [Spatial_Preview_260224.html](/C:/sfe_master_ops/templates/Spatial_Preview_260224.html)
+- [territory_optimizer_template.html](/C:/sfe_master_ops/templates/territory_optimizer_template.html)
 - [prescription_flow_template.html](/C:/sfe_master_ops/templates/prescription_flow_template.html)
 - [total_valid_templates.html](/C:/sfe_master_ops/templates/total_valid_templates.html)
 
 참고:
-- `hh.html`, `hh_builder_template.js`, `hhb.js`는 통합 보고서 디자인 복구 참고용 템플릿 자산입니다.
+- 현재 운영 기준 템플릿은 위 5개입니다.
+- 예전 문서에 남아 있던 `hh.html`, `hh_builder_template.js`, `hhb.js`는 현재 저장소에 없습니다.
 
 ### `scripts/`
 
@@ -138,6 +145,7 @@ OPS 판단과 파이프라인 실행을 담당합니다.
 - `normalize_hangyeol_crm_source.py`
 - `normalize_hangyeol_sandbox_source.py`
 - `normalize_hangyeol_prescription_source.py`
+- `normalize_hangyeol_territory_source.py`
 - `validate_hangyeol_crm_with_ops.py`
 - `validate_hangyeol_prescription_with_ops.py`
 - `validate_hangyeol_sandbox_with_ops.py`
@@ -151,8 +159,12 @@ OPS 판단과 파이프라인 실행을 담당합니다.
 현재 중요한 점:
 - CRM 검증 스크립트가 `crm_builder_payload.json` 생성
 - Prescription 검증 스크립트가 `prescription_builder_payload.json` 생성
-- Territory 검증 스크립트가 `territory_builder_payload.json` 생성
+- Territory 정규화 스크립트가 `ops_territory_activity.xlsx` 생성
+- Territory 검증 스크립트가 `territory_builder_payload.json`과 `territory_builder_payload_assets/*.js` 생성
 - Builder 검증 스크립트는 이 payload를 읽어 HTML 생성
+- Territory Builder 결과에는 `territory_map_preview_assets/*.js`가 같이 복사됨
+- 코드상으로는 CRM / Sandbox / Territory / Prescription / Total Valid 5종 생성 가능
+- 실제 저장된 HTML은 회사별 마지막 실행 시점에 따라 일부만 있을 수 있음
 
 ### `common/`
 
@@ -203,12 +215,21 @@ Builder는 직접 raw를 읽지 않습니다.
 - Territory
   - `territory_result_asset.json`
   - `territory_builder_payload.json`
+  - `territory_builder_payload_assets/*.js`
   - `territory_map_preview.html`
 - Sandbox
   - `sandbox_result_asset.json` 내부 `dashboard_payload.template_payload`
   - `sandbox_report_preview.html`
 
 즉 Builder는 `표현 단계`이고, 계산은 앞단 모듈에 둡니다.
+
+추가 메모:
+- Territory Builder payload는 기본 화면에서 전체 병원 좌표를 다 싣지 않습니다.
+- 기본값은 `담당자 미선택`이고, 담당자를 고르면 해당 담당자용 `catalog asset`과 선택 월용 `route asset`만 읽습니다.
+- `total_valid_preview.html`은 Builder 단계에서 별도로 생성됩니다.
+- 회사별 현재 저장 상태는 다릅니다.
+- `daon_pharma`는 Builder 5종 저장이 확인됩니다.
+- `hangyeol_pharma`는 현재 Builder 3종 저장이 확인됩니다.
 
 ## 현재 UI 기준 흐름
 
@@ -241,7 +262,7 @@ Builder는 직접 raw를 읽지 않습니다.
 - HTML 열기/다운로드
 - Prescription는 원본 엑셀 다운로드도 제공
 
-## 현재 생성되는 보고서
+## 현재 생성 가능한 보고서
 
 개별 보고서:
 - CRM 행동 분석 보고서
@@ -257,6 +278,10 @@ Builder는 직접 raw를 읽지 않습니다.
 
 즉 통합 보고서도 OPS가 새 계산을 하는 곳이 아니라,
 최종 템플릿 결과를 확인하는 관제 화면에 가깝습니다.
+
+주의:
+- 위 목록은 코드 기준 생성 가능 목록입니다.
+- 실제 폴더에 저장된 결과는 회사별 마지막 실행 상태를 기준으로 달라질 수 있습니다.
 
 ## 현재 빠진 것
 

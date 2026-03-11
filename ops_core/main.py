@@ -52,8 +52,8 @@ app.include_router(prescription_router)
 app.include_router(sandbox_router)
 app.include_router(territory_router)
 app.include_router(pipeline_router)
-# Phase 6 Builder는 UI 레이어로 제공 (templates/total_valid_templates.html)
-# Phase 8 Streamlit 콘솔 도입 예정
+# Builder는 UI + 검증 스크립트 레이어로 제공
+# Streamlit 운영 콘솔은 현재 ui/ops_console.py 에서 사용 중
 
 
 # ────────────────────────────────────────
@@ -68,8 +68,11 @@ async def root():
         "status": "running",
         "principle": "원천데이터 → Adapter → Module → Result Asset → OPS",
         "active_modules": ["crm", "prescription", "sandbox", "territory", "pipeline"],
-        "ui_modules": ["builder (total_valid_templates.html)"],
-        "planned_modules": ["streamlit_console"],
+        "ui_modules": [
+            "streamlit_console (ui/ops_console.py)",
+            "builder_html (scripts/validate_hangyeol_builder_with_ops.py)",
+        ],
+        "planned_modules": [],
         "pipeline": {
             "endpoint": "POST /ops/pipeline/run",
             "flow": "crm → prescription → sandbox → territory → builder",
@@ -102,9 +105,21 @@ async def ops_status():
                 "status": "active",
                 "evaluate_endpoint": "/ops/crm/evaluate",
             },
-            "prescription": {"status": "planned"},
-            "sandbox": {"status": "planned"},
-            "territory": {"status": "planned"},
-            "builder": {"status": "planned"},
+            "prescription": {
+                "status": "active",
+                "evaluate_endpoint": "/ops/prescription/evaluate",
+            },
+            "sandbox": {
+                "status": "active",
+                "evaluate_endpoint": "/ops/sandbox/evaluate",
+            },
+            "territory": {
+                "status": "active",
+                "evaluate_endpoint": "/ops/territory/evaluate",
+            },
+            "builder": {
+                "status": "ui-active",
+                "evaluate_endpoint": "ui/ops_console.py + scripts/validate_hangyeol_builder_with_ops.py",
+            },
         }
     }

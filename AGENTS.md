@@ -145,7 +145,7 @@ Result Asset -> builder_input_standard -> builder_payload_standard -> HTML
 
 - `templates/report_template.html`
 - `templates/crm_analysis_template.html`
-- `templates/Spatial_Preview_260224.html`
+- `templates/territory_optimizer_template.html`
 - `templates/prescription_flow_template.html`
 - `templates/total_valid_templates.html`
 

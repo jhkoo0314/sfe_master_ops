@@ -7,7 +7,8 @@
 - 회사별 raw를 같은 틀로 흡수하고 어디까지 연결되는지 검증
 - CRM, Prescription, Sandbox, Territory, Builder를 실제로 실행 가능
 - 회사 코드별로 결과 폴더를 분리
-- HTML 보고서 5종과 통합 허브까지 생성
+- 코드 기준으로 HTML 보고서 5종과 통합 허브까지 생성 가능
+- 실제 저장된 보고서 수는 회사별 마지막 실행 상태에 따라 다를 수 있음
 
 ## 핵심 원칙
 
@@ -32,7 +33,7 @@
 - 목표
 - Prescription fact_ship
 
-생성되는 주요 HTML:
+코드 기준 생성 가능한 주요 HTML:
 - CRM 행동 분석 보고서
 - Sandbox 성과 보고서
 - Territory 권역 지도 보고서
@@ -46,6 +47,15 @@
 - 업로드 파일 반영
 - 실제 파이프라인 실행
 - 산출물 미리보기/다운로드
+- 대시보드 / 데이터 어댑터 / 파이프라인 / 분석 인텔리전스 / 결과물 빌더 5개 탭 사용
+- 현재 실행모드:
+  - `CRM -> Sandbox`
+  - `CRM -> Territory`
+  - `Sandbox -> HTML`
+  - `Sandbox -> Territory`
+  - `CRM -> PDF`
+  - `CRM -> Sandbox -> Territory`
+  - `통합 실행`
 
 ## Builder 입력 방식
 
@@ -62,6 +72,7 @@
 - Territory
   - `territory_result_asset.json`
   - `territory_builder_payload.json`
+  - `territory_builder_payload_assets/*.js`
   - `territory_map_preview.html`
 - Sandbox
   - `sandbox_result_asset.json` 안의 `dashboard_payload.template_payload`
@@ -85,6 +96,14 @@ data/
 - `data/ops_standard/daon_pharma`
 - `data/ops_validation/daon_pharma`
 
+현재 확인된 회사 예시:
+- `daon_pharma`: Builder 보고서 5종 저장 확인
+- `hangyeol_pharma`: Builder 보고서 3종 저장 확인
+
+즉:
+- 코드 구조는 5종 보고서를 지원
+- 실제 저장 산출물은 회사별 마지막 실행 결과에 따라 다름
+
 ## 주요 파일
 
 운영 콘솔:
@@ -101,9 +120,13 @@ data/
 Builder 템플릿:
 - [report_template.html](/C:/sfe_master_ops/templates/report_template.html)
 - [crm_analysis_template.html](/C:/sfe_master_ops/templates/crm_analysis_template.html)
-- [Spatial_Preview_260224.html](/C:/sfe_master_ops/templates/Spatial_Preview_260224.html)
+- [territory_optimizer_template.html](/C:/sfe_master_ops/templates/territory_optimizer_template.html)
 - [prescription_flow_template.html](/C:/sfe_master_ops/templates/prescription_flow_template.html)
 - [total_valid_templates.html](/C:/sfe_master_ops/templates/total_valid_templates.html)
+
+참고:
+- `templates/`에는 현재 위 5개 템플릿만 운영 기준으로 유지
+- 예전 문서에 남아 있던 `hh.html`, `hh_builder_template.js`, `hhb.js`는 현재 저장소에 없음
 
 ## 실행 방식
 
@@ -122,6 +145,7 @@ uv run streamlit run ui/ops_console.py --server.port 8501
 ## 실행모드
 
 - `CRM -> Sandbox`
+- `CRM -> Territory`
 - `Sandbox -> HTML`
 - `Sandbox -> Territory`
 - `CRM -> PDF`
@@ -136,6 +160,9 @@ uv run streamlit run ui/ops_console.py --server.port 8501
 - `prescription_flow_preview.html`
 - `total_valid_preview.html`
 
+단, 위 5개는 `입력 데이터 + 모듈 산출물 + Builder payload`가 모두 준비됐을 때 기준입니다.
+즉 회사별 마지막 실행 상태에 따라 일부만 저장돼 있을 수 있습니다.
+
 ## 현재 주의할 점
 
 - 완전 범용 제품이라기보다 `회사별 커스텀 가능한 공통 틀`에 가깝습니다.
@@ -143,6 +170,10 @@ uv run streamlit run ui/ops_console.py --server.port 8501
 - Prescription HTML은 경량화했지만 다른 보고서보다 여전히 무거운 편입니다.
 - 통합 보고서는 개별 HTML을 한 화면에서 묶어 보는 허브입니다.
 - WebSlide 기능은 현재 제거된 상태입니다.
+- Territory는 이제 `ops_standard/{company_key}/territory/ops_territory_activity.xlsx`를 만들고, Builder는 이 표준 파일 기반 payload를 읽습니다.
+- Territory 지도는 기본값이 `담당자 미선택` 상태입니다.
+- Territory 지도는 초기 전체 마커를 한 번에 뿌리지 않고, 담당자를 고른 뒤 해당 담당자의 `catalog asset`과 선택한 `월 asset`만 순차 로딩합니다.
+- Territory Builder 출력에는 `builder/territory_map_preview_assets/*.js`가 같이 생기며, 지도는 이 분리 asset을 필요할 때만 읽습니다.
 
 ## 현재 검증된 회사 예시
 

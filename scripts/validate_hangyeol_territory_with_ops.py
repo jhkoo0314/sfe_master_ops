@@ -11,7 +11,10 @@ if str(ROOT) not in sys.path:
     sys.path.insert(0, str(ROOT))
 
 from modules.territory.schemas import GeoCoord
-from modules.territory.builder_payload import build_territory_builder_payload
+from modules.territory.builder_payload import (
+    build_chunked_territory_payload,
+    build_territory_builder_payload,
+)
 from modules.territory.service import build_territory_result_asset
 from ops_core.api.territory_router import evaluate_territory_asset
 from modules.sandbox.schemas import HospitalAnalysisRecord
@@ -20,9 +23,10 @@ from common.company_runtime import get_active_company_key, get_active_company_na
 COMPANY_KEY = get_active_company_key()
 COMPANY_NAME = get_active_company_name(COMPANY_KEY)
 SANDBOX_VALIDATION_ROOT = get_company_root(ROOT, "ops_validation", COMPANY_KEY) / "sandbox"
+TERRITORY_STANDARD_ROOT = get_company_root(ROOT, "ops_standard", COMPANY_KEY) / "territory"
 SOURCE_ROOT = get_company_root(ROOT, "company_source", COMPANY_KEY)
 OUTPUT_ROOT = get_company_root(ROOT, "ops_validation", COMPANY_KEY) / "territory"
-CRM_ACTIVITY_PATH = get_company_root(ROOT, "company_source", COMPANY_KEY) / "crm" / "hangyeol_crm_activity_raw.xlsx"
+TERRITORY_ACTIVITY_PATH = TERRITORY_STANDARD_ROOT / "ops_territory_activity.xlsx"
 
 
 def load_hospital_records() -> list[HospitalAnalysisRecord]:
@@ -49,6 +53,8 @@ def build_hospital_maps() -> tuple[dict[str, str], dict[str, GeoCoord], dict[str
 
 def main() -> None:
     OUTPUT_ROOT.mkdir(parents=True, exist_ok=True)
+    chunk_root = OUTPUT_ROOT / "territory_builder_payload_assets"
+    chunk_root.mkdir(parents=True, exist_ok=True)
 
     hospital_records = load_hospital_records()
     region_map, coord_map, name_map, sub_region_map, rep_map = build_hospital_maps()
@@ -62,7 +68,11 @@ def main() -> None:
         hospital_rep_map=rep_map,
     )
     evaluation = evaluate_territory_asset(asset)
-    builder_payload = build_territory_builder_payload(asset, crm_activity_path=str(CRM_ACTIVITY_PATH))
+    full_builder_payload = build_territory_builder_payload(
+        asset,
+        territory_activity_path=str(TERRITORY_ACTIVITY_PATH),
+    )
+    builder_payload, asset_chunks = build_chunked_territory_payload(full_builder_payload)
 
     (OUTPUT_ROOT / "territory_result_asset.json").write_text(
         json.dumps(asset.model_dump(mode="json"), ensure_ascii=False, indent=2),
@@ -72,6 +82,24 @@ def main() -> None:
         json.dumps(builder_payload, ensure_ascii=False, indent=2),
         encoding="utf-8",
     )
+    for existing in chunk_root.glob("*.js"):
+        existing.unlink()
+    for chunk_name, chunk_payload in asset_chunks.items():
+        if "views" in chunk_payload:
+            chunk_key = f"{chunk_payload.get('rep_id', '')}|{chunk_payload.get('month_key', '')}"
+            chunk_script = (
+                "window.__TERRITORY_MONTH_DATA__ = window.__TERRITORY_MONTH_DATA__ || {};\n"
+                f"window.__TERRITORY_MONTH_DATA__[{json.dumps(chunk_key, ensure_ascii=False)}] = "
+                f"{json.dumps(chunk_payload, ensure_ascii=False)};\n"
+            )
+        else:
+            chunk_key = str(chunk_payload.get("rep_id", "")).strip()
+            chunk_script = (
+                "window.__TERRITORY_REP_DATA__ = window.__TERRITORY_REP_DATA__ || {};\n"
+                f"window.__TERRITORY_REP_DATA__[{json.dumps(chunk_key, ensure_ascii=False)}] = "
+                f"{json.dumps(chunk_payload, ensure_ascii=False)};\n"
+            )
+        (chunk_root / chunk_name).write_text(chunk_script, encoding="utf-8")
     (OUTPUT_ROOT / "territory_ops_evaluation.json").write_text(
         json.dumps(evaluation.model_dump(mode="json"), ensure_ascii=False, indent=2),
         encoding="utf-8",
@@ -86,6 +114,8 @@ def main() -> None:
         "quality_score": evaluation.quality_score,
         "next_modules": evaluation.next_modules,
         "coverage_rate": asset.coverage_summary.coverage_rate,
+        "territory_activity_standard_exists": TERRITORY_ACTIVITY_PATH.exists(),
+        "rep_filter_count": len(builder_payload.get("filters", {}).get("rep_options", [])),
     }
     (OUTPUT_ROOT / "territory_validation_summary.json").write_text(
         json.dumps(summary, ensure_ascii=False, indent=2),

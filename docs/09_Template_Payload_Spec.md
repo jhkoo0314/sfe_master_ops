@@ -246,11 +246,11 @@ payload 필수 키:
 
 ---
 
-## 3.2 `Spatial_Preview_260224.html`
+## 3.2 `territory_optimizer_template.html`
 
 대상 파일:
 
-- `templates/Spatial_Preview_260224.html`
+- `templates/territory_optimizer_template.html`
 
 용도:
 
@@ -263,15 +263,16 @@ payload 필수 키:
 
 주입 방식:
 
-- `window.__INITIAL_MODE__`
-- `window.__INITIAL_MARKERS__`
-- `window.__INITIAL_ROUTES__`
+- `window.__TERRITORY_DATA__`
 
 payload 필수 키:
 
 - `mode`
-- `markers`
-- `routes`
+- `overview`
+- `hospital_catalog`
+- `filters`
+- `default_selection`
+- `rep_payloads`
 
 ### `mode`
 
@@ -284,44 +285,72 @@ payload 필수 키:
 - `hospital`
 - `routing`
 
-### `markers[]`
+### `filters.rep_options[]`
 
 설명:
 
-- 지도에 뿌릴 병원 핀 목록
+- 담당자 선택 드롭다운에 들어가는 목록
 
 대표 필드:
 
-- `hospital_id`
+- `value`
+- `label`
+- `month_count`
+- `day_count`
+- `hospital_count`
+
+### `rep_payloads.{rep_id}`
+
+설명:
+
+- 담당자 한 명의 Territory 화면 데이터 묶음
+
+대표 필드:
+
+- `rep_id`
+- `rep_name`
+- `portfolio_summary`
+- `months`
+- `dates_by_month`
+- `views`
+
+### `rep_payloads.{rep_id}.views.{month|date}`
+
+설명:
+
+- 실제 지도 렌더링에 바로 쓰는 선택 결과
+- 화면은 이 묶음 하나만 꺼내서 지도와 카드에 반영한다
+
+대표 필드:
+
+- `scope`
+- `summary`
+- `points`
+- `insight_text`
+
+### `hospital_catalog.{hospital_id}`
+
+설명:
+
+- 병원 기본 정보 카탈로그
+- 같은 병원 정보는 여기 한 번만 두고, 일자별 선택값은 병원 ID만 가리킨다
+
+대표 필드:
+
 - `hospital`
-- `rep`
 - `lat`
 - `lon`
 - `sales`
 - `target`
-- `insight`
+- `attainment_rate`
 - `region`
 - `sub_region`
 
-### `routes[]`
-
-설명:
-
-- 담당자 방문 동선
-
-대표 필드:
-
-- `rep`
-- `month`
-- `date`
-- `coords`
-
-`coords[]` 대표 필드:
+`points[]` 대표 필드:
 
 - `seq`
-- `hospital`
-- `lat`
-- `lon`
+- `hospital_id`
+- `visit_count`
 
 ---
 
