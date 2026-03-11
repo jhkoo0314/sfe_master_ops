@@ -9,6 +9,7 @@ from __future__ import annotations
 from datetime import datetime
 from typing import Optional
 from pydantic import BaseModel, Field
+from common.asset_versions import TERRITORY_RESULT_SCHEMA_VERSION
 
 from modules.territory.schemas import (
     MapMarker, RepRoute, RegionZone,
@@ -18,6 +19,7 @@ from modules.territory.templates import TerritoryMapContract
 
 
 class TerritoryResultAsset(BaseModel):
+    schema_version: str = Field(default=TERRITORY_RESULT_SCHEMA_VERSION)
     asset_type: str = "territory_result_asset"
 
     # 지도 템플릿 (렌더링 규격)

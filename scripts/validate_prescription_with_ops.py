@@ -11,6 +11,10 @@ if str(ROOT) not in sys.path:
     sys.path.insert(0, str(ROOT))
 
 from adapters.crm.hospital_adapter import load_hospital_master_from_file
+from common.asset_versions import (
+    PRESCRIPTION_BUILDER_PAYLOAD_VERSION,
+    attach_builder_payload_version,
+)
 from common.company_profile import get_company_ops_profile
 from common.company_runtime import get_active_company_key, get_active_company_name, get_company_root
 from modules.prescription.schemas import CompanyPrescriptionStandard
@@ -607,6 +611,11 @@ def main() -> None:
         gap_df=gap_report_df,
         rep_kpi_df=quarter_kpi_df,
         download_files=summary["output_files"],
+    )
+    builder_payload = attach_builder_payload_version(
+        builder_payload,
+        payload_version=PRESCRIPTION_BUILDER_PAYLOAD_VERSION,
+        source_asset_schema_version=asset.schema_version,
     )
     (OUTPUT_ROOT / "prescription_validation_summary.json").write_text(
         json.dumps(summary, ensure_ascii=False, indent=2),

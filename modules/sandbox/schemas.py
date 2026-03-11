@@ -21,6 +21,11 @@ from __future__ import annotations
 from datetime import date
 from typing import Any, Optional, Literal
 from pydantic import BaseModel, Field
+from common.asset_versions import (
+    BUILDER_CONTRACT_VERSION,
+    SANDBOX_INPUT_SCHEMA_VERSION,
+    SANDBOX_TEMPLATE_PAYLOAD_VERSION,
+)
 
 
 # ────────────────────────────────────────
@@ -149,6 +154,7 @@ class SandboxInputStandard(BaseModel):
 
     OPS가 허용한 자산 조합에 따라 구성된다.
     """
+    schema_version: str = Field(default=SANDBOX_INPUT_SCHEMA_VERSION)
     scenario: SandboxScenario
     aggregation_level: AggregationLevel = "monthly"  # 분석 집계 단위
     weight_config: dict[str, float] = Field(default_factory=dict) # 지표별 가중치 (커스텀 분석용)
@@ -249,6 +255,8 @@ class DashboardPayload(BaseModel):
     HTML Builder(Phase 6)를 위한 시각화 전용 데이터 구조.
     회사가 원하는 대시보드 형태를 여기서 결정합니다.
     """
+    payload_version: str = Field(default=SANDBOX_TEMPLATE_PAYLOAD_VERSION)
+    builder_contract_version: str = Field(default=BUILDER_CONTRACT_VERSION)
     layout_type: str = "comprehensive"  # "sales_focus", "activity_focus" 등
     chart_data: dict[str, list] = Field(default_factory=dict) # 시계열, 파이차트 등 데이터
     top_performers: list[dict] = Field(default_factory=list)

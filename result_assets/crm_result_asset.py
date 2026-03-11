@@ -14,6 +14,7 @@ OPS Core는 이 자산만 보고 품질/연결을 판단한다.
 from datetime import datetime
 from typing import Optional
 from pydantic import BaseModel, Field
+from common.asset_versions import CRM_RESULT_SCHEMA_VERSION
 from common.types import ResultAssetType
 
 
@@ -85,6 +86,10 @@ class CrmResultAsset(BaseModel):
       - Prescription Data Flow (hospital_id 재사용)
       - SFE Sandbox (crm_result_asset 전체 입력)
     """
+    schema_version: str = Field(
+        default=CRM_RESULT_SCHEMA_VERSION,
+        description="Result Asset JSON 규격 버전"
+    )
     asset_type: str = Field(
         default=ResultAssetType.CRM_RESULT,
         description="자산 타입 식별자 (고정값)"

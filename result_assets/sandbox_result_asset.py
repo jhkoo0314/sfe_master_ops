@@ -9,6 +9,7 @@ from __future__ import annotations
 from datetime import datetime
 from typing import Optional
 from pydantic import BaseModel, Field
+from common.asset_versions import SANDBOX_RESULT_SCHEMA_VERSION
 
 from modules.sandbox.schemas import (
     AnalysisSummary,
@@ -28,6 +29,7 @@ class SandboxResultAsset(BaseModel):
       - 분석 품질이 충분한지 판단
       - Territory / Builder handoff 가능 여부 결정
     """
+    schema_version: str = Field(default=SANDBOX_RESULT_SCHEMA_VERSION)
     asset_type: str = "sandbox_result_asset"
     scenario: str                           # 사용된 시나리오
     metric_months: list[str]                # 분석된 월 목록

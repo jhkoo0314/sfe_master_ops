@@ -10,6 +10,7 @@ import re
 from pathlib import Path
 import shutil
 
+from common.asset_versions import build_source_version_snapshot, extract_source_version_snapshot
 from modules.territory.builder_payload import build_chunked_territory_payload
 from modules.builder.schemas import (
     BuilderInputReference,
@@ -27,6 +28,12 @@ def build_sandbox_template_input(
 ) -> BuilderInputStandard:
     dashboard_payload = asset.dashboard_payload
     payload_seed = (dashboard_payload.template_payload if dashboard_payload is not None else {}) or {}
+    source_versions = build_source_version_snapshot(
+        "sandbox",
+        schema_version=getattr(asset, "schema_version", None),
+        payload_version=getattr(dashboard_payload, "payload_version", None) if dashboard_payload is not None else None,
+        builder_contract_version=getattr(dashboard_payload, "builder_contract_version", None) if dashboard_payload is not None else None,
+    )
     reference = BuilderInputReference(
         template_key="report_template",
         template_path=template_path,
@@ -41,6 +48,7 @@ def build_sandbox_template_input(
         report_title=f"SFE 성과 분석 보고서 ({asset.scenario})",
         executive_summary=dashboard_payload.insight_messages if dashboard_payload is not None else [],
         source_references=[reference],
+        source_versions=source_versions,
         payload_seed=payload_seed,
         source_modules=["sandbox"],
     )
@@ -56,6 +64,7 @@ def build_territory_template_input(
     source_asset_path: str | None = None,
 ) -> BuilderInputStandard:
     payload_seed = _load_payload_seed(builder_payload_path)
+    source_versions = extract_source_version_snapshot("territory", payload_seed)
     overview = payload_seed.get("overview", {})
     reference = BuilderInputReference(
         template_key="territory_map",
@@ -75,6 +84,7 @@ def build_territory_template_input(
             f"담당자 {int(overview.get('total_reps', 0))}명",
         ],
         source_references=[reference],
+        source_versions=source_versions,
         payload_seed=payload_seed,
         source_modules=["territory"],
     )
@@ -86,6 +96,7 @@ def build_prescription_template_input(
     source_asset_path: str | None = None,
 ) -> BuilderInputStandard:
     payload_seed = _load_payload_seed(builder_payload_path)
+    source_versions = extract_source_version_snapshot("prescription", payload_seed)
     overview = payload_seed.get("overview", {})
     reference = BuilderInputReference(
         template_key="prescription_flow",
@@ -106,6 +117,7 @@ def build_prescription_template_input(
             f"비교표 PASS {claim_summary.get('pass_count', 0)}건 / REVIEW {claim_summary.get('review_count', 0)}건 / SUSPECT {claim_summary.get('suspect_count', 0)}건",
         ],
         source_references=[reference],
+        source_versions=source_versions,
         payload_seed=payload_seed,
         source_modules=["prescription"],
     )
@@ -117,6 +129,7 @@ def build_crm_template_input(
     source_asset_path: str | None = None,
 ) -> BuilderInputStandard:
     payload_seed = _load_payload_seed(builder_payload_path)
+    source_versions = extract_source_version_snapshot("crm", payload_seed)
     overview = payload_seed.get("overview", {})
     activity_context = payload_seed.get("activity_context", {})
     mapping_quality = payload_seed.get("mapping_quality", {})
@@ -138,6 +151,7 @@ def build_crm_template_input(
             f"병원 매핑률 {float(mapping_quality.get('hospital_mapping_rate', 0) or 0):.1%}",
         ],
         source_references=[reference],
+        source_versions=source_versions,
         payload_seed=payload_seed,
         source_modules=["crm"],
     )
@@ -150,6 +164,7 @@ def build_template_payload(builder_input: BuilderInputStandard) -> BuilderPayloa
             template_path=builder_input.template_path,
             report_title=builder_input.report_title,
             payload=builder_input.payload_seed,
+            source_versions=builder_input.source_versions,
             source_modules=builder_input.source_modules,
             output_name="ops_report_preview.html",
             render_mode="report_data_json",
@@ -161,6 +176,7 @@ def build_template_payload(builder_input: BuilderInputStandard) -> BuilderPayloa
             template_path=builder_input.template_path,
             report_title=builder_input.report_title,
             payload=builder_input.payload_seed,
+            source_versions=builder_input.source_versions,
             source_modules=builder_input.source_modules,
             output_name="territory_map_preview.html",
             render_mode="territory_window_vars",
@@ -172,6 +188,7 @@ def build_template_payload(builder_input: BuilderInputStandard) -> BuilderPayloa
             template_path=builder_input.template_path,
             report_title=builder_input.report_title,
             payload=builder_input.payload_seed,
+            source_versions=builder_input.source_versions,
             source_modules=builder_input.source_modules,
             output_name="prescription_flow_preview.html",
             render_mode="prescription_window_vars",
@@ -183,6 +200,7 @@ def build_template_payload(builder_input: BuilderInputStandard) -> BuilderPayloa
             template_path=builder_input.template_path,
             report_title=builder_input.report_title,
             payload=builder_input.payload_seed,
+            source_versions=builder_input.source_versions,
             source_modules=builder_input.source_modules,
             output_name="crm_analysis_preview.html",
             render_mode="crm_window_vars",

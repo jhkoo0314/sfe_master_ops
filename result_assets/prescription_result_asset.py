@@ -14,6 +14,7 @@ OPS는 이 자산만 보고 품질/연결을 판단한다.
 from datetime import datetime
 from typing import Optional
 from pydantic import BaseModel, Field
+from common.asset_versions import PRESCRIPTION_RESULT_SCHEMA_VERSION
 from common.types import ResultAssetType
 
 
@@ -80,6 +81,7 @@ class PrescriptionResultAsset(BaseModel):
     다음 모듈로의 handoff 대상:
       - SFE Sandbox (CRM Result Asset과 함께 조합 분석)
     """
+    schema_version: str = Field(default=PRESCRIPTION_RESULT_SCHEMA_VERSION)
     asset_type: str = Field(default=ResultAssetType.PRESCRIPTION_RESULT)
     generated_at: datetime = Field(default_factory=datetime.now)
     source_module: str = Field(default="prescription")

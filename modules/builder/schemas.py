@@ -10,6 +10,12 @@ from __future__ import annotations
 from datetime import datetime
 from typing import Any, Optional, Literal
 from pydantic import BaseModel, Field
+from common.asset_versions import (
+    BUILDER_CONTRACT_VERSION,
+    BUILDER_INPUT_SCHEMA_VERSION,
+    BUILDER_PAYLOAD_VERSION,
+    HTML_BUILDER_RESULT_SCHEMA_VERSION,
+)
 
 
 # ────────────────────────────────────────
@@ -58,11 +64,14 @@ class BuilderInputStandard(BaseModel):
     Builder가 받는 공통 입력 규격.
     모듈별 자산을 바로 HTML로 보내지 않고 이 구조로 먼저 맞춘다.
     """
+    schema_version: str = Field(default=BUILDER_INPUT_SCHEMA_VERSION)
+    builder_contract_version: str = Field(default=BUILDER_CONTRACT_VERSION)
     template_key: BuilderTemplateKey
     template_path: str
     report_title: str
     executive_summary: list[str] = Field(default_factory=list)
     source_references: list[BuilderInputReference] = Field(default_factory=list)
+    source_versions: dict[str, dict[str, str]] = Field(default_factory=dict)
     payload_seed: dict[str, Any] = Field(default_factory=dict)
     source_modules: list[str] = Field(default_factory=list)
 
@@ -71,10 +80,13 @@ class BuilderPayloadStandard(BaseModel):
     """
     템플릿이 바로 읽는 최종 주입용 데이터.
     """
+    payload_version: str = Field(default=BUILDER_PAYLOAD_VERSION)
+    builder_contract_version: str = Field(default=BUILDER_CONTRACT_VERSION)
     template_key: BuilderTemplateKey
     template_path: str
     report_title: str
     payload: dict[str, Any] = Field(default_factory=dict)
+    source_versions: dict[str, dict[str, str]] = Field(default_factory=dict)
     source_modules: list[str] = Field(default_factory=list)
     output_name: str = "builder_output.html"
     render_mode: Literal["report_data_json", "territory_window_vars", "prescription_window_vars", "crm_window_vars"] = "report_data_json"
@@ -88,6 +100,7 @@ class HtmlBuilderResultAsset(BaseModel):
     HTML Builder 최종 산출물.
     OPS가 이 자산을 평가하여 보고 자산으로 승인한다.
     """
+    schema_version: str = Field(default=HTML_BUILDER_RESULT_SCHEMA_VERSION)
     asset_type: str = "html_builder_result_asset"
 
     # Builder 입력/표현 메타

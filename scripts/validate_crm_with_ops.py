@@ -9,6 +9,10 @@ if str(ROOT) not in sys.path:
     sys.path.insert(0, str(ROOT))
 
 from adapters.crm.hospital_adapter import load_hospital_master_from_file, build_hospital_index
+from common.asset_versions import (
+    CRM_BUILDER_PAYLOAD_VERSION,
+    attach_builder_payload_version,
+)
 from adapters.crm.company_master_adapter import load_company_master_from_file
 from adapters.crm.crm_activity_adapter import load_crm_activity_from_file
 from common.company_profile import get_company_ops_profile
@@ -80,6 +84,11 @@ def main() -> None:
         COMPANY_NAME,
         activities=crm_activities,
         company_master=company_master,
+    )
+    builder_payload = attach_builder_payload_version(
+        builder_payload,
+        payload_version=CRM_BUILDER_PAYLOAD_VERSION,
+        source_asset_schema_version=result_asset.schema_version,
     )
 
     (OUTPUT_ROOT / "crm_result_asset.json").write_text(

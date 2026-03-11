@@ -11,6 +11,10 @@ if str(ROOT) not in sys.path:
     sys.path.insert(0, str(ROOT))
 
 from common.company_profile import get_company_ops_profile
+from common.asset_versions import (
+    TERRITORY_BUILDER_PAYLOAD_VERSION,
+    attach_builder_payload_version,
+)
 from modules.territory.schemas import GeoCoord
 from modules.territory.builder_payload import (
     build_chunked_territory_payload,
@@ -75,6 +79,11 @@ def main() -> None:
         territory_activity_path=str(TERRITORY_ACTIVITY_PATH),
     )
     builder_payload, asset_chunks = build_chunked_territory_payload(full_builder_payload)
+    builder_payload = attach_builder_payload_version(
+        builder_payload,
+        payload_version=TERRITORY_BUILDER_PAYLOAD_VERSION,
+        source_asset_schema_version=asset.schema_version,
+    )
 
     (OUTPUT_ROOT / "territory_result_asset.json").write_text(
         json.dumps(asset.model_dump(mode="json"), ensure_ascii=False, indent=2),

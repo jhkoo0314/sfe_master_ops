@@ -71,6 +71,38 @@ Builder가 받는 공통 입력 규격이다.
 - `output_name`
 - `render_mode`
 
+### 2.4 버전 규칙
+
+2026-03-11 기준으로 Builder와 모듈 JSON은 루트에 버전 필드를 같이 남긴다.
+
+왜 필요한가:
+
+- 같은 이름의 JSON이어도 내부 모양이 바뀔 수 있기 때문이다.
+- 나중에 HTML이 안 맞을 때 `어느 규격 파일인지` 바로 확인하려는 목적이다.
+
+현재 규칙:
+
+- Result Asset JSON
+  - `schema_version`
+- 모듈별 Builder payload JSON
+  - `payload_version`
+  - `builder_contract_version`
+  - `source_asset_schema_version`
+- BuilderInputStandard JSON
+  - `schema_version`
+  - `builder_contract_version`
+  - `source_versions`
+- BuilderPayloadStandard JSON
+  - `payload_version`
+  - `builder_contract_version`
+  - `source_versions`
+
+쉽게 말하면:
+
+- 모듈은 자기 결과 파일 버전을 적는다.
+- Builder용 payload도 자기 주입 규격 버전을 적는다.
+- Builder는 받은 버전을 다시 `source_versions`로 기록한다.
+
 ---
 
 ## 3. 템플릿별 규격
