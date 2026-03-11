@@ -104,6 +104,39 @@ data/
 - 코드 구조는 5종 보고서를 지원
 - 실제 저장 산출물은 회사별 마지막 실행 결과에 따라 다름
 
+원천 파일 이름 규칙:
+- `crm/crm_activity_raw.xlsx`
+- `company/company_assignment_raw.xlsx`
+- `company/account_master.xlsx`
+- `sales/sales_raw.xlsx`
+- `target/target_raw.xlsx`
+- `company/fact_ship_raw.csv`
+- `company/rep_master.xlsx`
+
+즉 회사 구분은 파일명 앞 접두사가 아니라 `company_key` 폴더가 맡습니다.
+
+## 실행 진입점 정리
+
+현재 실제 실행 진입점은 회사명 없는 공통 스크립트입니다.
+
+- `scripts/generate_source_raw.py`
+- `scripts/normalize_crm_source.py`
+- `scripts/normalize_sandbox_source.py`
+- `scripts/normalize_prescription_source.py`
+- `scripts/normalize_territory_source.py`
+- `scripts/validate_crm_with_ops.py`
+- `scripts/validate_sandbox_with_ops.py`
+- `scripts/validate_prescription_with_ops.py`
+- `scripts/validate_territory_with_ops.py`
+- `scripts/validate_builder_with_ops.py`
+- `scripts/validate_full_pipeline.py`
+
+회사별 차이는 파일 이름이 아니라 [company_profile.py](/C:/sfe_master_ops/common/company_profile.py)에서 관리합니다.
+
+참고:
+- raw 샘플 생성도 이제 [generate_source_raw.py](/C:/sfe_master_ops/scripts/generate_source_raw.py)를 먼저 보고, 실제 회사별 생성 로직은 profile에 등록된 스크립트가 맡습니다.
+- 회사별 raw 생성 구현은 [raw_generators](/C:/sfe_master_ops/scripts/raw_generators) 아래에 둡니다.
+
 ## 주요 파일
 
 운영 콘솔:
@@ -111,6 +144,9 @@ data/
 - [console_shared.py](/C:/sfe_master_ops/ui/console_shared.py)
 - [console_sidebar.py](/C:/sfe_master_ops/ui/console_sidebar.py)
 - [console_tabs.py](/C:/sfe_master_ops/ui/console_tabs.py)
+
+회사별 실행 프로필:
+- [company_profile.py](/C:/sfe_master_ops/common/company_profile.py)
 
 모듈별 Builder payload:
 - [builder_payload.py](/C:/sfe_master_ops/modules/crm/builder_payload.py)

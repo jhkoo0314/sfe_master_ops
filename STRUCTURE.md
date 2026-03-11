@@ -140,21 +140,28 @@ OPS 판단과 파이프라인 실행을 담당합니다.
 
 정규화/검증/Builder 생성 스크립트입니다.
 
+원칙:
+- 루트 `scripts/`에는 공통 진입점만 둡니다.
+- 회사별 raw 생성 구현은 `scripts/raw_generators/` 아래에 둡니다.
+
 대표 파일:
 
-- `normalize_hangyeol_crm_source.py`
-- `normalize_hangyeol_sandbox_source.py`
-- `normalize_hangyeol_prescription_source.py`
-- `normalize_hangyeol_territory_source.py`
-- `validate_hangyeol_crm_with_ops.py`
-- `validate_hangyeol_prescription_with_ops.py`
-- `validate_hangyeol_sandbox_with_ops.py`
-- `validate_hangyeol_territory_with_ops.py`
-- `validate_hangyeol_builder_with_ops.py`
-- `validate_hangyeol_full_pipeline.py`
+- `generate_source_raw.py`
+- `normalize_crm_source.py`
+- `normalize_sandbox_source.py`
+- `normalize_prescription_source.py`
+- `normalize_territory_source.py`
+- `validate_crm_with_ops.py`
+- `validate_prescription_with_ops.py`
+- `validate_sandbox_with_ops.py`
+- `validate_territory_with_ops.py`
+- `validate_builder_with_ops.py`
+- `validate_full_pipeline.py`
 
-이름은 `hangyeol`이 남아 있지만,
-현재는 `company_runtime.py`를 통해 회사 코드 기준 동적 경로를 사용합니다.
+운영 메모:
+- 현재 기준 진입점 이름은 위 공통 이름만 사용합니다.
+- 실제 경로와 입력 파일 선택은 계속 `company_runtime.py`가 회사 코드 기준으로 처리합니다.
+- raw 샘플 생성은 `generate_source_raw.py`가 공통 진입점이고, 실제 회사별 생성 로직은 `company_profile.py`에 연결된 생성 스크립트가 담당합니다.
 
 현재 중요한 점:
 - CRM 검증 스크립트가 `crm_builder_payload.json` 생성
@@ -172,6 +179,8 @@ OPS 판단과 파이프라인 실행을 담당합니다.
 
 - [company_runtime.py](/C:/sfe_master_ops/common/company_runtime.py)
   - 회사 코드 기준 경로 생성
+- [company_profile.py](/C:/sfe_master_ops/common/company_profile.py)
+  - 회사별 raw 파일 위치와 adapter 설정을 묶어서 관리
 - `config.py`
 - `exceptions.py`
 - `types.py`
@@ -196,6 +205,18 @@ data/
 data/company_source/{company_key}/
 data/ops_standard/{company_key}/
 data/ops_validation/{company_key}/
+```
+
+현재 원천 파일 이름은 회사명 접두사 없이 공통 이름을 씁니다.
+
+```text
+crm/crm_activity_raw.xlsx
+company/company_assignment_raw.xlsx
+company/account_master.xlsx
+sales/sales_raw.xlsx
+target/target_raw.xlsx
+company/fact_ship_raw.csv
+company/rep_master.xlsx
 ```
 
 ## 현재 Builder 기준 흐름

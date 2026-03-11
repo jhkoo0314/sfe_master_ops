@@ -70,7 +70,7 @@ async def root():
         "active_modules": ["crm", "prescription", "sandbox", "territory", "pipeline"],
         "ui_modules": [
             "streamlit_console (ui/ops_console.py)",
-            "builder_html (scripts/validate_hangyeol_builder_with_ops.py)",
+            "builder_html (scripts/validate_builder_with_ops.py)",
         ],
         "planned_modules": [],
         "pipeline": {
@@ -119,7 +119,7 @@ async def ops_status():
             },
             "builder": {
                 "status": "ui-active",
-                "evaluate_endpoint": "ui/ops_console.py + scripts/validate_hangyeol_builder_with_ops.py",
+                "evaluate_endpoint": "ui/ops_console.py + scripts/validate_builder_with_ops.py",
             },
         }
     }

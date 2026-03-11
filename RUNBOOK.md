@@ -130,6 +130,38 @@ data/ops_standard/daon_pharma/
 data/ops_validation/daon_pharma/
 ```
 
+원천 파일 기본 이름도 이제 공통 규칙으로 맞춥니다.
+
+- `crm/crm_activity_raw.xlsx`
+- `company/company_assignment_raw.xlsx`
+- `company/account_master.xlsx`
+- `sales/sales_raw.xlsx`
+- `target/target_raw.xlsx`
+- `company/fact_ship_raw.csv`
+- `company/rep_master.xlsx`
+
+## 6-1. 실행 스크립트 기준
+
+현재 운영에서 먼저 보는 실행 파일은 회사명 없는 공통 스크립트입니다.
+
+- `scripts/generate_source_raw.py`
+- `scripts/normalize_crm_source.py`
+- `scripts/normalize_sandbox_source.py`
+- `scripts/normalize_prescription_source.py`
+- `scripts/normalize_territory_source.py`
+- `scripts/validate_crm_with_ops.py`
+- `scripts/validate_sandbox_with_ops.py`
+- `scripts/validate_prescription_with_ops.py`
+- `scripts/validate_territory_with_ops.py`
+- `scripts/validate_builder_with_ops.py`
+- `scripts/validate_full_pipeline.py`
+
+회사별 raw 파일 위치와 어댑터 설정은 [company_profile.py](/C:/sfe_master_ops/common/company_profile.py)에서 가져옵니다.
+
+참고:
+- raw 샘플 데이터가 필요할 때는 `scripts/generate_source_raw.py`를 먼저 보고, 실제 회사별 생성은 profile에 등록된 스크립트가 실행됩니다.
+- 회사별 raw 생성 구현 파일은 `scripts/raw_generators/` 아래에 둡니다.
+
 ## 7. 주요 산출물
 
 정규화 결과:

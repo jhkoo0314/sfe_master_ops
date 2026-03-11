@@ -93,7 +93,7 @@ class SalesAdapterConfig(BaseModel):
         한결제약 회사 원본형 sales 파일 기준 설정.
 
         파일:
-          data/raw/company_source/hangyeol_pharma/sales/hangyeol_sales_raw.xlsx
+          data/raw/company_source/hangyeol_pharma/sales/sales_raw.xlsx
         """
         return cls(
             hospital_id_col="거래처코드",
@@ -171,7 +171,7 @@ class TargetAdapterConfig(BaseModel):
         한결제약 회사 원본형 target 파일 기준 설정.
 
         파일:
-          data/raw/company_source/hangyeol_pharma/target/hangyeol_target_raw.xlsx
+          data/raw/company_source/hangyeol_pharma/target/target_raw.xlsx
         """
         return cls(
             rep_id_col="영업사원코드",

@@ -226,7 +226,7 @@ class CompanyPrescriptionAdapterConfig(BaseModel):
         한결제약 회사 원본형 fact_ship 파일 기준 설정.
 
         파일:
-          data/raw/company_source/hangyeol_pharma/company/hangyeol_fact_ship_raw.csv
+          data/raw/company_source/hangyeol_pharma/company/fact_ship_raw.csv
         """
         return cls(
             record_type_value="wholesaler_shipment",

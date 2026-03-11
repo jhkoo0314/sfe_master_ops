@@ -8,6 +8,7 @@ import time
 
 import pandas as pd
 import streamlit as st
+from common.company_profile import get_company_ops_profile
 from common.company_runtime import get_active_company_key as env_company_key, get_active_company_name as env_company_name
 
 
@@ -448,17 +449,18 @@ def get_crm_package_status(uploaded: dict) -> dict:
 
 
 def get_source_target_map() -> dict[str, tuple[str, str]]:
-    root = get_project_root()
-    company_root = os.path.join(root, "data", "company_source", get_active_company_key())
-    return {
-        "crm_activity": (os.path.join(company_root, "crm", "hangyeol_crm_activity_raw.xlsx"), "excel"),
-        "crm_rep_master": (os.path.join(company_root, "company", "hangyeol_company_assignment_raw.xlsx"), "excel"),
-        "crm_account_assignment": (os.path.join(company_root, "company", "hangyeol_account_master.xlsx"), "excel"),
-        "crm_rules": (os.path.join(company_root, "company", "hangyeol_crm_rules_raw.xlsx"), "excel"),
-        "sales": (os.path.join(company_root, "sales", "hangyeol_sales_raw.xlsx"), "excel"),
-        "target": (os.path.join(company_root, "target", "hangyeol_target_raw.xlsx"), "excel"),
-        "prescription": (os.path.join(company_root, "company", "hangyeol_fact_ship_raw.csv"), "csv"),
-    }
+    root = Path(get_project_root())
+    company_key = get_active_company_key()
+    profile = get_company_ops_profile(company_key)
+    return profile.resolved_source_targets(root, company_key)
+
+
+def get_source_target_display_path(source_key: str) -> str:
+    root = Path(get_project_root())
+    company_key = get_active_company_key()
+    profile = get_company_ops_profile(company_key)
+    relative_path, _ = profile.source_targets[source_key]
+    return str(Path("data") / "company_source" / company_key / Path(relative_path))
 
 
 def get_source_target_rows(execution_mode: str, uploaded: dict) -> list[dict]:
@@ -582,15 +584,15 @@ def stage_uploaded_sources(uploaded: dict) -> list[str]:
 
 
 def get_mode_pipeline_steps(execution_mode: str) -> list[dict]:
-    from scripts.normalize_hangyeol_crm_source import main as normalize_crm_main
-    from scripts.validate_hangyeol_crm_with_ops import main as validate_crm_main
-    from scripts.normalize_hangyeol_sandbox_source import main as normalize_sandbox_main
-    from scripts.validate_hangyeol_sandbox_with_ops import main as validate_sandbox_main
-    from scripts.normalize_hangyeol_territory_source import main as normalize_territory_main
-    from scripts.normalize_hangyeol_prescription_source import main as normalize_rx_main
-    from scripts.validate_hangyeol_prescription_with_ops import main as validate_rx_main
-    from scripts.validate_hangyeol_territory_with_ops import main as validate_territory_main
-    from scripts.validate_hangyeol_builder_with_ops import main as validate_builder_main
+    from scripts.normalize_crm_source import main as normalize_crm_main
+    from scripts.validate_crm_with_ops import main as validate_crm_main
+    from scripts.normalize_sandbox_source import main as normalize_sandbox_main
+    from scripts.validate_sandbox_with_ops import main as validate_sandbox_main
+    from scripts.normalize_territory_source import main as normalize_territory_main
+    from scripts.normalize_prescription_source import main as normalize_rx_main
+    from scripts.validate_prescription_with_ops import main as validate_rx_main
+    from scripts.validate_territory_with_ops import main as validate_territory_main
+    from scripts.validate_builder_with_ops import main as validate_builder_main
 
     return {
         "crm_to_sandbox": [

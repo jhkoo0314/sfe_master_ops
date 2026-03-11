@@ -10,6 +10,7 @@ ROOT = Path(__file__).resolve().parents[1]
 if str(ROOT) not in sys.path:
     sys.path.insert(0, str(ROOT))
 
+from common.company_profile import get_company_ops_profile
 from modules.territory.schemas import GeoCoord
 from modules.territory.builder_payload import (
     build_chunked_territory_payload,
@@ -22,6 +23,7 @@ from common.company_runtime import get_active_company_key, get_active_company_na
 
 COMPANY_KEY = get_active_company_key()
 COMPANY_NAME = get_active_company_name(COMPANY_KEY)
+PROFILE = get_company_ops_profile(COMPANY_KEY)
 SANDBOX_VALIDATION_ROOT = get_company_root(ROOT, "ops_validation", COMPANY_KEY) / "sandbox"
 TERRITORY_STANDARD_ROOT = get_company_root(ROOT, "ops_standard", COMPANY_KEY) / "territory"
 SOURCE_ROOT = get_company_root(ROOT, "company_source", COMPANY_KEY)
@@ -35,7 +37,7 @@ def load_hospital_records() -> list[HospitalAnalysisRecord]:
 
 
 def build_hospital_maps() -> tuple[dict[str, str], dict[str, GeoCoord], dict[str, str], dict[str, str], dict[str, str]]:
-    account_df = pd.read_excel(SOURCE_ROOT / "company" / "hangyeol_account_master.xlsx")
+    account_df = pd.read_excel(PROFILE.source_path(SOURCE_ROOT, "crm_account_assignment"))
     region_map = {str(r.account_id): str(r.region_key) for r in account_df.itertuples(index=False)}
     coord_map = {
         str(r.account_id): GeoCoord(

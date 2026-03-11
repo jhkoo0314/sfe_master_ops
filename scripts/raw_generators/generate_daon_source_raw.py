@@ -4,17 +4,24 @@ import random
 from dataclasses import dataclass
 from itertools import cycle
 from pathlib import Path
+import sys
 
 import numpy as np
 import pandas as pd
 
 
-ROOT = Path(__file__).resolve().parents[1]
+ROOT = Path(__file__).resolve().parents[2]
+if str(ROOT) not in sys.path:
+    sys.path.insert(0, str(ROOT))
+
+from common.company_profile import get_company_ops_profile
+
 PUBLIC_ROOT = ROOT / "data" / "public"
-OUTPUT_ROOT = ROOT / "data" / "company_source" / "daon_pharma"
+COMPANY_KEY = "daon_pharma"
+PROFILE = get_company_ops_profile(COMPANY_KEY)
+OUTPUT_ROOT = ROOT / "data" / "company_source" / COMPANY_KEY
 PORTFOLIO_PATH = ROOT / "docs" / "hangyeol-pharma-portfolio-draft.csv"
 
-COMPANY_KEY = "daon_pharma"
 COMPANY_NAME = "다온제약"
 SEED = 20260310
 CLINIC_REP_COUNT = 75
@@ -533,18 +540,25 @@ def generate_fact_ship(account_master: pd.DataFrame, sales_raw: pd.DataFrame, po
 
 
 def write_outputs(rep_df: pd.DataFrame, account_master: pd.DataFrame, assignment_raw: pd.DataFrame, crm_raw: pd.DataFrame, target_raw: pd.DataFrame, sales_raw: pd.DataFrame, ship_raw: pd.DataFrame) -> None:
-    (OUTPUT_ROOT / "crm").mkdir(parents=True, exist_ok=True)
-    (OUTPUT_ROOT / "sales").mkdir(parents=True, exist_ok=True)
-    (OUTPUT_ROOT / "target").mkdir(parents=True, exist_ok=True)
-    (OUTPUT_ROOT / "company").mkdir(parents=True, exist_ok=True)
+    output_paths = {
+        "rep_master": PROFILE.source_path(OUTPUT_ROOT, "rep_master"),
+        "crm_account_assignment": PROFILE.source_path(OUTPUT_ROOT, "crm_account_assignment"),
+        "crm_rep_master": PROFILE.source_path(OUTPUT_ROOT, "crm_rep_master"),
+        "crm_activity": PROFILE.source_path(OUTPUT_ROOT, "crm_activity"),
+        "target": PROFILE.source_path(OUTPUT_ROOT, "target"),
+        "sales": PROFILE.source_path(OUTPUT_ROOT, "sales"),
+        "prescription": PROFILE.source_path(OUTPUT_ROOT, "prescription"),
+    }
+    for path in output_paths.values():
+        path.parent.mkdir(parents=True, exist_ok=True)
 
-    rep_df.to_excel(OUTPUT_ROOT / "company" / "hangyeol_rep_master.xlsx", index=False)
-    account_master.to_excel(OUTPUT_ROOT / "company" / "hangyeol_account_master.xlsx", index=False)
-    assignment_raw.to_excel(OUTPUT_ROOT / "company" / "hangyeol_company_assignment_raw.xlsx", index=False)
-    crm_raw.to_excel(OUTPUT_ROOT / "crm" / "hangyeol_crm_activity_raw.xlsx", index=False)
-    target_raw.to_excel(OUTPUT_ROOT / "target" / "hangyeol_target_raw.xlsx", index=False)
-    sales_raw.to_excel(OUTPUT_ROOT / "sales" / "hangyeol_sales_raw.xlsx", index=False)
-    ship_raw.to_csv(OUTPUT_ROOT / "company" / "hangyeol_fact_ship_raw.csv", index=False, encoding="utf-8-sig")
+    rep_df.to_excel(output_paths["rep_master"], index=False)
+    account_master.to_excel(output_paths["crm_account_assignment"], index=False)
+    assignment_raw.to_excel(output_paths["crm_rep_master"], index=False)
+    crm_raw.to_excel(output_paths["crm_activity"], index=False)
+    target_raw.to_excel(output_paths["target"], index=False)
+    sales_raw.to_excel(output_paths["sales"], index=False)
+    ship_raw.to_csv(output_paths["prescription"], index=False, encoding="utf-8-sig")
 
 
 def main() -> None:

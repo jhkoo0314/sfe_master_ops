@@ -10,8 +10,8 @@ ROOT = Path(__file__).resolve().parents[1]
 if str(ROOT) not in sys.path:
     sys.path.insert(0, str(ROOT))
 
-from adapters.crm.adapter_config import HospitalAdapterConfig
 from adapters.crm.hospital_adapter import load_hospital_master_from_file
+from common.company_profile import get_company_ops_profile
 from common.company_runtime import get_active_company_key, get_active_company_name, get_company_root
 from modules.prescription.schemas import CompanyPrescriptionStandard
 from modules.prescription.flow_builder import build_hospital_region_index, build_prescription_standard_flow
@@ -22,10 +22,11 @@ from ops_core.api.prescription_router import evaluate_prescription_asset
 
 COMPANY_KEY = get_active_company_key()
 COMPANY_NAME = get_active_company_name(COMPANY_KEY)
+PROFILE = get_company_ops_profile(COMPANY_KEY)
 SOURCE_ROOT = get_company_root(ROOT, "company_source", COMPANY_KEY)
 STANDARD_ROOT = get_company_root(ROOT, "ops_standard", COMPANY_KEY) / "prescription"
 OUTPUT_ROOT = get_company_root(ROOT, "ops_validation", COMPANY_KEY) / "prescription"
-ACCOUNT_MASTER_PATH = SOURCE_ROOT / "company" / "hangyeol_account_master.xlsx"
+ACCOUNT_MASTER_PATH = PROFILE.source_path(SOURCE_ROOT, "crm_account_assignment")
 
 
 def load_standard_records() -> list[CompanyPrescriptionStandard]:
@@ -530,8 +531,8 @@ def main() -> None:
     OUTPUT_ROOT.mkdir(parents=True, exist_ok=True)
 
     hospitals = load_hospital_master_from_file(
-        SOURCE_ROOT / "company" / "hangyeol_account_master.xlsx",
-        config=HospitalAdapterConfig.hangyeol_account_example(),
+        ACCOUNT_MASTER_PATH,
+        config=PROFILE.hospital_adapter_factory(),
     )
     sub_idx, reg_idx = build_hospital_region_index(hospitals)
     standards = load_standard_records()
@@ -546,7 +547,7 @@ def main() -> None:
         gaps,
         adapter_failed_count=0,
         total_raw_count=len(standards),
-        notes="hangyeol fact_ship source -> adapter normalization -> ops prescription validation",
+        notes=f"{COMPANY_KEY} fact_ship source -> adapter normalization -> ops prescription validation",
     )
     evaluation = evaluate_prescription_asset(asset)
     assignment_df = load_hospital_assignment_frame()

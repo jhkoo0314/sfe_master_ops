@@ -10,11 +10,13 @@ ROOT = Path(__file__).resolve().parents[1]
 if str(ROOT) not in sys.path:
     sys.path.insert(0, str(ROOT))
 
-from adapters.prescription.adapter_config import CompanyPrescriptionAdapterConfig
 from adapters.prescription.company_prescription_adapter import load_prescription_from_file
-from common.company_runtime import get_active_company_key, get_company_root
+from common.company_profile import get_company_ops_profile
+from common.company_runtime import get_active_company_key, get_active_company_name, get_company_root
 
 COMPANY_KEY = get_active_company_key()
+COMPANY_NAME = get_active_company_name(COMPANY_KEY)
+PROFILE = get_company_ops_profile(COMPANY_KEY)
 SOURCE_ROOT = get_company_root(ROOT, "company_source", COMPANY_KEY)
 OUTPUT_ROOT = get_company_root(ROOT, "ops_standard", COMPANY_KEY) / "prescription"
 
@@ -26,10 +28,10 @@ def models_to_frame(models: list) -> pd.DataFrame:
 def main() -> None:
     OUTPUT_ROOT.mkdir(parents=True, exist_ok=True)
 
-    source_file = SOURCE_ROOT / "company" / "hangyeol_fact_ship_raw.csv"
+    source_file = PROFILE.source_path(SOURCE_ROOT, "prescription")
     standards, failed = load_prescription_from_file(
         source_file,
-        config=CompanyPrescriptionAdapterConfig.hangyeol_fact_ship_example(),
+        config=PROFILE.prescription_adapter_factory(),
     )
 
     standard_df = models_to_frame(standards)
@@ -39,8 +41,11 @@ def main() -> None:
         pd.DataFrame(failed).to_excel(OUTPUT_ROOT / "failed_prescription_rows.xlsx", index=False)
 
     report = {
+        "company": COMPANY_NAME,
+        "company_key": COMPANY_KEY,
         "source_root": str(SOURCE_ROOT),
         "output_root": str(OUTPUT_ROOT),
+        "source_file": str(source_file),
         "standard_record_count": len(standards),
         "failed_record_count": len(failed),
         "unique_wholesalers": len({r.wholesaler_id for r in standards}),
@@ -53,7 +58,7 @@ def main() -> None:
         encoding="utf-8",
     )
 
-    print("Normalized Hangyeol prescription source data:")
+    print(f"Normalized {COMPANY_NAME} prescription source data:")
     print(json.dumps(report, ensure_ascii=False, indent=2))
 
 

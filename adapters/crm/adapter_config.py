@@ -125,7 +125,7 @@ class HospitalAdapterConfig(BaseModel):
         한결제약 회사 원본형 account master 파일 기준 설정.
 
         파일:
-          data/raw/company_source/hangyeol_pharma/company/hangyeol_account_master.xlsx
+          data/raw/company_source/hangyeol_pharma/company/account_master.xlsx
         """
         return cls(
             hospital_id_col="account_id",
@@ -219,7 +219,7 @@ class CompanyMasterAdapterConfig(BaseModel):
         한결제약 회사 원본형 배정 파일 기준 설정.
 
         파일:
-          data/raw/company_source/hangyeol_pharma/company/hangyeol_company_assignment_raw.xlsx
+          data/raw/company_source/hangyeol_pharma/company/company_assignment_raw.xlsx
         """
         return cls(
             rep_id_col="영업사원코드",
@@ -345,7 +345,7 @@ class CrmActivityAdapterConfig(BaseModel):
         한결제약 회사 원본형 CRM 파일 기준 설정.
 
         파일:
-          data/raw/company_source/hangyeol_pharma/crm/hangyeol_crm_activity_raw.xlsx
+          data/raw/company_source/hangyeol_pharma/crm/crm_activity_raw.xlsx
         """
         return cls(
             rep_id_col="영업사원코드",

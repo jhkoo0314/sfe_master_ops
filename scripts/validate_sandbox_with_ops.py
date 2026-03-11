@@ -110,12 +110,12 @@ def main() -> None:
     metric_months = sorted({r.metric_month for r in sales_records} | {r.metric_month for r in crm_records})
 
     input_std = SandboxInputStandard(
-        scenario="hangyeol_crm_sales_target",
+        scenario=f"{COMPANY_KEY}_crm_sales_target",
         metric_months=metric_months,
         crm_records=crm_records,
         sales_records=sales_records,
         target_records=target_records,
-        created_by="hangyeol_source_adapter",
+        created_by=f"{COMPANY_KEY}_source_adapter",
     )
     result_asset = build_sandbox_result_asset(input_std)
     evaluation = evaluate_sandbox_asset(result_asset)

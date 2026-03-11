@@ -8,20 +8,17 @@ ROOT = Path(__file__).resolve().parents[1]
 if str(ROOT) not in sys.path:
     sys.path.insert(0, str(ROOT))
 
-from adapters.crm.adapter_config import (
-    HospitalAdapterConfig,
-    CompanyMasterAdapterConfig,
-    CrmActivityAdapterConfig,
-)
 from adapters.crm.hospital_adapter import load_hospital_master_from_file, build_hospital_index
 from adapters.crm.company_master_adapter import load_company_master_from_file
 from adapters.crm.crm_activity_adapter import load_crm_activity_from_file
+from common.company_profile import get_company_ops_profile
 from common.company_runtime import get_active_company_key, get_active_company_name, get_company_root
 from modules.crm.service import build_crm_builder_payload, build_crm_result_asset
 from ops_core.api.crm_router import evaluate_crm_asset
 
 COMPANY_KEY = get_active_company_key()
 COMPANY_NAME = get_active_company_name(COMPANY_KEY)
+PROFILE = get_company_ops_profile(COMPANY_KEY)
 SOURCE_ROOT = get_company_root(ROOT, "company_source", COMPANY_KEY)
 OUTPUT_ROOT = get_company_root(ROOT, "ops_validation", COMPANY_KEY) / "crm"
 
@@ -29,25 +26,25 @@ OUTPUT_ROOT = get_company_root(ROOT, "ops_validation", COMPANY_KEY) / "crm"
 def main() -> None:
     OUTPUT_ROOT.mkdir(parents=True, exist_ok=True)
 
-    hospital_file = SOURCE_ROOT / "company" / "hangyeol_account_master.xlsx"
-    company_file = SOURCE_ROOT / "company" / "hangyeol_company_assignment_raw.xlsx"
-    crm_file = SOURCE_ROOT / "crm" / "hangyeol_crm_activity_raw.xlsx"
+    hospital_file = PROFILE.source_path(SOURCE_ROOT, "crm_account_assignment")
+    company_file = PROFILE.source_path(SOURCE_ROOT, "crm_rep_master")
+    crm_file = PROFILE.source_path(SOURCE_ROOT, "crm_activity")
 
     hospitals = load_hospital_master_from_file(
         hospital_file,
-        config=HospitalAdapterConfig.hangyeol_account_example(),
+        config=PROFILE.hospital_adapter_factory(),
     )
     hospital_index = build_hospital_index(hospitals)
 
     company_master, company_unmapped = load_company_master_from_file(
         company_file,
-        config=CompanyMasterAdapterConfig.hangyeol_company_source_example(),
+        config=PROFILE.company_master_adapter_factory(),
         hospital_index=hospital_index,
     )
 
     crm_activities, crm_unmapped = load_crm_activity_from_file(
         crm_file,
-        config=CrmActivityAdapterConfig.hangyeol_crm_source_example(),
+        config=PROFILE.crm_activity_adapter_factory(),
         company_master=company_master,
     )
 

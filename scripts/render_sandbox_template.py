@@ -9,10 +9,14 @@ ROOT = Path(__file__).resolve().parents[1]
 if str(ROOT) not in sys.path:
     sys.path.insert(0, str(ROOT))
 
+from common.company_runtime import get_active_company_key, get_active_company_name, get_company_root
+
 
 TEMPLATE_PATH = ROOT / "templates" / "report_template.html"
-SANDBOX_ASSET_PATH = ROOT / "data" / "ops_validation" / "hangyeol_pharma" / "sandbox" / "sandbox_result_asset.json"
-OUTPUT_ROOT = ROOT / "data" / "ops_validation" / "hangyeol_pharma" / "sandbox"
+COMPANY_KEY = get_active_company_key()
+COMPANY_NAME = get_active_company_name(COMPANY_KEY)
+SANDBOX_ASSET_PATH = get_company_root(ROOT, "ops_validation", COMPANY_KEY) / "sandbox" / "sandbox_result_asset.json"
+OUTPUT_ROOT = get_company_root(ROOT, "ops_validation", COMPANY_KEY) / "sandbox"
 
 
 def load_json(path: Path) -> dict:
@@ -60,7 +64,7 @@ def main() -> None:
     }
     output_summary.write_text(json.dumps(summary, ensure_ascii=False, indent=2), encoding="utf-8")
 
-    print("Rendered Hangyeol sandbox template:")
+    print(f"Rendered {COMPANY_NAME} sandbox template:")
     print(json.dumps(summary, ensure_ascii=False, indent=2))
 
 

@@ -10,11 +10,13 @@ ROOT = Path(__file__).resolve().parents[1]
 if str(ROOT) not in sys.path:
     sys.path.insert(0, str(ROOT))
 
-from adapters.sandbox.adapter_config import SalesAdapterConfig, TargetAdapterConfig
 from adapters.sandbox.domain_adapter import load_sales_from_records, load_target_from_records
-from common.company_runtime import get_active_company_key, get_company_root
+from common.company_profile import get_company_ops_profile
+from common.company_runtime import get_active_company_key, get_active_company_name, get_company_root
 
 COMPANY_KEY = get_active_company_key()
+COMPANY_NAME = get_active_company_name(COMPANY_KEY)
+PROFILE = get_company_ops_profile(COMPANY_KEY)
 SOURCE_ROOT = get_company_root(ROOT, "company_source", COMPANY_KEY)
 OUTPUT_ROOT = get_company_root(ROOT, "ops_standard", COMPANY_KEY) / "sandbox"
 
@@ -26,9 +28,9 @@ def models_to_frame(models: list) -> pd.DataFrame:
 def main() -> None:
     OUTPUT_ROOT.mkdir(parents=True, exist_ok=True)
 
-    sales_file = SOURCE_ROOT / "sales" / "hangyeol_sales_raw.xlsx"
-    target_file = SOURCE_ROOT / "target" / "hangyeol_target_raw.xlsx"
-    account_file = SOURCE_ROOT / "company" / "hangyeol_account_master.xlsx"
+    sales_file = PROFILE.source_path(SOURCE_ROOT, "sales")
+    target_file = PROFILE.source_path(SOURCE_ROOT, "target")
+    account_file = PROFILE.source_path(SOURCE_ROOT, "crm_account_assignment")
 
     sales_raw = pd.read_excel(sales_file)
     target_raw = pd.read_excel(target_file)
@@ -41,15 +43,15 @@ def main() -> None:
 
     sales_records, sales_failed = load_sales_from_records(
         sales_raw.to_dict(orient="records"),
-        config=SalesAdapterConfig.hangyeol_sales_source_example(),
-        source_label="hangyeol_sales_raw",
+        config=PROFILE.sales_adapter_factory(),
+        source_label=f"{COMPANY_KEY}_sales_raw",
         hospital_name_to_id=hospital_name_to_id,
     )
 
     target_records, target_failed = load_target_from_records(
         target_raw.to_dict(orient="records"),
-        config=TargetAdapterConfig.hangyeol_target_source_example(),
-        source_label="hangyeol_target_raw",
+        config=PROFILE.target_adapter_factory(),
+        source_label=f"{COMPANY_KEY}_target_raw",
         hospital_name_to_id=hospital_name_to_id,
     )
 
@@ -65,8 +67,12 @@ def main() -> None:
         pd.DataFrame(target_failed).to_excel(OUTPUT_ROOT / "failed_target_rows.xlsx", index=False)
 
     report = {
+        "company": COMPANY_NAME,
+        "company_key": COMPANY_KEY,
         "source_root": str(SOURCE_ROOT),
         "output_root": str(OUTPUT_ROOT),
+        "sales_source_file": str(sales_file),
+        "target_source_file": str(target_file),
         "sales_record_count": len(sales_records),
         "target_record_count": len(target_records),
         "sales_failed_count": len(sales_failed),
@@ -81,7 +87,7 @@ def main() -> None:
         encoding="utf-8",
     )
 
-    print("Normalized Hangyeol sandbox source data:")
+    print(f"Normalized {COMPANY_NAME} sandbox source data:")
     print(json.dumps(report, ensure_ascii=False, indent=2))
 
 
