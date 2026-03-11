@@ -16,6 +16,7 @@ from modules.sandbox.schemas import (
     SalesDomainRecord,
     TargetDomainRecord,
 )
+from modules.sandbox.builder_payload import build_chunked_sandbox_payload
 from modules.sandbox.service import build_sandbox_result_asset
 from ops_core.api.sandbox_router import evaluate_sandbox_asset
 from common.company_runtime import get_active_company_key, get_active_company_name, get_company_root
@@ -103,6 +104,11 @@ def load_target_records() -> list[TargetDomainRecord]:
 
 def main() -> None:
     OUTPUT_ROOT.mkdir(parents=True, exist_ok=True)
+    chunk_root = OUTPUT_ROOT / "sandbox_template_payload_assets"
+    chunk_root.mkdir(parents=True, exist_ok=True)
+
+    for existing in chunk_root.glob("*.js"):
+        existing.unlink()
 
     crm_records = load_crm_domain_records()
     sales_records = load_sales_records()
@@ -118,6 +124,20 @@ def main() -> None:
         created_by=f"{COMPANY_KEY}_source_adapter",
     )
     result_asset = build_sandbox_result_asset(input_std)
+    if result_asset.dashboard_payload is not None:
+        manifest, asset_chunks = build_chunked_sandbox_payload(
+            result_asset.dashboard_payload.template_payload or {}
+        )
+        for chunk_name, chunk_payload in asset_chunks.items():
+            branch_key_json = json.dumps(str(chunk_payload.get("branch_name") or ""), ensure_ascii=False)
+            chunk_script = (
+                "window.__SANDBOX_BRANCH_DATA__ = window.__SANDBOX_BRANCH_DATA__ || {};\n"
+                f"window.__SANDBOX_BRANCH_DATA__[{branch_key_json}] = "
+                f"{json.dumps(chunk_payload.get('branch_payload', {}), ensure_ascii=False)};\n"
+            )
+            (chunk_root / chunk_name).write_text(chunk_script, encoding="utf-8")
+        manifest["asset_base"] = chunk_root.name
+        result_asset.dashboard_payload.template_payload = manifest
     evaluation = evaluate_sandbox_asset(result_asset)
 
     (OUTPUT_ROOT / "sandbox_result_asset.json").write_text(

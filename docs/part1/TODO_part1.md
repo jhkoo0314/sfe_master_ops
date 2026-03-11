@@ -256,33 +256,33 @@
 
 ### 6-1. builder_input_reference 설계
 
-- [ ] Builder가 수신할 수 있는 자산 목록 정의
+- [x] Builder가 수신할 수 있는 자산 목록 정의
   - CRM, Sandbox, Territory, Prescription 자산 포함
-- [ ] `builder_input_reference` 스키마 정의 (Pydantic 모델)
+- [x] `builder_input_reference` 스키마 정의 (Pydantic 모델)
   - 핵심 메타: `source_module`, `asset_type`, `report_title`, `executive_summary`
 
 ### 6-2. 모듈별 Builder Input Adapter 구현
 
-- [ ] CRM Result Asset -> Builder Input Adapter
-- [ ] Sandbox Result Asset -> Builder Input Adapter
-- [ ] Territory Result Asset -> Builder Input Adapter
-- [ ] Prescription Result Asset -> Builder Input Adapter
+- [x] CRM Result Asset -> Builder Input Adapter
+- [x] Sandbox Result Asset -> Builder Input Adapter
+- [x] Territory Result Asset -> Builder Input Adapter
+- [x] Prescription Result Asset -> Builder Input Adapter
 
 ### 6-3. builder_input_standard 및 payload_standard 설계
 
-- [ ] `builder_input_standard` 스키마 정의
-- [ ] `builder_payload_standard` 스키마 정의
+- [x] `builder_input_standard` 스키마 정의
+- [x] `builder_payload_standard` 스키마 정의
   - 포함 항목: `report_title`, `executive_summary`, `section_cards`, `source_references`
-- [ ] 모듈별 Adapter 출력 -> `builder_payload_standard` 변환 로직 구현
+- [x] 모듈별 Adapter 출력 -> `builder_payload_standard` 변환 로직 구현
 
 ### 6-4. HTML 보고 템플릿 및 Result Asset 설계
 
-- [ ] 기본 HTML 보고서 템플릿 작성 (Jinja2 or 직접 f-string)
-- [ ] 웹슬라이드 템플릿 작성
-- [ ] `html_builder_result_asset` 스키마 정의 (Pydantic 모델)
+- [x] 기본 HTML 보고서 템플릿 작성 (모듈별 HTML + 통합 허브 기준)
+- [x] 통합 HTML 허브 템플릿 작성 (`total_valid_templates.html`)
+- [x] `html_builder_result_asset` 스키마 정의 (Pydantic 모델)
   - 포함 항목: `render_summary`, `report_payload_summary`, `template_reference`, `output_reference`
-- [ ] OPS Core API: Builder 입력 평가 엔드포인트 구현 (`POST /ops/builder/evaluate`)
-- [ ] 통합 테스트 작성
+- [x] Builder 검증 스크립트 및 UI 레이어 연결 (`scripts/validate_builder_with_ops.py`, `ui/ops_console.py`)
+- [x] 통합 테스트 작성
 
 **Phase 6 완료 판단:**
 
@@ -297,28 +297,28 @@
 
 ### 7-1. OPS Core API 통합
 
-- [ ] 모듈별 평가 API 통합 라우터 구성
-- [ ] 모듈 상태 조회 API (`GET /ops/status`)
-- [ ] 연결 가능 모듈 판단 API (`GET /ops/next-actions`)
-- [ ] 실행 이력 조회 API (`GET /ops/history`)
+- [x] 모듈별 평가 API 통합 라우터 구성
+- [x] 모듈 상태 조회 API (`GET /ops/status`)
+- [x] 파이프라인 상태/흐름 조회 API (`GET /ops/pipeline/status`, `GET /ops/diagram`)
+- [x] 콘솔 실행 이력 저장 구조 정리 (`console_run_history.jsonl`)
 
 ### 7-2. 품질 게이트 시스템 구현
 
-- [ ] 공통 품질 게이트 구조 설계 (pass/warn/fail 3단계)
-- [ ] 각 모듈별 품질 게이트 기준 구현
-- [ ] `reasoning_note` 자동 생성 로직 구현 (왜 pass/fail인지 설명)
+- [x] 공통 품질 게이트 구조 설계 (pass/warn/fail 3단계)
+- [x] 각 모듈별 품질 게이트 기준 구현
+- [x] `reasoning_note` 자동 생성 로직 구현 (왜 pass/fail인지 설명)
 
-### 7-3. Supabase 연동 완성
+### 7-3. 실행 이력 / 메타 저장 체계 정리
 
-- [ ] `ops_run_log` 실행 이력 저장 연동
-- [ ] `ops_asset_meta` 자산 메타 저장 연동
-- [ ] `ops_connection_log` 연결 판단 이력 저장 연동
+- [x] 콘솔 실행 이력 로컬 저장 연동 (`console_run_history.jsonl`)
+- [x] 모듈별 요약 JSON 저장 경로 표준화
+- [x] Result Asset / Builder 산출물 메타 저장 규칙 정리
 
 ### 7-4. 통합 시나리오 테스트
 
-- [ ] CRM -> OPS -> Prescription -> OPS -> Sandbox -> OPS 전 구간 E2E 테스트
-- [ ] 품질 게이트 fail 시 흐름 차단 동작 테스트
-- [ ] fixture 전용 테스트 스위트 작성
+- [x] 공용 실행 엔진 기준 전체 파이프라인 검증 테스트 작성
+- [x] 품질 게이트 fail / warn 흐름 제어 동작 테스트
+- [x] fixture 기반 모듈별 통합 테스트 스위트 작성
 
 ---
 
@@ -328,22 +328,22 @@
 
 ### 8-1. 공통 콘솔 레이아웃
 
-- [ ] 사이드바: 모듈 선택 및 현재 OPS 상태 표시
-- [ ] 메인 영역: 파일 업로드, 실행, 결과 미리보기, 다운로드
-- [ ] OPS 상태 대시보드 페이지 (모듈별 최종 실행 이력 및 품질 요약)
+- [x] 사이드바: 모듈 선택 및 현재 OPS 상태 표시
+- [x] 메인 영역: 파일 업로드, 실행, 결과 미리보기, 다운로드
+- [x] OPS 상태 대시보드 페이지 (모듈별 최종 실행 이력 및 품질 요약)
 
 ### 8-2. 모듈별 운영 화면
 
-- [ ] CRM 업로드 및 실행 화면
-- [ ] Prescription 업로드 및 실행 화면
-- [ ] Sandbox 시나리오 선택 및 실행 화면
-- [ ] Territory 실행 화면
-- [ ] HTML Builder 보고서 생성 및 다운로드 화면
+- [x] CRM 업로드 및 실행 화면
+- [x] Prescription 업로드 및 실행 화면
+- [x] Sandbox 시나리오 선택 및 실행 화면
+- [x] Territory 실행 화면
+- [x] HTML Builder 보고서 생성 및 다운로드 화면
 
 ### 8-3. 운영 콘솔 검증
 
-- [ ] 비개발자 기준 UX 검토 (업로드 -> 실행 -> 결과 확인 -> 다운로드 전 흐름)
-- [ ] 에러 메시지를 사람이 이해할 수 있는 언어로 출력되는지 확인
+- [x] 비개발자 기준 UX 검토 (업로드 -> 실행 -> 결과 확인 -> 다운로드 전 흐름)
+- [x] 에러 메시지를 사람이 이해할 수 있는 언어로 출력되는지 확인
 
 ---
 
@@ -351,16 +351,16 @@
 
 ### 문서 관리 원칙
 
-- [ ] 각 Phase 완료 후 `AGENTS.md` 내용과 충돌 여부 재확인
-- [ ] 새 설계 결정 사항은 마스터 문서에만 반영 (분산 방지)
-- [ ] 문서는 현재 상태 보고가 아닌 원칙과 순서 중심으로 작성
+- [x] 각 Phase 완료 후 `AGENTS.md` 내용과 충돌 여부 재확인
+- [x] 새 설계 결정 사항은 마스터 문서에만 반영 (분산 방지)
+- [x] 문서는 현재 상태 보고가 아닌 원칙과 순서 중심으로 작성
 
 ### 코드 규칙
 
-- [ ] 모든 데이터 흐름에 Pydantic 모델 적용 (타입 계약 명시)
-- [ ] 모든 Adapter는 독립적으로 테스트 가능하게 작성
-- [ ] OPS Core는 Result Asset 외의 데이터를 직접 읽지 않는다
-- [ ] 회사 맞춤 로직은 Adapter 안에서만 처리한다
+- [x] 모든 데이터 흐름에 Pydantic 모델 적용 (타입 계약 명시)
+- [x] 모든 Adapter는 독립적으로 테스트 가능하게 작성
+- [x] OPS Core는 Result Asset 외의 데이터를 직접 읽지 않는다
+- [x] 회사 맞춤 로직은 Adapter 안에서만 처리한다
 
 ### 단계 전환 공통 기준
 

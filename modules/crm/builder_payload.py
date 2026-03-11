@@ -1,11 +1,13 @@
 from __future__ import annotations
 
 import pandas as pd
+import re
 
 from modules.crm.schemas import CompanyMasterStandard, CrmStandardActivity
 from result_assets.crm_result_asset import CrmResultAsset
 
 
+CHUNKED_CRM_DATA_MODE = "chunked_crm_scope_assets_v1"
 _TEAM_ALL_TOKEN = "ALL"
 _TEAM_ALL_LABEL = "전체 팀"
 _REP_ALL_TOKEN = "ALL"
@@ -84,6 +86,16 @@ def _tag_tone(status: str) -> str:
         "IMPROVED": "tag-blue",
     }
     return mapping.get(status, "tag-muted")
+
+
+def _sanitize_scope_token(value: str) -> str:
+    safe = re.sub(r"[^A-Za-z0-9_-]+", "_", str(value or "").strip())
+    return safe or "scope"
+
+
+def _build_scope_chunk_name(scope_key: str) -> str:
+    safe_scope = _sanitize_scope_token(scope_key)
+    return f"{safe_scope}.js"
 
 
 def _build_basic_payload(asset: CrmResultAsset, summary: dict, company_name: str) -> dict:
@@ -856,3 +868,43 @@ def build_crm_builder_payload(
         },
         "scope_data": scope_data,
     }
+
+
+def build_chunked_crm_payload(payload: dict) -> tuple[dict, dict[str, dict]]:
+    scope_data = payload.get("scope_data", {}) or {}
+    filters = payload.get("filters", {}) or {}
+
+    manifest = {
+        key: value
+        for key, value in payload.items()
+        if key != "scope_data"
+    }
+    manifest["data_mode"] = CHUNKED_CRM_DATA_MODE
+    manifest["asset_base"] = ""
+    manifest["scope_data"] = {}
+    manifest["scope_asset_manifest"] = {}
+
+    default_scope_key = f"{filters.get('default_period', 'ALL')}|{filters.get('default_team', 'ALL')}"
+    if default_scope_key not in scope_data:
+        default_scope_key = next(iter(scope_data), default_scope_key)
+    manifest["default_scope_key"] = default_scope_key
+
+    asset_chunks: dict[str, dict] = {}
+    rep_scope_count = 0
+    for scope_key, scope_payload in scope_data.items():
+        scope_token = str(scope_key or "").strip()
+        if not scope_token:
+            continue
+        chunk_name = _build_scope_chunk_name(scope_token)
+        manifest["scope_asset_manifest"][scope_token] = chunk_name
+        asset_chunks[chunk_name] = {
+            "scope_key": scope_token,
+            "scope_payload": scope_payload,
+        }
+        rep_scope_count += len((scope_payload or {}).get("rep_scope_data", {}) or {})
+
+    manifest["scope_asset_counts"] = {
+        "scope_count": len(manifest["scope_asset_manifest"]),
+        "rep_scope_count": rep_scope_count,
+    }
+    return manifest, asset_chunks

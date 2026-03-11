@@ -17,6 +17,7 @@ from adapters.crm.company_master_adapter import load_company_master_from_file
 from adapters.crm.crm_activity_adapter import load_crm_activity_from_file
 from common.company_profile import get_company_ops_profile
 from common.company_runtime import get_active_company_key, get_active_company_name, get_company_root
+from modules.crm.builder_payload import build_chunked_crm_payload
 from modules.crm.service import build_crm_builder_payload, build_crm_result_asset
 from ops_core.api.crm_router import evaluate_crm_asset
 
@@ -29,6 +30,11 @@ OUTPUT_ROOT = get_company_root(ROOT, "ops_validation", COMPANY_KEY) / "crm"
 
 def main() -> None:
     OUTPUT_ROOT.mkdir(parents=True, exist_ok=True)
+    chunk_root = OUTPUT_ROOT / "crm_builder_payload_assets"
+    chunk_root.mkdir(parents=True, exist_ok=True)
+
+    for existing in chunk_root.glob("*.js"):
+        existing.unlink()
 
     hospital_file = PROFILE.source_path(SOURCE_ROOT, "crm_account_assignment")
     company_file = PROFILE.source_path(SOURCE_ROOT, "crm_rep_master")
@@ -85,8 +91,19 @@ def main() -> None:
         activities=crm_activities,
         company_master=company_master,
     )
+    chunked_builder_payload, asset_chunks = build_chunked_crm_payload(builder_payload)
+    for chunk_name, chunk_payload in asset_chunks.items():
+        scope_key_json = json.dumps(str(chunk_payload.get("scope_key") or ""), ensure_ascii=False)
+        chunk_script = (
+            "window.__CRM_SCOPE_DATA__ = window.__CRM_SCOPE_DATA__ || {};\n"
+            f"window.__CRM_SCOPE_DATA__[{scope_key_json}] = "
+            f"{json.dumps(chunk_payload.get('scope_payload', {}), ensure_ascii=False)};\n"
+        )
+        (chunk_root / chunk_name).write_text(chunk_script, encoding="utf-8")
+
+    chunked_builder_payload["asset_base"] = chunk_root.name
     builder_payload = attach_builder_payload_version(
-        builder_payload,
+        chunked_builder_payload,
         payload_version=CRM_BUILDER_PAYLOAD_VERSION,
         source_asset_schema_version=result_asset.schema_version,
     )

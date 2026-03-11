@@ -155,6 +155,7 @@ body[data-view="rep"] .overview-only { display:none; }
   <div class="sep"></div>
   <span class="ctrl-label">Rep</span>
   <select id="ctx-rep"></select>
+  <span id="scope-load-status" style="font-size:10px;color:var(--muted);font-family:var(--mono);margin-left:8px">상세 대기</span>
 </div>
 
 <div class="main">
@@ -324,16 +325,39 @@ body[data-view="rep"] .overview-only { display:none; }
 
 <script>
 window.__CRM_DATA__ = {};
+window.__CRM_SCOPE_DATA__ = window.__CRM_SCOPE_DATA__ || {};
 
 const data = window.__CRM_DATA__ || {};
 const filters = data.filters || {};
-const scopeData = data.scope_data || {};
+const scopeData = window.__CRM_SCOPE_DATA__;
+const inlineScopeData = data.scope_data || {};
+const scopeManifest = data.scope_asset_manifest || {};
+const defaultScopeKey = data.default_scope_key || `${filters.default_period || "ALL"}|${filters.default_team || "ALL"}`;
 const logic = data.logic_reference || {};
 const overview = data.overview || {};
 let radarChart = null;
 let trendChart = null;
 let matrixPage = 1;
 const MATRIX_PAGE_SIZE = 10;
+const scopeLoadPromises = {};
+const EMPTY_SCOPE = {
+  kpi_banner: { leading: [], ops: [], outcome: [] },
+  radar: { labels: [], team_avg: [], target: [] },
+  integrity: {},
+  coach_summary: { score: 0, delta_display: "+0.000", weight_rows: [] },
+  behavior_axis: [],
+  behavior_diagnosis: "",
+  pipeline: { stages: [], avg_dwell_days: 0, conversion_rate: 0 },
+  matrix_rows: [],
+  trend: { labels: [], hir: [], bcr: [], fgr: [] },
+  quality_flags: [],
+  rep_options: filters.rep_options || [{ token: "ALL", label: "전체 담당자" }],
+  rep_scope_data: {},
+  rep_token: "ALL",
+  rep_label: "전체 담당자"
+};
+
+Object.assign(scopeData, inlineScopeData);
 
 const periodSelect = document.getElementById("ctx-period");
 const teamSelect = document.getElementById("ctx-team");
@@ -341,6 +365,7 @@ const repSelect = document.getElementById("ctx-rep");
 const matrixPrevButton = document.getElementById("matrix-prev");
 const matrixNextButton = document.getElementById("matrix-next");
 const matrixPageInfo = document.getElementById("matrix-page-info");
+const scopeLoadStatus = document.getElementById("scope-load-status");
 
 function colorByTone(tone) {
   return {
@@ -370,23 +395,83 @@ function scopeKey() {
   return `${periodSelect.value}|${teamSelect.value}`;
 }
 
+function setScopeLoadStatus(message, color) {
+  if (!scopeLoadStatus) return;
+  scopeLoadStatus.textContent = message || "상세 대기";
+  scopeLoadStatus.style.color = color || "var(--muted)";
+}
+
+function scopeAssetUrl(chunkName) {
+  const assetBase = String(data.asset_base || "").trim();
+  return assetBase ? `${assetBase}/${chunkName}` : chunkName;
+}
+
+function loadScriptAsset(src) {
+  return new Promise((resolve, reject) => {
+    const existing = document.querySelector(`script[data-crm-asset="${src}"]`);
+    if (existing) {
+      if (existing.dataset.loaded === "true") {
+        resolve();
+        return;
+      }
+      existing.addEventListener("load", () => resolve(), { once: true });
+      existing.addEventListener("error", () => reject(new Error(`CRM asset load failed: ${src}`)), { once: true });
+      return;
+    }
+
+    const script = document.createElement("script");
+    script.src = src;
+    script.async = true;
+    script.dataset.crmAsset = src;
+    script.addEventListener("load", () => {
+      script.dataset.loaded = "true";
+      resolve();
+    }, { once: true });
+    script.addEventListener("error", () => reject(new Error(`CRM asset load failed: ${src}`)), { once: true });
+    document.head.appendChild(script);
+  });
+}
+
+async function ensureScopeLoaded(requestedScopeKey) {
+  const requested = String(requestedScopeKey || "").trim();
+  if (!requested) {
+    return false;
+  }
+  if (scopeData[requested]) {
+    setScopeLoadStatus(`선택 범위 준비됨: ${requested}`, "var(--green)");
+    return true;
+  }
+
+  const chunkName = scopeManifest[requested];
+  if (!chunkName) {
+    setScopeLoadStatus(`선택 범위 상세 없음: ${requested}`, "var(--amber)");
+    return false;
+  }
+
+  if (!scopeLoadPromises[requested]) {
+    setScopeLoadStatus(`상세 불러오는 중: ${requested}`, "var(--blue)");
+    scopeLoadPromises[requested] = loadScriptAsset(scopeAssetUrl(chunkName));
+  }
+
+  try {
+    await scopeLoadPromises[requested];
+    if (scopeData[requested]) {
+      setScopeLoadStatus(`선택 범위 준비됨: ${requested}`, "var(--green)");
+      return true;
+    }
+    setScopeLoadStatus(`상세 연결 실패: ${requested}`, "var(--amber)");
+    return false;
+  } catch (error) {
+    console.error(error);
+    setScopeLoadStatus(`상세 읽기 실패: ${requested}`, "var(--red)");
+    return false;
+  } finally {
+    delete scopeLoadPromises[requested];
+  }
+}
+
 function baseScope() {
-  return scopeData[scopeKey()] || scopeData[`${filters.default_period || "ALL"}|${filters.default_team || "ALL"}`] || Object.values(scopeData)[0] || {
-    kpi_banner: { leading: [], ops: [], outcome: [] },
-    radar: { labels: [], team_avg: [], target: [] },
-    integrity: {},
-    coach_summary: { score: 0, delta_display: "+0.000", weight_rows: [] },
-    behavior_axis: [],
-    behavior_diagnosis: "",
-    pipeline: { stages: [], avg_dwell_days: 0, conversion_rate: 0 },
-    matrix_rows: [],
-    trend: { labels: [], hir: [], bcr: [], fgr: [] },
-    quality_flags: [],
-    rep_options: filters.rep_options || [{ token: "ALL", label: "전체 담당자" }],
-    rep_scope_data: {},
-    rep_token: "ALL",
-    rep_label: "전체 담당자"
-  };
+  return scopeData[scopeKey()] || scopeData[defaultScopeKey] || Object.values(scopeData)[0] || EMPTY_SCOPE;
 }
 
 function currentScope() {
@@ -559,7 +644,8 @@ function renderFlags(scope) {
   `).join("") || `<div class="empty">품질 플래그가 없습니다.</div>`;
 }
 
-function refreshRepOptions() {
+async function refreshRepOptions() {
+  await ensureScopeLoaded(scopeKey());
   const scope = baseScope();
   const options = scope.rep_options || filters.rep_options || [{ token: "ALL", label: "전체 담당자" }];
   const previous = repSelect.value || filters.default_rep || "ALL";
@@ -584,21 +670,19 @@ function update() {
   document.getElementById("brand-subtitle").textContent = `${data.company || "회사 미지정"} · 품질 ${String(overview.quality_status || "unknown").toUpperCase()} · 점수 ${Number(overview.quality_score || 0).toFixed(1)} · ${scope.rep_label || "전체 담당자"}`;
 }
 
-makeOptions(periodSelect, filters.period_options || [{ token: "ALL", label: "전체 기간" }], filters.default_period || "ALL");
-makeOptions(teamSelect, filters.team_options || [{ token: "ALL", label: "전체 팀" }], filters.default_team || "ALL");
-makeOptions(repSelect, filters.rep_options || [{ token: "ALL", label: "전체 담당자" }], filters.default_rep || "ALL");
-document.getElementById("ts-now").textContent = data.generated_at || "-";
-refreshRepOptions();
+async function syncScopeAndUpdate() {
+  await ensureScopeLoaded(scopeKey());
+  await refreshRepOptions();
+  update();
+}
 
-periodSelect.addEventListener("change", () => {
+periodSelect.addEventListener("change", async () => {
   matrixPage = 1;
-  refreshRepOptions();
-  update();
+  await syncScopeAndUpdate();
 });
-teamSelect.addEventListener("change", () => {
+teamSelect.addEventListener("change", async () => {
   matrixPage = 1;
-  refreshRepOptions();
-  update();
+  await syncScopeAndUpdate();
 });
 repSelect.addEventListener("change", () => {
   matrixPage = 1;
@@ -619,7 +703,16 @@ matrixNextButton.addEventListener("click", () => {
   }
 });
 
-update();
+makeOptions(periodSelect, filters.period_options || [{ token: "ALL", label: "전체 기간" }], filters.default_period || "ALL");
+makeOptions(teamSelect, filters.team_options || [{ token: "ALL", label: "전체 팀" }], filters.default_team || "ALL");
+makeOptions(repSelect, filters.rep_options || [{ token: "ALL", label: "전체 담당자" }], filters.default_rep || "ALL");
+document.getElementById("ts-now").textContent = data.generated_at || "-";
+
+(async () => {
+  await ensureScopeLoaded(scopeKey() || defaultScopeKey);
+  await refreshRepOptions();
+  update();
+})();
 </script>
 </body>
 </html>

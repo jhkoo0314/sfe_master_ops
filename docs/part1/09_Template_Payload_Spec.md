@@ -126,8 +126,21 @@ Builder가 받는 공통 입력 규격이다.
 
 - 템플릿 내부 `const db = ...` 자리에 JSON 전체를 넣는다.
 
-payload 필수 키:
+운영 기준 payload 모드:
 
+- 기본 inline 모드
+  - 예전 방식처럼 `branches`까지 한 번에 넣는 형태
+- 현재 권장 모드: `chunked_sandbox_branch_assets_v1`
+  - 첫 화면용 요약만 inline으로 넣고
+  - 무거운 `branches`는 바깥 asset으로 분리하는 형태
+
+현재 운영 기준 필수 키:
+
+- `data_mode`
+- `asset_base`
+- `branch_asset_manifest`
+- `branch_asset_counts`
+- `branch_index`
 - `branches`
 - `products`
 - `total_prod_analysis`
@@ -135,6 +148,15 @@ payload 필수 키:
 - `total_avg`
 - `data_health`
 - `missing_data`
+
+chunked 모드 규칙:
+
+1. `data_mode = "chunked_sandbox_branch_assets_v1"`
+2. `branches`는 기본적으로 빈 객체 `{}`여도 된다.
+3. 실제 지점 상세는 `sandbox_template_payload_assets/*.js` 또는 Builder 출력의 `sandbox_report_preview_assets/*.js`에서 읽는다.
+4. `branch_asset_manifest`는 `지점명 -> asset 파일명` 매핑이다.
+5. `branch_index`는 드롭다운용 지점 목록이다.
+6. `branch_asset_counts`는 지점 수 / 담당자 수 요약이다.
 
 ### `branches`
 
@@ -276,9 +298,83 @@ payload 필수 키:
 ]
 ```
 
+### `branch_asset_manifest`
+
+설명:
+
+- chunked 모드에서 지점 상세가 어느 파일에 들어 있는지 알려주는 표
+
+예:
+
+```json
+{
+  "서울지점": "branch__b432bc14.js",
+  "부산지점": "branch__27bf5ca4.js"
+}
+```
+
+### `branch_index`
+
+설명:
+
+- 첫 화면 드롭다운을 만들 때 쓰는 가벼운 지점 목록
+
+예:
+
+```json
+[
+  { "key": "서울지점", "label": "서울지점", "member_count": 14 },
+  { "key": "부산지점", "label": "부산지점", "member_count": 11 }
+]
+```
+
 ---
 
-## 3.2 `territory_optimizer_template.html`
+## 3.2 `crm_analysis_template.html`
+
+대상 파일:
+
+- `templates/crm_analysis_template.html`
+
+현재 `render_mode`:
+
+- `crm_window_vars`
+
+주입 방식:
+
+- `window.__CRM_DATA__`
+
+미리보기 seed에 남기는 핵심 키:
+
+- `overview`
+- `activity_context`
+- `mapping_quality`
+- `logic_reference`
+- `filters`
+
+무거운 범위별 화면 데이터 규칙:
+
+- `scope_data`
+
+2026-03-11 기준 CRM은 `chunked_crm_scope_assets_v1` 모드에서 `기간 + 팀` 단위 scope를 바깥 asset으로 분리할 수 있다.
+
+이때 추가되는 키:
+
+- `data_mode`
+- `asset_base`
+- `default_scope_key`
+- `scope_asset_manifest`
+- `scope_asset_counts`
+
+쉽게 말하면:
+
+- 기본 HTML 안에는 회사 요약, 필터, 버전 정보만 남긴다.
+- 실제 차트/표/담당자 상세는 선택한 `기간 + 팀` scope asset을 읽을 때 붙인다.
+- 담당자별 상세(`rep_scope_data`)도 해당 scope asset 안에 같이 들어간다.
+
+---
+
+## 3.3 `territory_optimizer_template.html`
 
 대상 파일:
 
@@ -386,7 +482,7 @@ payload 필수 키:
 
 ---
 
-## 3.3 `prescription_flow_template.html`
+## 3.4 `prescription_flow_template.html`
 
 대상 파일:
 

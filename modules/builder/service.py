@@ -11,7 +11,9 @@ from pathlib import Path
 import shutil
 
 from common.asset_versions import build_source_version_snapshot, extract_source_version_snapshot
+from modules.crm.builder_payload import build_chunked_crm_payload
 from modules.prescription.builder_payload import build_chunked_prescription_payload
+from modules.sandbox.builder_payload import build_chunked_sandbox_payload
 from modules.territory.builder_payload import build_chunked_territory_payload
 from modules.builder.schemas import (
     BuilderInputReference,
@@ -167,7 +169,7 @@ def build_template_payload(builder_input: BuilderInputStandard) -> BuilderPayloa
             payload=builder_input.payload_seed,
             source_versions=builder_input.source_versions,
             source_modules=builder_input.source_modules,
-            output_name="ops_report_preview.html",
+            output_name="sandbox_report_preview.html",
             render_mode="report_data_json",
         )
 
@@ -277,8 +279,10 @@ def build_html_builder_asset(
 def _summarize_payload(builder_payload: BuilderPayloadStandard) -> dict:
     payload = builder_payload.payload
     if builder_payload.template_key == "report_template":
+        branch_counts = payload.get("branch_asset_counts", {})
         return {
-            "branch_count": len(payload.get("branches", {})),
+            "branch_count": int(branch_counts.get("branch_count", len(payload.get("branches", {}))) or 0),
+            "member_count": int(branch_counts.get("member_count", 0) or 0),
             "product_count": len(payload.get("products", [])),
             "missing_data_count": len(payload.get("missing_data", [])),
         }
@@ -299,10 +303,13 @@ def _summarize_payload(builder_payload: BuilderPayloadStandard) -> dict:
             "hospital_trace_count": int(detail_counts.get("hospital_traces", len(payload.get("hospital_traces", []))) or 0),
         }
     if builder_payload.template_key == "crm_analysis":
-        default_scope = payload.get("scope_data", {}).get("ALL|ALL", {})
+        default_scope_key = payload.get("default_scope_key") or "ALL|ALL"
+        default_scope = payload.get("scope_data", {}).get(default_scope_key, {})
+        scope_counts = payload.get("scope_asset_counts", {})
         return {
-            "scope_count": len(payload.get("scope_data", {})),
+            "scope_count": int(scope_counts.get("scope_count", len(payload.get("scope_data", {}))) or 0),
             "team_option_count": len(payload.get("filters", {}).get("team_options", [])),
+            "rep_scope_count": int(scope_counts.get("rep_scope_count", 0) or 0),
             "matrix_row_count": len(default_scope.get("matrix_rows", [])),
         }
     return {}
@@ -359,6 +366,45 @@ def prepare_territory_chunk_assets(
     builder_payload.payload = manifest
 
 
+def prepare_sandbox_chunk_assets(
+    builder_payload: BuilderPayloadStandard,
+    asset_source_path: str,
+    output_root: str,
+) -> None:
+    if builder_payload.template_key != "report_template":
+        return
+
+    target_asset_dir = Path(output_root) / f"{Path(builder_payload.output_name).stem}_assets"
+    target_asset_dir.mkdir(parents=True, exist_ok=True)
+
+    for existing in target_asset_dir.glob("*.js"):
+        existing.unlink()
+
+    payload = builder_payload.payload
+    if str(payload.get("data_mode") or "").startswith("chunked_"):
+        source_asset_dir = Path(asset_source_path).with_name("sandbox_template_payload_assets")
+        if not source_asset_dir.exists():
+            payload["asset_base"] = target_asset_dir.name
+            return
+        for chunk_file in source_asset_dir.glob("*.js"):
+            shutil.copy2(chunk_file, target_asset_dir / chunk_file.name)
+        payload["asset_base"] = target_asset_dir.name
+        return
+
+    manifest, asset_chunks = build_chunked_sandbox_payload(payload)
+    for chunk_name, chunk_payload in asset_chunks.items():
+        branch_key_json = json.dumps(str(chunk_payload.get("branch_name") or ""), ensure_ascii=False)
+        chunk_script = (
+            "window.__SANDBOX_BRANCH_DATA__ = window.__SANDBOX_BRANCH_DATA__ || {};\n"
+            f"window.__SANDBOX_BRANCH_DATA__[{branch_key_json}] = "
+            f"{json.dumps(chunk_payload.get('branch_payload', {}), ensure_ascii=False)};\n"
+        )
+        (target_asset_dir / chunk_name).write_text(chunk_script, encoding="utf-8")
+
+    manifest["asset_base"] = target_asset_dir.name
+    builder_payload.payload = manifest
+
+
 def prepare_prescription_chunk_assets(
     builder_payload: BuilderPayloadStandard,
     payload_source_path: str,
@@ -394,6 +440,46 @@ def prepare_prescription_chunk_assets(
             f"window.__PRESCRIPTION_DETAIL_DATA__[{bucket_json}] = window.__PRESCRIPTION_DETAIL_DATA__[{bucket_json}] || {{}};\n"
             f"window.__PRESCRIPTION_DETAIL_DATA__[{bucket_json}][{cache_key_json}] = "
             f"{json.dumps(chunk_payload.get('rows', []), ensure_ascii=False)};\n"
+        )
+        (target_asset_dir / chunk_name).write_text(chunk_script, encoding="utf-8")
+
+    manifest["asset_base"] = target_asset_dir.name
+    builder_payload.payload = manifest
+
+
+def prepare_crm_chunk_assets(
+    builder_payload: BuilderPayloadStandard,
+    payload_source_path: str,
+    output_root: str,
+) -> None:
+    if builder_payload.template_key != "crm_analysis":
+        return
+
+    target_asset_dir = Path(output_root) / f"{Path(builder_payload.output_name).stem}_assets"
+    target_asset_dir.mkdir(parents=True, exist_ok=True)
+
+    for existing in target_asset_dir.glob("*.js"):
+        existing.unlink()
+
+    payload = builder_payload.payload
+    if str(payload.get("data_mode") or "").startswith("chunked_"):
+        source_path = Path(payload_source_path)
+        source_asset_dir = source_path.with_name(f"{source_path.stem}_assets")
+        if not source_asset_dir.exists():
+            payload["asset_base"] = target_asset_dir.name
+            return
+        for chunk_file in source_asset_dir.glob("*.js"):
+            shutil.copy2(chunk_file, target_asset_dir / chunk_file.name)
+        payload["asset_base"] = target_asset_dir.name
+        return
+
+    manifest, asset_chunks = build_chunked_crm_payload(payload)
+    for chunk_name, chunk_payload in asset_chunks.items():
+        scope_key_json = json.dumps(str(chunk_payload.get("scope_key") or ""), ensure_ascii=False)
+        chunk_script = (
+            "window.__CRM_SCOPE_DATA__ = window.__CRM_SCOPE_DATA__ || {};\n"
+            f"window.__CRM_SCOPE_DATA__[{scope_key_json}] = "
+            f"{json.dumps(chunk_payload.get('scope_payload', {}), ensure_ascii=False)};\n"
         )
         (target_asset_dir / chunk_name).write_text(chunk_script, encoding="utf-8")
 

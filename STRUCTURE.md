@@ -65,14 +65,16 @@ sfe_master_ops/
   - `builder_payload.py`에서 처방 보고서용 payload 생성
 - `modules/sandbox/`
   - Sandbox Result Asset 생성
+  - `builder_payload.py`에서 지점 상세 분리용 manifest 생성
   - `dashboard_payload.template_payload`를 Builder 입력으로 사용
+  - 현재는 `manifest + 지점 asset` 구조로 Sandbox Builder 데이터를 분리 생성
 - `modules/territory/`
   - Territory Result Asset 생성
   - `builder_payload.py`에서 지도 보고서용 payload 생성
   - 현재는 `manifest + 담당자/월 asset` 구조로 Territory Builder 데이터를 분리 생성
 - `modules/builder/`
   - 모듈이 만든 payload를 읽어 HTML로 주입
-  - Territory처럼 큰 payload는 Builder 단계에서도 분리 asset 구조를 유지하도록 보정
+  - Territory, Prescription, CRM, Sandbox처럼 큰 payload는 Builder 단계에서도 분리 asset 구조를 유지하도록 보정
   - 직접 계산 엔진 역할은 하지 않음
 
 ### `ops_core/`
@@ -175,11 +177,13 @@ OPS 판단과 파이프라인 실행을 담당합니다.
 
 현재 중요한 점:
 - CRM 검증 스크립트가 `crm_builder_payload.json` 생성
+- CRM 검증 스크립트는 필요 시 `crm_builder_payload_assets/*.js`도 같이 생성
 - Prescription 검증 스크립트가 `prescription_builder_payload.json` 생성
 - Prescription 검증 스크립트는 필요 시 `prescription_builder_payload_assets/*.js`도 같이 생성
 - Territory 정규화 스크립트가 `ops_territory_activity.xlsx` 생성
 - Territory 검증 스크립트가 `territory_builder_payload.json`과 `territory_builder_payload_assets/*.js` 생성
 - Builder 검증 스크립트는 이 payload를 읽어 HTML 생성
+- CRM Builder 결과에도 `crm_analysis_preview_assets/*.js`가 같이 복사될 수 있음
 - Prescription Builder 결과에도 `prescription_flow_preview_assets/*.js`가 같이 복사될 수 있음
 - Territory Builder 결과에는 `territory_map_preview_assets/*.js`가 같이 복사됨
 - 코드상으로는 CRM / Sandbox / Territory / Prescription / Total Valid 5종 생성 가능
@@ -240,6 +244,7 @@ Builder는 직접 raw를 읽지 않습니다.
 - CRM
   - `crm_result_asset.json`
   - `crm_builder_payload.json`
+  - `crm_builder_payload_assets/*.js`
   - `crm_analysis_preview.html`
 - Prescription
   - `prescription_result_asset.json`
@@ -252,17 +257,21 @@ Builder는 직접 raw를 읽지 않습니다.
   - `territory_map_preview.html`
 - Sandbox
   - `sandbox_result_asset.json` 내부 `dashboard_payload.template_payload`
+  - `sandbox_template_payload_assets/*.js`
+  - `sandbox_report_preview_assets/*.js`
   - `sandbox_report_preview.html`
 
 즉 Builder는 `표현 단계`이고, 계산은 앞단 모듈에 둡니다.
 
 추가 메모:
 - Territory Builder payload는 기본 화면에서 전체 병원 좌표를 다 싣지 않습니다.
+- Sandbox 보고서도 기본 화면에서 전체 지점 상세를 다 싣지 않습니다.
+- Sandbox는 요약만 먼저 열고, 지점을 고르면 해당 지점 asset만 읽습니다.
 - 기본값은 `담당자 미선택`이고, 담당자를 고르면 해당 담당자용 `catalog asset`과 선택 월용 `route asset`만 읽습니다.
 - `total_valid_preview.html`은 Builder 단계에서 별도로 생성됩니다.
 - 회사별 현재 저장 상태는 다릅니다.
 - `daon_pharma`는 Builder 5종 저장이 확인됩니다.
-- `hangyeol_pharma`는 현재 Builder 3종 저장이 확인됩니다.
+- `hangyeol_pharma`는 현재 Builder 5종 저장이 확인됩니다.
 
 ## 현재 UI 기준 흐름
 

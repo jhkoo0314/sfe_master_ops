@@ -30,6 +30,6 @@ build-backend = "hatchling.build"
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
-asyncio_mode = "auto"
+addopts = "-p no:cacheprovider"
 python_files = ["test_*.py"]
 python_functions = ["test_*"]

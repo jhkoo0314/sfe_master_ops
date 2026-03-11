@@ -10,6 +10,42 @@
 - 코드 기준으로 HTML 보고서 5종과 통합 허브까지 생성 가능
 - 실제 저장된 보고서 수는 회사별 마지막 실행 상태에 따라 다를 수 있음
 
+## Part 1 상태
+
+2026-03-11 기준으로 이 프로젝트는 `Part 1 완료` 상태로 봅니다.
+
+쉽게 말하면:
+
+- CRM / Prescription / Sandbox / Territory / Builder가 한 흐름으로 실제 실행됩니다.
+- 운영 콘솔에서 회사 코드 기준으로 실행과 산출물 확인이 가능합니다.
+- 핵심 JSON에는 버전이 붙어 있어 파일 규격 추적이 가능합니다.
+- CRM / Prescription / Sandbox / Territory는 무거운 상세를 필요할 때만 읽는 구조로 정리됐습니다.
+- 파일 크기 / 로딩 시간 회귀 테스트가 들어 있어 다시 무거워지는 문제를 빨리 잡을 수 있습니다.
+
+즉 지금은 `기초 구조를 만드는 단계`를 넘어서,
+`운영 직전 단계까지 안정성을 확보한 상태`로 판단합니다.
+
+## Part 2 실행 가능성
+
+2026-03-11 기준으로 `Part 2 착수 가능` 상태입니다.
+
+이유는 간단합니다.
+
+- 앞단 구조가 크게 흔들리지 않습니다.
+- 실행 순서와 산출물 규격이 정리돼 있습니다.
+- 콘솔, 모듈, Builder, 문서가 같은 구조를 바라보도록 맞춰졌습니다.
+
+따라서 Part 2는 새 기능을 억지로 많이 붙이는 단계보다,
+`OPS를 실제 운영 허브로 키우는 단계`로 가는 것이 맞습니다.
+
+권장 우선순위:
+
+1. `Intake Gate`
+2. `Daily Watch`
+3. `배치 자동화 / 실패 알림`
+4. `Action Queue`
+5. `규칙 / 임계치 외부화`
+
 ## 핵심 원칙
 
 ```text
@@ -64,6 +100,7 @@
 - CRM
   - `crm_result_asset.json`
   - `crm_builder_payload.json`
+  - `crm_builder_payload_assets/*.js`
   - `crm_analysis_preview.html`
 - Prescription
   - `prescription_result_asset.json`
@@ -77,6 +114,8 @@
   - `territory_map_preview.html`
 - Sandbox
   - `sandbox_result_asset.json` 안의 `dashboard_payload.template_payload`
+  - `sandbox/sandbox_template_payload_assets/*.js`
+  - `builder/sandbox_report_preview_assets/*.js`
   - `sandbox_report_preview.html`
 
 즉 Builder는 `모듈이 먼저 만든 재료`만 받아서 화면을 만듭니다.
@@ -99,7 +138,7 @@ data/
 
 현재 확인된 회사 예시:
 - `daon_pharma`: Builder 보고서 5종 저장 확인
-- `hangyeol_pharma`: Builder 보고서 3종 저장 확인
+- `hangyeol_pharma`: Builder 보고서 5종 저장 확인
 
 즉:
 - 코드 구조는 5종 보고서를 지원
@@ -157,6 +196,7 @@ data/
 모듈별 Builder payload:
 - [builder_payload.py](/C:/sfe_master_ops/modules/crm/builder_payload.py)
 - [builder_payload.py](/C:/sfe_master_ops/modules/prescription/builder_payload.py)
+- [builder_payload.py](/C:/sfe_master_ops/modules/sandbox/builder_payload.py)
 - [builder_payload.py](/C:/sfe_master_ops/modules/territory/builder_payload.py)
 
 Builder 템플릿:
@@ -213,6 +253,8 @@ uv run streamlit run ui/ops_console.py --server.port 8501
 - 통합 보고서는 개별 HTML을 한 화면에서 묶어 보는 허브입니다.
 - WebSlide 기능은 현재 제거된 상태입니다.
 - Territory는 이제 `ops_standard/{company_key}/territory/ops_territory_activity.xlsx`를 만들고, Builder는 이 표준 파일 기반 payload를 읽습니다.
+- Sandbox 보고서는 이제 전체 지점 상세를 처음부터 싣지 않습니다.
+- Sandbox 보고서는 먼저 요약만 열고, 지점을 고르면 `builder/sandbox_report_preview_assets/*.js`에서 해당 지점 상세를 읽습니다.
 - Territory 지도는 기본값이 `담당자 미선택` 상태입니다.
 - Territory 지도는 초기 전체 마커를 한 번에 뿌리지 않고, 담당자를 고른 뒤 해당 담당자의 `catalog asset`과 선택한 `월 asset`만 순차 로딩합니다.
 - Territory Builder 출력에는 `builder/territory_map_preview_assets/*.js`가 같이 생기며, 지도는 이 분리 asset을 필요할 때만 읽습니다.

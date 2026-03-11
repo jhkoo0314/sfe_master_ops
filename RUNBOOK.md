@@ -175,16 +175,20 @@ data/ops_validation/daon_pharma/
 
 모듈별 Builder payload:
 - `crm/crm_builder_payload.json`
+- `crm/crm_builder_payload_assets/*.js`
 - `prescription/prescription_builder_payload.json`
 - `territory/territory_builder_payload.json`
 - Sandbox는 `sandbox_result_asset.json` 안의 `dashboard_payload.template_payload` 사용
+- `sandbox/sandbox_template_payload_assets/*.js`
 
 Territory 정규화 결과:
 - `data/ops_standard/{company_key}/territory/ops_territory_activity.xlsx`
 
 Builder 결과:
 - `data/ops_validation/{company_key}/builder/crm_analysis_preview.html`
+- `data/ops_validation/{company_key}/builder/crm_analysis_preview_assets/*.js`
 - `data/ops_validation/{company_key}/builder/sandbox_report_preview.html`
+- `data/ops_validation/{company_key}/builder/sandbox_report_preview_assets/*.js`
 - `data/ops_validation/{company_key}/builder/territory_map_preview.html`
 - `data/ops_validation/{company_key}/builder/territory_map_preview_assets/*.js`
 - `data/ops_validation/{company_key}/builder/prescription_flow_preview.html`
@@ -201,6 +205,8 @@ Builder 결과:
 - Builder는 모듈이 먼저 만든 payload만 읽습니다.
 - 그래서 템플릿이 바뀌면 Builder보다 먼저 `모듈 payload`를 같이 맞춰야 합니다.
 - Territory 보고서도 이제 Builder 안에서 계산하지 않고 `territory_builder_payload.json`을 읽습니다.
+- Sandbox 보고서는 `sandbox_result_asset.json` 안의 payload를 그대로 쓰되, 무거운 지점 상세는 `manifest + branch asset` 구조로 분리됩니다.
+- Sandbox 보고서는 첫 화면에 요약만 먼저 열고, 지점을 고를 때만 해당 지점 asset을 읽습니다.
 - Territory payload는 `manifest + 분리 asset` 구조입니다.
 - 기본 화면은 `담당자 미선택` 상태로 시작하고, 담당자를 고른 뒤 해당 담당자 asset과 선택 월 asset만 읽습니다.
 - `total_valid_preview.html`은 개별 HTML을 한 화면에서 묶어 보여주는 허브입니다.
@@ -230,7 +236,7 @@ data/ops_validation/{company_key}/pipeline/console_run_history.jsonl
 
 현재 확인된 예시:
 - `daon_pharma`는 Builder 보고서 5종 저장이 확인됩니다.
-- `hangyeol_pharma`는 현재 Builder 보고서 3종 저장이 확인됩니다.
+- `hangyeol_pharma`는 현재 Builder 보고서 5종 저장이 확인됩니다.
 
 ## 11. 문제 해결
 

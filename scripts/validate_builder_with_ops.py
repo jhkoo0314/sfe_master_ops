@@ -13,6 +13,8 @@ from modules.builder.service import (
     build_crm_template_input,
     build_html_builder_asset,
     build_prescription_template_input,
+    prepare_sandbox_chunk_assets,
+    prepare_crm_chunk_assets,
     prepare_prescription_chunk_assets,
     prepare_territory_chunk_assets,
     build_sandbox_template_input,
@@ -126,6 +128,12 @@ def main() -> None:
             source_asset_path=str(SANDBOX_ASSET_PATH),
         )
         sandbox_payload = build_template_payload(sandbox_input)
+        prepare_sandbox_chunk_assets(
+            sandbox_payload,
+            asset_source_path=str(SANDBOX_ASSET_PATH),
+            output_root=str(OUTPUT_ROOT),
+        )
+        sandbox_input.payload_seed = sandbox_payload.payload
         sandbox_html = render_builder_html(sandbox_payload)
         sandbox_result_asset = build_html_builder_asset(sandbox_input, sandbox_html)
         summary["sandbox_report"] = write_builder_output(
@@ -147,6 +155,12 @@ def main() -> None:
             source_asset_path=str(CRM_ASSET_PATH),
         )
         crm_payload = build_template_payload(crm_input)
+        prepare_crm_chunk_assets(
+            crm_payload,
+            payload_source_path=str(CRM_BUILDER_PAYLOAD_PATH),
+            output_root=str(OUTPUT_ROOT),
+        )
+        crm_input.payload_seed = crm_payload.payload
         crm_html = render_builder_html(crm_payload)
         crm_result_asset = build_html_builder_asset(crm_input, crm_html)
         summary["crm_analysis"] = write_builder_output(

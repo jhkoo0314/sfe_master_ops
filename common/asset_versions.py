@@ -8,11 +8,11 @@ CRM_RESULT_SCHEMA_VERSION = "crm_result_asset_v1"
 PRESCRIPTION_RESULT_SCHEMA_VERSION = "prescription_result_asset_v1"
 SANDBOX_INPUT_SCHEMA_VERSION = "sandbox_input_standard_v1"
 SANDBOX_RESULT_SCHEMA_VERSION = "sandbox_result_asset_v1"
-SANDBOX_TEMPLATE_PAYLOAD_VERSION = "sandbox_template_payload_v1"
+SANDBOX_TEMPLATE_PAYLOAD_VERSION = "sandbox_template_payload_chunked_v1"
 TERRITORY_RESULT_SCHEMA_VERSION = "territory_result_asset_v1"
 HTML_BUILDER_RESULT_SCHEMA_VERSION = "html_builder_result_asset_v1"
 
-CRM_BUILDER_PAYLOAD_VERSION = "crm_builder_payload_v1"
+CRM_BUILDER_PAYLOAD_VERSION = "crm_builder_payload_chunked_v1"
 PRESCRIPTION_BUILDER_PAYLOAD_VERSION = "prescription_builder_payload_chunked_v1"
 TERRITORY_BUILDER_PAYLOAD_VERSION = "territory_builder_payload_v1"
 

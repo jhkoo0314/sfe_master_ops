@@ -144,6 +144,7 @@ Result Asset -> builder_input_standard -> builder_payload_standard -> HTML
   - Builder는 이 payload만 읽어 `territory_map_preview.html` 생성
 - Sandbox
   - `sandbox_result_asset.json` 안의 `dashboard_payload.template_payload`를 Builder가 사용
+  - 큰 지점 상세는 `sandbox_template_payload_assets/*.js`로 분리될 수 있음
   - 별도 `sandbox_builder_payload.json` 파일은 현재 없다
 
 현재 템플릿:

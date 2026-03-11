@@ -27,6 +27,10 @@ data/
 
 # pytest
 .pytest_cache/
+.pytest_tmp*/
+pytest-cache-files-*/
+tests/_tmp_*/
+/tmp*/
 .coverage
 htmlcov/
 
