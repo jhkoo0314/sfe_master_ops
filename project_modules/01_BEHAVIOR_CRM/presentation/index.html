@@ -1,0 +1,145 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>BehaviorCRM 대시보드 지표 설명서</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Noto Sans KR', sans-serif;
+            line-height: 1.6;
+            color: #333;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 40px 20px;
+        }
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 20px;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+            padding: 60px;
+        }
+        h1 {
+            font-size: 3em;
+            color: #2d3748;
+            margin-bottom: 20px;
+            text-align: center;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+        .subtitle {
+            text-align: center;
+            color: #718096;
+            font-size: 1.2em;
+            margin-bottom: 50px;
+        }
+        .nav-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 30px;
+            margin-top: 50px;
+        }
+        .nav-card {
+            background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%);
+            border-radius: 15px;
+            padding: 30px;
+            text-decoration: none;
+            color: inherit;
+            transition: transform 0.3s, box-shadow 0.3s;
+            border: 2px solid transparent;
+        }
+        .nav-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 10px 30px rgba(0,0,0,0.2);
+            border-color: #667eea;
+        }
+        .nav-card h2 {
+            color: #2d3748;
+            margin-bottom: 15px;
+            font-size: 1.5em;
+        }
+        .nav-card p {
+            color: #4a5568;
+            margin-bottom: 20px;
+        }
+        .nav-card .icon {
+            font-size: 3em;
+            margin-bottom: 15px;
+        }
+        .badge {
+            display: inline-block;
+            background: #667eea;
+            color: white;
+            padding: 5px 15px;
+            border-radius: 20px;
+            font-size: 0.9em;
+            margin-top: 10px;
+        }
+        .footer {
+            text-align: center;
+            margin-top: 60px;
+            padding-top: 30px;
+            border-top: 2px solid #e2e8f0;
+            color: #718096;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>📊 BehaviorCRM 대시보드 지표 설명서</h1>
+        <p class="subtitle">임원 발표용 상세 지표 및 계산 로직 문서</p>
+
+        <div class="nav-grid">
+            <a href="behavior-metrics.html" class="nav-card">
+                <div class="icon">🎯</div>
+                <h2>Behavior Layer 지표</h2>
+                <p>HIR, RTR, BCR, PHR 4대 핵심 지표의 상세 설명과 계산 로직</p>
+                <span class="badge">4개 지표</span>
+            </a>
+
+            <a href="outcome-metrics.html" class="nav-card">
+                <div class="icon">💰</div>
+                <h2>Outcome Layer 지표</h2>
+                <p>매출, 성장률, 파이프라인, 예측 등 성과 지표의 계산 방법</p>
+                <span class="badge">4개 지표</span>
+            </a>
+
+            <a href="manager-dashboard.html" class="nav-card">
+                <div class="icon">👥</div>
+                <h2>관리자 대시보드</h2>
+                <p>팀 KPI, 코칭 우선순위, 팀 밸런스 분석 지표</p>
+                <span class="badge">팀 관리</span>
+            </a>
+
+            <a href="calculation-details.html" class="nav-card">
+                <div class="icon">🔬</div>
+                <h2>상세 계산 로직</h2>
+                <p>각 지표의 수학적 공식, 알고리즘, 예시 계산</p>
+                <span class="badge">기술 문서</span>
+            </a>
+
+            <a href="dashboard-overview.html" class="nav-card">
+                <div class="icon">📈</div>
+                <h2>대시보드 개요</h2>
+                <p>각 대시보드 페이지별 구성 요소와 시각화 방법</p>
+                <span class="badge">UI/UX</span>
+            </a>
+        </div>
+
+        <div class="footer">
+            <p>BehaviorCRM v1.0 | 생성일: 2025년 1월</p>
+        </div>
+    </div>
+</body>
+</html>
+
+

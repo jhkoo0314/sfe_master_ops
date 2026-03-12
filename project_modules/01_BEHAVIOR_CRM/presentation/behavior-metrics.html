@@ -1,0 +1,573 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Behavior Layer 지표 - BehaviorCRM</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Noto Sans KR', sans-serif;
+            line-height: 1.6;
+            color: #333;
+            background: #f7fafc;
+            padding: 40px 20px;
+        }
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 20px;
+            box-shadow: 0 10px 40px rgba(0,0,0,0.1);
+            padding: 60px;
+        }
+        .header {
+            text-align: center;
+            margin-bottom: 50px;
+            padding-bottom: 30px;
+            border-bottom: 3px solid #667eea;
+        }
+        h1 {
+            font-size: 2.5em;
+            color: #2d3748;
+            margin-bottom: 15px;
+        }
+        .back-link {
+            display: inline-block;
+            margin-top: 20px;
+            color: #667eea;
+            text-decoration: none;
+            font-weight: 600;
+        }
+        .back-link:hover {
+            text-decoration: underline;
+        }
+        .metric-section {
+            margin-bottom: 60px;
+            padding: 40px;
+            background: #f7fafc;
+            border-radius: 15px;
+            border-left: 5px solid #667eea;
+        }
+        .metric-header {
+            display: flex;
+            align-items: center;
+            gap: 20px;
+            margin-bottom: 30px;
+        }
+        .metric-icon {
+            font-size: 3em;
+        }
+        .metric-title {
+            font-size: 2em;
+            color: #2d3748;
+        }
+        .metric-subtitle {
+            color: #718096;
+            font-size: 1.1em;
+            margin-top: 5px;
+        }
+        .info-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 30px;
+            margin-top: 30px;
+        }
+        .info-box {
+            background: white;
+            padding: 25px;
+            border-radius: 10px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.05);
+        }
+        .info-box h3 {
+            color: #667eea;
+            margin-bottom: 15px;
+            font-size: 1.3em;
+        }
+        .formula {
+            background: #2d3748;
+            color: #e2e8f0;
+            padding: 20px;
+            border-radius: 10px;
+            font-family: 'Courier New', monospace;
+            margin: 20px 0;
+            overflow-x: auto;
+        }
+        .formula code {
+            font-size: 1.1em;
+        }
+        .example {
+            background: #edf2f7;
+            padding: 20px;
+            border-radius: 10px;
+            margin: 20px 0;
+        }
+        .example h4 {
+            color: #2d3748;
+            margin-bottom: 10px;
+        }
+        ul {
+            list-style: none;
+            padding-left: 0;
+        }
+        li {
+            padding: 10px 0;
+            border-bottom: 1px solid #e2e8f0;
+        }
+        li:before {
+            content: "✓ ";
+            color: #667eea;
+            font-weight: bold;
+            margin-right: 10px;
+        }
+        .visual-box {
+            background: white;
+            padding: 30px;
+            border-radius: 10px;
+            text-align: center;
+            margin: 20px 0;
+        }
+        .radar-chart {
+            width: 300px;
+            height: 300px;
+            margin: 20px auto;
+            border: 2px solid #e2e8f0;
+            border-radius: 50%;
+            position: relative;
+        }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 20px 0;
+        }
+        th, td {
+            padding: 15px;
+            text-align: left;
+            border-bottom: 1px solid #e2e8f0;
+        }
+        th {
+            background: #667eea;
+            color: white;
+            font-weight: 600;
+        }
+        tr:hover {
+            background: #f7fafc;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>🎯 Behavior Layer 지표</h1>
+            <p class="subtitle">행동 품질을 측정하는 4대 핵심 지표</p>
+            <a href="index.html" class="back-link">← 목차로 돌아가기</a>
+        </div>
+
+        <!-- HIR -->
+        <div class="metric-section">
+            <div class="metric-header">
+                <div class="metric-icon">📊</div>
+                <div>
+                    <h2 class="metric-title">HIR (High-Impact Rate) - 정직입력률</h2>
+                    <p class="metric-subtitle">행동 기록의 품질을 측정하는 지표</p>
+                </div>
+            </div>
+
+            <div class="info-grid">
+                <div class="info-box">
+                    <h3>📝 정의</h3>
+                    <p>Behavior Score의 <code>quality_score</code>를 기반으로 계산되는 지표로, 사용자가 입력한 활동 기록의 정확성과 품질을 평가합니다.</p>
+                </div>
+                <div class="info-box">
+                    <h3>🎯 목적</h3>
+                    <p>데이터의 신뢰성을 보장하고, 정확한 행동 분석을 위한 기초 데이터 품질을 측정합니다.</p>
+                </div>
+            </div>
+
+            <h3 style="margin-top: 30px; color: #2d3748;">계산 공식</h3>
+            <div class="formula">
+                <code>
+                    HIR = 평균(각 Behavior 타입별 quality_score)<br>
+                    <br>
+                    단계별 계산:<br>
+                    1. 최근 30일간의 Behavior Score 조회<br>
+                    2. 8개 Behavior 타입별로 가장 최근 quality_score 추출<br>
+                    3. 추출된 quality_score들의 평균 계산<br>
+                    4. 0-100 스케일로 정규화
+                </code>
+            </div>
+
+            <div class="example">
+                <h4>예시 계산</h4>
+                <p>최근 30일간의 Behavior Score에서:</p>
+                <ul>
+                    <li>Call: quality_score = 85</li>
+                    <li>Visit: quality_score = 90</li>
+                    <li>Email: quality_score = 80</li>
+                    <li>Presentation: quality_score = 95</li>
+                    <li>... (8개 타입)</li>
+                </ul>
+                <p><strong>HIR = (85 + 90 + 80 + 95 + ...) / 8 = 87.5점</strong></p>
+            </div>
+
+            <h3 style="margin-top: 30px; color: #2d3748;">대시보드 표시</h3>
+            <ul>
+                <li><strong>위치:</strong> 메인 대시보드 - ProfileCard (왼쪽 상단)</li>
+                <li><strong>표시 형식:</strong> "HIR (정직) 87%" 형태로 표시</li>
+                <li><strong>색상:</strong> 녹색 계열 (높을수록 좋음)</li>
+                <li><strong>변화 추적:</strong> 이전 기간 대비 증감 표시 (▲/▼)</li>
+            </ul>
+
+            <h3 style="margin-top: 30px; color: #2d3748;">해석 가이드</h3>
+            <table>
+                <tr>
+                    <th>점수 범위</th>
+                    <th>의미</th>
+                    <th>권장 조치</th>
+                </tr>
+                <tr>
+                    <td>90-100</td>
+                    <td>매우 높은 품질</td>
+                    <td>현재 수준 유지</td>
+                </tr>
+                <tr>
+                    <td>70-89</td>
+                    <td>양호한 품질</td>
+                    <td>일부 개선 여지 있음</td>
+                </tr>
+                <tr>
+                    <td>50-69</td>
+                    <td>보통 품질</td>
+                    <td>기록 정확도 개선 필요</td>
+                </tr>
+                <tr>
+                    <td>0-49</td>
+                    <td>낮은 품질</td>
+                    <td>즉시 개선 필요</td>
+                </tr>
+            </table>
+        </div>
+
+        <!-- RTR -->
+        <div class="metric-section">
+            <div class="metric-header">
+                <div class="metric-icon">🌡️</div>
+                <div>
+                    <h2 class="metric-title">RTR (Relationship Temperature Rate) - 관계온도</h2>
+                    <p class="metric-subtitle">고객과의 관계 품질을 측정하는 지표</p>
+                </div>
+            </div>
+
+            <div class="info-grid">
+                <div class="info-box">
+                    <h3>📝 정의</h3>
+                    <p>Activity의 <code>sentiment_score</code>를 기반으로 계산되는 지표로, 고객과의 관계가 얼마나 긍정적인지를 측정합니다.</p>
+                </div>
+                <div class="info-box">
+                    <h3>🎯 목적</h3>
+                    <p>고객 관계의 건강도를 파악하고, 관계 개선이 필요한 고객을 식별합니다.</p>
+                </div>
+            </div>
+
+            <h3 style="margin-top: 30px; color: #2d3748;">계산 공식</h3>
+            <div class="formula">
+                <code>
+                    RTR = 평균(Activity의 sentiment_score)<br>
+                    <br>
+                    단계별 계산:<br>
+                    1. 최근 30일간의 Activity 조회<br>
+                    2. sentiment_score가 있는 Activity만 필터링<br>
+                    3. sentiment_score의 평균 계산<br>
+                    4. 0-100 스케일로 정규화
+                </code>
+            </div>
+
+            <div class="example">
+                <h4>예시 계산</h4>
+                <p>최근 30일간의 Activity:</p>
+                <ul>
+                    <li>Activity 1: sentiment_score = 85</li>
+                    <li>Activity 2: sentiment_score = 90</li>
+                    <li>Activity 3: sentiment_score = 75</li>
+                    <li>Activity 4: sentiment_score = null (제외)</li>
+                    <li>Activity 5: sentiment_score = 95</li>
+                </ul>
+                <p><strong>RTR = (85 + 90 + 75 + 95) / 4 = 86.25점</strong></p>
+            </div>
+
+            <h3 style="margin-top: 30px; color: #2d3748;">대시보드 표시</h3>
+            <ul>
+                <li><strong>위치:</strong> 메인 대시보드 - ProfileCard</li>
+                <li><strong>표시 형식:</strong> "RTR (관계) 86점" 형태로 표시</li>
+                <li><strong>색상:</strong> 노란색 계열 (관계 온도 표현)</li>
+                <li><strong>시각화:</strong> 레이더 차트에서 오른쪽 축</li>
+            </ul>
+
+            <h3 style="margin-top: 30px; color: #2d3748;">해석 가이드</h3>
+            <table>
+                <tr>
+                    <th>점수 범위</th>
+                    <th>관계 상태</th>
+                    <th>권장 조치</th>
+                </tr>
+                <tr>
+                    <td>80-100</td>
+                    <td>매우 긍정적</td>
+                    <td>관계 유지 및 강화</td>
+                </tr>
+                <tr>
+                    <td>60-79</td>
+                    <td>양호한 관계</td>
+                    <td>지속적인 관리</td>
+                </tr>
+                <tr>
+                    <td>40-59</td>
+                    <td>보통 관계</td>
+                    <td>관계 개선 활동 필요</td>
+                </tr>
+                <tr>
+                    <td>0-39</td>
+                    <td>관계 악화</td>
+                    <td>즉시 관계 회복 조치</td>
+                </tr>
+            </table>
+        </div>
+
+        <!-- BCR -->
+        <div class="metric-section">
+            <div class="metric-header">
+                <div class="metric-icon">🔄</div>
+                <div>
+                    <h2 class="metric-title">BCR (Behavior Consistency Rate) - 루틴 점수</h2>
+                    <p class="metric-subtitle">행동의 일관성과 규칙성을 측정하는 지표</p>
+                </div>
+            </div>
+
+            <div class="info-grid">
+                <div class="info-box">
+                    <h3>📝 정의</h3>
+                    <p>활동 빈도, 규칙성, Behavior Score 일관성을 종합하여 계산되는 지표로, 꾸준한 활동 패턴을 평가합니다.</p>
+                </div>
+                <div class="info-box">
+                    <h3>🎯 목적</h3>
+                    <p>일관된 업무 패턴을 유지하는지 확인하고, 루틴이 깨진 경우를 조기에 발견합니다.</p>
+                </div>
+            </div>
+
+            <h3 style="margin-top: 30px; color: #2d3748;">계산 공식</h3>
+            <div class="formula">
+                <code>
+                    BCR = 빈도 점수(40점) + 규칙성 점수(30점) + 품질 일관성 점수(30점)<br>
+                    <br>
+                    세부 계산:<br>
+                    1. 빈도 점수 = (활동 일수 / 총 일수) × 40<br>
+                    2. 규칙성 점수 = 활동 간격의 표준편차 기반 점수 × 30<br>
+                    3. 품질 일관성 = Behavior Score quality_score 표준편차 기반 점수 × 30<br>
+                    4. 총점 = 빈도 + 규칙성 + 품질 일관성 (최대 100점)
+                </code>
+            </div>
+
+            <div class="example">
+                <h4>예시 계산</h4>
+                <p>최근 30일간:</p>
+                <ul>
+                    <li>활동 일수: 20일 / 총 30일 → 빈도 점수 = (20/30) × 40 = 26.7점</li>
+                    <li>활동 간격 표준편차 낮음 → 규칙성 점수 = 25점</li>
+                    <li>quality_score 표준편차 낮음 → 품질 일관성 = 28점</li>
+                </ul>
+                <p><strong>BCR = 26.7 + 25 + 28 = 79.7점</strong></p>
+            </div>
+
+            <h3 style="margin-top: 30px; color: #2d3748;">대시보드 표시</h3>
+            <ul>
+                <li><strong>위치:</strong> 메인 대시보드 - ProfileCard</li>
+                <li><strong>표시 형식:</strong> "BCR (루틴) 80%" 형태로 표시</li>
+                <li><strong>색상:</strong> 기본 색상</li>
+                <li><strong>시각화:</strong> 레이더 차트에서 하단 축</li>
+            </ul>
+
+            <h3 style="margin-top: 30px; color: #2d3748;">해석 가이드</h3>
+            <table>
+                <tr>
+                    <th>점수 범위</th>
+                    <th>일관성 수준</th>
+                    <th>권장 조치</th>
+                </tr>
+                <tr>
+                    <td>80-100</td>
+                    <td>매우 일관적</td>
+                    <td>현재 패턴 유지</td>
+                </tr>
+                <tr>
+                    <td>60-79</td>
+                    <td>양호한 일관성</td>
+                    <td>일부 개선 여지</td>
+                </tr>
+                <tr>
+                    <td>40-59</td>
+                    <td>보통 일관성</td>
+                    <td>규칙적인 패턴 형성 필요</td>
+                </tr>
+                <tr>
+                    <td>0-39</td>
+                    <td>일관성 부족</td>
+                    <td>루틴 개선 필수</td>
+                </tr>
+            </table>
+        </div>
+
+        <!-- PHR -->
+        <div class="metric-section">
+            <div class="metric-header">
+                <div class="metric-icon">📅</div>
+                <div>
+                    <h2 class="metric-title">PHR (Proactive Health Rate) - 선제적 관리 점수</h2>
+                    <p class="metric-subtitle">다음 활동 계획의 적절성을 측정하는 지표</p>
+                </div>
+            </div>
+
+            <div class="info-grid">
+                <div class="info-box">
+                    <h3>📝 정의</h3>
+                    <p>Activity의 <code>next_action_date</code>를 기반으로 계산되는 지표로, 고객을 얼마나 선제적으로 관리하고 있는지 평가합니다.</p>
+                </div>
+                <div class="info-box">
+                    <h3>🎯 목적</h3>
+                    <p>Dead Lead를 방지하고, 적절한 시기에 고객을 관리하여 관계를 유지합니다.</p>
+                </div>
+            </div>
+
+            <h3 style="margin-top: 30px; color: #2d3748;">계산 공식</h3>
+            <div class="formula">
+                <code>
+                    PHR = 평균(각 Activity의 관리 점수)<br>
+                    <br>
+                    Activity별 점수 기준:<br>
+                    - next_action_date가 지남 (Dead Lead): 0점<br>
+                    - 0-7일 이내: 100점 (적극적 관리)<br>
+                    - 8-14일: 80점<br>
+                    - 15-30일: 60점<br>
+                    - 30일 이상: 40점<br>
+                    - next_action_date 없음: 0점
+                </code>
+            </div>
+
+            <div class="example">
+                <h4>예시 계산</h4>
+                <p>최근 30일간의 Activity:</p>
+                <ul>
+                    <li>Activity 1: next_action_date = 3일 후 → 100점</li>
+                    <li>Activity 2: next_action_date = 10일 후 → 80점</li>
+                    <li>Activity 3: next_action_date = 20일 후 → 60점</li>
+                    <li>Activity 4: next_action_date 없음 → 0점</li>
+                    <li>Activity 5: next_action_date = 지난 날짜 → 0점</li>
+                </ul>
+                <p><strong>PHR = (100 + 80 + 60 + 0 + 0) / 5 = 48점</strong></p>
+            </div>
+
+            <h3 style="margin-top: 30px; color: #2d3748;">대시보드 표시</h3>
+            <ul>
+                <li><strong>위치:</strong> 메인 대시보드 - ProfileCard</li>
+                <li><strong>표시 형식:</strong> "PHR (관리) 48%" 형태로 표시</li>
+                <li><strong>색상:</strong> 기본 색상</li>
+                <li><strong>시각화:</strong> 레이더 차트에서 왼쪽 축</li>
+            </ul>
+
+            <h3 style="margin-top: 30px; color: #2d3748;">해석 가이드</h3>
+            <table>
+                <tr>
+                    <th>점수 범위</th>
+                    <th>관리 수준</th>
+                    <th>권장 조치</th>
+                </tr>
+                <tr>
+                    <td>80-100</td>
+                    <td>매우 적극적</td>
+                    <td>현재 관리 수준 유지</td>
+                </tr>
+                <tr>
+                    <td>60-79</td>
+                    <td>양호한 관리</td>
+                    <td>일부 개선 여지</td>
+                </tr>
+                <tr>
+                    <td>40-59</td>
+                    <td>보통 관리</td>
+                    <td>다음 활동 계획 수립 필요</td>
+                </tr>
+                <tr>
+                    <td>0-39</td>
+                    <td>관리 부족</td>
+                    <td>즉시 Dead Lead 점검 및 관리</td>
+                </tr>
+            </table>
+        </div>
+
+        <!-- Total Score -->
+        <div class="metric-section">
+            <div class="metric-header">
+                <div class="metric-icon">⭐</div>
+                <div>
+                    <h2 class="metric-title">Total Score - 종합 점수</h2>
+                    <p class="metric-subtitle">4개 지표의 평균 종합 점수</p>
+                </div>
+            </div>
+
+            <h3 style="margin-top: 30px; color: #2d3748;">계산 공식</h3>
+            <div class="formula">
+                <code>
+                    Total Score = (HIR + RTR + BCR + PHR) / 4<br>
+                    <br>
+                    예시:<br>
+                    HIR = 87, RTR = 86, BCR = 80, PHR = 48<br>
+                    Total Score = (87 + 86 + 80 + 48) / 4 = 75.25점
+                </code>
+            </div>
+
+            <h3 style="margin-top: 30px; color: #2d3748;">랭크 시스템</h3>
+            <table>
+                <tr>
+                    <th>Total Score</th>
+                    <th>랭크</th>
+                    <th>상위 비율</th>
+                </tr>
+                <tr>
+                    <td>90-100</td>
+                    <td>🏆 Excellent</td>
+                    <td>상위 5%</td>
+                </tr>
+                <tr>
+                    <td>80-89</td>
+                    <td>🏆 Excellent</td>
+                    <td>상위 12%</td>
+                </tr>
+                <tr>
+                    <td>70-79</td>
+                    <td>⭐ Good</td>
+                    <td>상위 30%</td>
+                </tr>
+                <tr>
+                    <td>60-69</td>
+                    <td>📊 Average</td>
+                    <td>상위 50%</td>
+                </tr>
+                <tr>
+                    <td>0-59</td>
+                    <td>📈 개선 필요</td>
+                    <td>하위 50%</td>
+                </tr>
+            </table>
+        </div>
+
+        <div style="text-align: center; margin-top: 50px; padding-top: 30px; border-top: 2px solid #e2e8f0;">
+            <a href="index.html" class="back-link">← 목차로 돌아가기</a>
+        </div>
+    </div>
+</body>
+</html>
+
+

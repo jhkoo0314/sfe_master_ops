@@ -1,0 +1,458 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>관리자 대시보드 지표 - BehaviorCRM</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Noto Sans KR', sans-serif;
+            line-height: 1.6;
+            color: #333;
+            background: #f7fafc;
+            padding: 40px 20px;
+        }
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 20px;
+            box-shadow: 0 10px 40px rgba(0,0,0,0.1);
+            padding: 60px;
+        }
+        .header {
+            text-align: center;
+            margin-bottom: 50px;
+            padding-bottom: 30px;
+            border-bottom: 3px solid #9f7aea;
+        }
+        h1 {
+            font-size: 2.5em;
+            color: #2d3748;
+            margin-bottom: 15px;
+        }
+        .back-link {
+            display: inline-block;
+            margin-top: 20px;
+            color: #9f7aea;
+            text-decoration: none;
+            font-weight: 600;
+        }
+        .back-link:hover {
+            text-decoration: underline;
+        }
+        .metric-section {
+            margin-bottom: 60px;
+            padding: 40px;
+            background: #f7fafc;
+            border-radius: 15px;
+            border-left: 5px solid #9f7aea;
+        }
+        .metric-header {
+            display: flex;
+            align-items: center;
+            gap: 20px;
+            margin-bottom: 30px;
+        }
+        .metric-icon {
+            font-size: 3em;
+        }
+        .metric-title {
+            font-size: 2em;
+            color: #2d3748;
+        }
+        .metric-subtitle {
+            color: #718096;
+            font-size: 1.1em;
+            margin-top: 5px;
+        }
+        .info-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 30px;
+            margin-top: 30px;
+        }
+        .info-box {
+            background: white;
+            padding: 25px;
+            border-radius: 10px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.05);
+        }
+        .info-box h3 {
+            color: #9f7aea;
+            margin-bottom: 15px;
+            font-size: 1.3em;
+        }
+        .formula {
+            background: #2d3748;
+            color: #e2e8f0;
+            padding: 20px;
+            border-radius: 10px;
+            font-family: 'Courier New', monospace;
+            margin: 20px 0;
+            overflow-x: auto;
+        }
+        .formula code {
+            font-size: 1.1em;
+        }
+        .example {
+            background: #edf2f7;
+            padding: 20px;
+            border-radius: 10px;
+            margin: 20px 0;
+        }
+        .example h4 {
+            color: #2d3748;
+            margin-bottom: 10px;
+        }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 20px 0;
+        }
+        th, td {
+            padding: 15px;
+            text-align: left;
+            border-bottom: 1px solid #e2e8f0;
+        }
+        th {
+            background: #9f7aea;
+            color: white;
+            font-weight: 600;
+        }
+        tr:hover {
+            background: #f7fafc;
+        }
+        .kpi-grid {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 20px;
+            margin: 30px 0;
+        }
+        .kpi-card {
+            background: white;
+            padding: 20px;
+            border-radius: 10px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.05);
+        }
+        .kpi-value {
+            font-size: 2em;
+            font-weight: bold;
+            color: #9f7aea;
+            margin: 10px 0;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>👥 관리자 대시보드 지표</h1>
+            <p class="subtitle">팀 관리 및 코칭을 위한 지표</p>
+            <a href="index.html" class="back-link">← 목차로 돌아가기</a>
+        </div>
+
+        <!-- Team Behavior Score -->
+        <div class="metric-section">
+            <div class="metric-header">
+                <div class="metric-icon">📊</div>
+                <div>
+                    <h2 class="metric-title">Team Behavior Score</h2>
+                    <p class="metric-subtitle">팀 전체 평균 Behavior Score</p>
+                </div>
+            </div>
+
+            <div class="info-grid">
+                <div class="info-box">
+                    <h3>📝 정의</h3>
+                    <p>팀원들의 개별 Behavior Score를 평균하여 계산한 팀 전체 점수입니다.</p>
+                </div>
+                <div class="info-box">
+                    <h3>🎯 목적</h3>
+                    <p>팀 전체의 행동 품질 수준을 파악하고, 개선이 필요한 팀원을 식별합니다.</p>
+                </div>
+            </div>
+
+            <h3 style="margin-top: 30px; color: #2d3748;">계산 공식</h3>
+            <div class="formula">
+                <code>
+                    Team Behavior Score = 평균(각 팀원의 Behavior Score)<br>
+                    <br>
+                    계산 단계:<br>
+                    1. 팀원 목록 조회 (getTeamMembers)<br>
+                    2. 각 팀원의 Behavior Score 계산 (최근 30일)<br>
+                       - 8개 Behavior 타입별 quality_score 평균<br>
+                    3. 팀원별 점수 합산 후 평균 계산<br>
+                    4. 이전 기간 대비 변화율 계산
+                </code>
+            </div>
+
+            <div class="example">
+                <h4>예시 계산</h4>
+                <p>팀원 5명의 Behavior Score:</p>
+                <ul>
+                    <li>팀원 A: 85점</li>
+                    <li>팀원 B: 78점</li>
+                    <li>팀원 C: 92점</li>
+                    <li>팀원 D: 80점</li>
+                    <li>팀원 E: 88점</li>
+                </ul>
+                <p><strong>Team Behavior Score = (85 + 78 + 92 + 80 + 88) / 5 = 84.6점</strong></p>
+                <p>이전 기간: 82점</p>
+                <p><strong>변화율 = ((84.6 - 82) / 82) × 100% = +3.2%</strong></p>
+            </div>
+
+            <h3 style="margin-top: 30px; color: #2d3748;">대시보드 표시</h3>
+            <div class="kpi-grid">
+                <div class="kpi-card">
+                    <div style="font-size: 0.9em; color: #718096; margin-bottom: 10px;">Team Behavior Score</div>
+                    <div class="kpi-value">85점</div>
+                    <div style="font-size: 0.8em; color: #48bb78; margin-top: 10px;">▲ 전월 대비 3점 상승</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Avg. HIR -->
+        <div class="metric-section">
+            <div class="metric-header">
+                <div class="metric-icon">🎯</div>
+                <div>
+                    <h2 class="metric-title">Avg. HIR (정직입력)</h2>
+                    <p class="metric-subtitle">팀원들의 평균 HIR 점수</p>
+                </div>
+            </div>
+
+            <h3 style="margin-top: 30px; color: #2d3748;">계산 공식</h3>
+            <div class="formula">
+                <code>
+                    Avg. HIR = 평균(각 팀원의 HIR 점수)<br>
+                    <br>
+                    각 팀원의 HIR 계산:<br>
+                    - 최근 30일간의 Behavior Score 조회<br>
+                    - 8개 Behavior 타입별 quality_score 평균<br>
+                    - 0-100 스케일로 정규화
+                </code>
+            </div>
+
+            <div class="example">
+                <h4>예시 계산</h4>
+                <p>팀원 5명의 HIR:</p>
+                <ul>
+                    <li>팀원 A: 87%</li>
+                    <li>팀원 B: 75%</li>
+                    <li>팀원 C: 95%</li>
+                    <li>팀원 D: 82%</li>
+                    <li>팀원 E: 90%</li>
+                </ul>
+                <p><strong>Avg. HIR = (87 + 75 + 95 + 82 + 90) / 5 = 85.8%</strong></p>
+            </div>
+
+            <h3 style="margin-top: 30px; color: #2d3748;">해석 가이드</h3>
+            <table>
+                <tr>
+                    <th>Avg. HIR 범위</th>
+                    <th>의미</th>
+                    <th>권장 조치</th>
+                </tr>
+                <tr>
+                    <td>90-100%</td>
+                    <td>신뢰도 매우 높음</td>
+                    <td>현재 수준 유지</td>
+                </tr>
+                <tr>
+                    <td>70-89%</td>
+                    <td>신뢰도 높음</td>
+                    <td>일부 개선 여지</td>
+                </tr>
+                <tr>
+                    <td>0-69%</td>
+                    <td>신뢰도 개선 필요</td>
+                    <td>데이터 입력 품질 개선 교육</td>
+                </tr>
+            </table>
+        </div>
+
+        <!-- Active Pipeline -->
+        <div class="metric-section">
+            <div class="metric-header">
+                <div class="metric-icon">🔮</div>
+                <div>
+                    <h2 class="metric-title">Active Pipeline</h2>
+                    <p class="metric-subtitle">팀 전체 파이프라인 금액</p>
+                </div>
+            </div>
+
+            <h3 style="margin-top: 30px; color: #2d3748;">계산 공식</h3>
+            <div class="formula">
+                <code>
+                    Active Pipeline = Σ(팀원별 진행 중인 거래 예상 금액)<br>
+                    <br>
+                    현재 상태:<br>
+                    - 임시로 0 표시 (향후 구현 예정)<br>
+                    - Opportunities 테이블 또는 Account의 예상 매출 필드 활용 예정
+                </code>
+            </div>
+
+            <h3 style="margin-top: 30px; color: #2d3748;">대시보드 표시</h3>
+            <div class="kpi-card">
+                <div style="font-size: 0.9em; color: #718096; margin-bottom: 10px;">Active Pipeline</div>
+                <div class="kpi-value">₩ 0B</div>
+                <div style="font-size: 0.8em; color: #718096; margin-top: 10px;">데이터 준비 중</div>
+            </div>
+        </div>
+
+        <!-- Team Goal Forecast -->
+        <div class="metric-section">
+            <div class="metric-header">
+                <div class="metric-icon">🎯</div>
+                <div>
+                    <h2 class="metric-title">Team Goal Forecast</h2>
+                    <p class="metric-subtitle">팀 목표 달성 예측률</p>
+                </div>
+            </div>
+
+            <h3 style="margin-top: 30px; color: #2d3748;">계산 공식</h3>
+            <div class="formula">
+                <code>
+                    Team Goal Forecast = (Avg. HIR / 목표 HIR) × 100%<br>
+                    <br>
+                    현재 로직:<br>
+                    - 목표 HIR = 70점 (기본값)<br>
+                    - Avg. HIR을 목표 대비 비율로 계산<br>
+                    - 최대 100%로 제한
+                </code>
+            </div>
+
+            <div class="example">
+                <h4>예시 계산</h4>
+                <p>Avg. HIR = 85.8%</p>
+                <p>목표 HIR = 70%</p>
+                <p><strong>Team Goal Forecast = (85.8 / 70) × 100% = 122.6% → 100% (최대값 제한)</strong></p>
+            </div>
+
+            <h3 style="margin-top: 30px; color: #2d3748;">해석 가이드</h3>
+            <table>
+                <tr>
+                    <th>Forecast 범위</th>
+                    <th>의미</th>
+                    <th>상태</th>
+                </tr>
+                <tr>
+                    <td>100% 이상</td>
+                    <td>목표 달성</td>
+                    <td>✅ 목표 달성</td>
+                </tr>
+                <tr>
+                    <td>90-99%</td>
+                    <td>목표 달성 임박</td>
+                    <td>⚠️ 목표 달성 필요</td>
+                </tr>
+                <tr>
+                    <td>0-89%</td>
+                    <td>목표 달성 필요</td>
+                    <td>❌ 개선 필요</td>
+                </tr>
+            </table>
+        </div>
+
+        <!-- Coaching Priority -->
+        <div class="metric-section">
+            <div class="metric-header">
+                <div class="metric-icon">🎓</div>
+                <div>
+                    <h2 class="metric-title">Coaching Priority List</h2>
+                    <p class="metric-subtitle">코칭 우선순위가 높은 팀원 목록</p>
+                </div>
+            </div>
+
+            <h3 style="margin-top: 30px; color: #2d3748;">우선순위 결정 기준</h3>
+            <div class="info-box" style="margin-top: 20px;">
+                <h3>우선순위 점수 계산</h3>
+                <ul style="list-style: disc; padding-left: 20px;">
+                    <li>Behavior Score가 낮은 팀원</li>
+                    <li>HIR이 낮은 팀원 (데이터 신뢰도 낮음)</li>
+                    <li>최근 성과가 하락한 팀원</li>
+                    <li>4개 지표 중 균형이 깨진 팀원</li>
+                </ul>
+            </div>
+
+            <h3 style="margin-top: 30px; color: #2d3748;">대시보드 표시</h3>
+            <div class="info-box">
+                <h4>CoachingPriorityList 컴포넌트</h4>
+                <p>팀원별로 다음 정보 표시:</p>
+                <ul style="list-style: disc; padding-left: 20px;">
+                    <li>이름 및 프로필</li>
+                    <li>Behavior Score</li>
+                    <li>주요 개선 영역 (가장 낮은 지표)</li>
+                    <li>코칭 액션 제안</li>
+                </ul>
+            </div>
+        </div>
+
+        <!-- Team Balance Radar -->
+        <div class="metric-section">
+            <div class="metric-header">
+                <div class="metric-icon">⚖️</div>
+                <div>
+                    <h2 class="metric-title">Team Balance Radar</h2>
+                    <p class="metric-subtitle">팀 전체의 지표 밸런스 분석</p>
+                </div>
+            </div>
+
+            <h3 style="margin-top: 30px; color: #2d3748;">계산 방법</h3>
+            <div class="formula">
+                <code>
+                    팀 평균 지표 = 평균(각 팀원의 개별 지표)<br>
+                    <br>
+                    계산 지표:<br>
+                    - 팀 평균 HIR<br>
+                    - 팀 평균 RTR<br>
+                    - 팀 평균 BCR<br>
+                    - 팀 평균 PHR<br>
+                    <br>
+                    레이더 차트로 시각화하여<br>
+                    팀 전체의 강점/약점 영역 파악
+                </code>
+            </div>
+
+            <h3 style="margin-top: 30px; color: #2d3748;">해석 방법</h3>
+            <ul style="list-style: none; padding-left: 0;">
+                <li>✓ 레이더 차트가 균형잡힌 형태 → 팀 전체가 균형있게 발전</li>
+                <li>✓ 특정 축이 낮음 → 해당 영역 집중 코칭 필요</li>
+                <li>✓ 모든 축이 높음 → 팀 전체 성과 우수</li>
+            </ul>
+        </div>
+
+        <!-- Market Intel -->
+        <div class="metric-section">
+            <div class="metric-header">
+                <div class="metric-icon">📰</div>
+                <div>
+                    <h2 class="metric-title">Market Intel</h2>
+                    <p class="metric-subtitle">시장 정보 및 인사이트</p>
+                </div>
+            </div>
+
+            <h3 style="margin-top: 30px; color: #2d3748;">제공 정보</h3>
+            <div class="info-box">
+                <ul style="list-style: disc; padding-left: 20px;">
+                    <li>업계 평균 대비 팀 성과 비교</li>
+                    <li>시장 트렌드 정보</li>
+                    <li>경쟁사 대비 우위/열위 분석</li>
+                    <li>시장 기회 포인트</li>
+                </ul>
+            </div>
+        </div>
+
+        <div style="text-align: center; margin-top: 50px; padding-top: 30px; border-top: 2px solid #e2e8f0;">
+            <a href="index.html" class="back-link">← 목차로 돌아가기</a>
+        </div>
+    </div>
+</body>
+</html>
+
+

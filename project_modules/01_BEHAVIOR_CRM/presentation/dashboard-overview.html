@@ -1,0 +1,451 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>대시보드 개요 - BehaviorCRM</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Noto Sans KR', sans-serif;
+            line-height: 1.6;
+            color: #333;
+            background: #f7fafc;
+            padding: 40px 20px;
+        }
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 20px;
+            box-shadow: 0 10px 40px rgba(0,0,0,0.1);
+            padding: 60px;
+        }
+        .header {
+            text-align: center;
+            margin-bottom: 50px;
+            padding-bottom: 30px;
+            border-bottom: 3px solid #4299e1;
+        }
+        h1 {
+            font-size: 2.5em;
+            color: #2d3748;
+            margin-bottom: 15px;
+        }
+        .back-link {
+            display: inline-block;
+            margin-top: 20px;
+            color: #4299e1;
+            text-decoration: none;
+            font-weight: 600;
+        }
+        .back-link:hover {
+            text-decoration: underline;
+        }
+        .dashboard-section {
+            margin-bottom: 60px;
+            padding: 40px;
+            background: #f7fafc;
+            border-radius: 15px;
+            border-left: 5px solid #4299e1;
+        }
+        .dashboard-header {
+            display: flex;
+            align-items: center;
+            gap: 20px;
+            margin-bottom: 30px;
+        }
+        .dashboard-icon {
+            font-size: 3em;
+        }
+        .dashboard-title {
+            font-size: 2em;
+            color: #2d3748;
+        }
+        .component-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 20px;
+            margin: 30px 0;
+        }
+        .component-card {
+            background: white;
+            padding: 25px;
+            border-radius: 10px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.05);
+        }
+        .component-card h4 {
+            color: #4299e1;
+            margin-bottom: 15px;
+            font-size: 1.2em;
+        }
+        .layout-diagram {
+            background: white;
+            padding: 30px;
+            border-radius: 10px;
+            margin: 20px 0;
+            border: 2px dashed #cbd5e0;
+        }
+        .grid-visual {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 10px;
+            margin: 20px 0;
+        }
+        .grid-item {
+            background: #edf2f7;
+            padding: 20px;
+            border-radius: 5px;
+            text-align: center;
+            min-height: 100px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        .grid-item.span-2 {
+            grid-column: span 2;
+        }
+        .grid-item.span-3 {
+            grid-column: span 3;
+        }
+        ul {
+            list-style: none;
+            padding-left: 0;
+        }
+        li {
+            padding: 10px 0;
+            border-bottom: 1px solid #e2e8f0;
+        }
+        li:before {
+            content: "• ";
+            color: #4299e1;
+            font-weight: bold;
+            margin-right: 10px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>📈 대시보드 개요</h1>
+            <p class="subtitle">각 대시보드 페이지별 구성 요소 및 시각화 방법</p>
+            <a href="index.html" class="back-link">← 목차로 돌아가기</a>
+        </div>
+
+        <!-- 메인 대시보드 -->
+        <div class="dashboard-section">
+            <div class="dashboard-header">
+                <div class="dashboard-icon">🏠</div>
+                <div>
+                    <h2 class="dashboard-title">메인 대시보드 (Action Hub)</h2>
+                    <p style="color: #718096; margin-top: 5px;">행동 데이터 기반 대시보드</p>
+                </div>
+            </div>
+
+            <h3 style="margin-top: 30px; color: #2d3748;">레이아웃 구조</h3>
+            <div class="layout-diagram">
+                <div class="grid-visual">
+                    <div class="grid-item">ProfileCard<br/>(2행)</div>
+                    <div class="grid-item">BehaviorRadarChart<br/>(2행)</div>
+                    <div class="grid-item">ActionQueue<br/>(2행)</div>
+                    <div class="grid-item span-3">BehaviorOutcomeScatter<br/>(1행)</div>
+                </div>
+            </div>
+
+            <h3 style="margin-top: 30px; color: #2d3748;">주요 컴포넌트</h3>
+            <div class="component-grid">
+                <div class="component-card">
+                    <h4>ProfileCard</h4>
+                    <ul>
+                        <li>사용자 프로필 (아바타, 이름)</li>
+                        <li>Total Score (큰 숫자)</li>
+                        <li>랭크 배지 (상위 5%, 12% 등)</li>
+                        <li>4개 지표 그리드 (HIR, RTR, BCR, PHR)</li>
+                        <li>이전 기간 대비 변화 표시</li>
+                    </ul>
+                </div>
+
+                <div class="component-card">
+                    <h4>BehaviorRadarChart</h4>
+                    <ul>
+                        <li>SVG 기반 레이더 차트</li>
+                        <li>4개 지표 시각화 (HIR, RTR, BCR, PHR)</li>
+                        <li>가장 낮은 지표 팁 메시지</li>
+                        <li>균형 분석 및 개선 제안</li>
+                    </ul>
+                </div>
+
+                <div class="component-card">
+                    <h4>ActionQueue</h4>
+                    <ul>
+                        <li>우선순위별 액션 목록</li>
+                        <li>Dead Lead 알림</li>
+                        <li>다음 활동 예정일 관리</li>
+                        <li>즉시 조치 필요한 항목 강조</li>
+                    </ul>
+                </div>
+
+                <div class="component-card">
+                    <h4>BehaviorOutcomeScatter</h4>
+                    <ul>
+                        <li>행동 점수 vs 성과 스캐터 차트</li>
+                        <li>인과관계 시각화</li>
+                        <li>트렌드 라인</li>
+                        <li>데이터 포인트 상호작용</li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+
+        <!-- 성과 리포트 대시보드 -->
+        <div class="dashboard-section">
+            <div class="dashboard-header">
+                <div class="dashboard-icon">💰</div>
+                <div>
+                    <h2 class="dashboard-title">성과 리포트 (Outcome Report)</h2>
+                    <p style="color: #718096; margin-top: 5px;">매출 통계 및 성과 분석</p>
+                </div>
+            </div>
+
+            <h3 style="margin-top: 30px; color: #2d3748;">레이아웃 구조</h3>
+            <div class="layout-diagram">
+                <p><strong>상단:</strong> KPI 카드 4개 (Revenue, Growth, Pipeline, Prediction)</p>
+                <p><strong>하단:</strong> 2열 그리드</p>
+                <div class="grid-visual" style="grid-template-columns: 2fr 1fr;">
+                    <div class="grid-item">RevenueBehaviorChart<br/>(메인 차트)</div>
+                    <div class="grid-item">
+                        <div>GrowthLeaderboard</div>
+                        <div style="margin-top: 10px;">PipelineFunnel</div>
+                    </div>
+                </div>
+            </div>
+
+            <h3 style="margin-top: 30px; color: #2d3748;">주요 컴포넌트</h3>
+            <div class="component-grid">
+                <div class="component-card">
+                    <h4>RevenueKpiCard</h4>
+                    <ul>
+                        <li>총 매출액 표시</li>
+                        <li>목표 대비 달성률</li>
+                        <li>진행 바 (Progress Bar)</li>
+                        <li>목표까지 남은 금액</li>
+                    </ul>
+                </div>
+
+                <div class="component-card">
+                    <h4>GrowthKpiCard</h4>
+                    <ul>
+                        <li>YoY 성장률 표시</li>
+                        <li>업계 평균 대비 비교</li>
+                        <li>색상 코딩 (양수/음수)</li>
+                    </ul>
+                </div>
+
+                <div class="component-card">
+                    <h4>RevenueBehaviorChart</h4>
+                    <ul>
+                        <li>매출 트렌드 라인 차트</li>
+                        <li>행동 점수 오버레이</li>
+                        <li>인과관계 시각화</li>
+                        <li>시간대별 필터링</li>
+                    </ul>
+                </div>
+
+                <div class="component-card">
+                    <h4>GrowthLeaderboard</h4>
+                    <ul>
+                        <li>상위 성장 고객 목록</li>
+                        <li>성장률 순위</li>
+                        <li>고객별 상세 정보</li>
+                    </ul>
+                </div>
+
+                <div class="component-card">
+                    <h4>PipelineFunnel</h4>
+                    <ul>
+                        <li>파이프라인 단계별 집계</li>
+                        <li>퍼널 시각화</li>
+                        <li>전환율 표시</li>
+                        <li>병목 지점 식별</li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+
+        <!-- 관리자 대시보드 -->
+        <div class="dashboard-section">
+            <div class="dashboard-header">
+                <div class="dashboard-icon">👥</div>
+                <div>
+                    <h2 class="dashboard-title">관리자 대시보드 (Coaching Cockpit)</h2>
+                    <p style="color: #718096; margin-top: 5px;">팀 관리 및 코칭 대시보드</p>
+                </div>
+            </div>
+
+            <h3 style="margin-top: 30px; color: #2d3748;">레이아웃 구조</h3>
+            <div class="layout-diagram">
+                <p><strong>상단:</strong> CoachingCockpitHeader</p>
+                <p><strong>중간:</strong> TeamKpiRow (4개 KPI 카드)</p>
+                <p><strong>하단:</strong> 2열 그리드</p>
+                <div class="grid-visual" style="grid-template-columns: 2fr 1fr;">
+                    <div class="grid-item">CoachingPriorityList<br/>(코칭 우선순위)</div>
+                    <div class="grid-item">
+                        <div>TeamBalanceRadar</div>
+                        <div style="margin-top: 10px;">MarketIntel</div>
+                    </div>
+                </div>
+            </div>
+
+            <h3 style="margin-top: 30px; color: #2d3748;">주요 컴포넌트</h3>
+            <div class="component-grid">
+                <div class="component-card">
+                    <h4>TeamKpiRow</h4>
+                    <ul>
+                        <li>Team Behavior Score</li>
+                        <li>Avg. HIR (정직입력)</li>
+                        <li>Active Pipeline</li>
+                        <li>Team Goal Forecast</li>
+                        <li>각 KPI별 트렌드 표시</li>
+                    </ul>
+                </div>
+
+                <div class="component-card">
+                    <h4>CoachingPriorityList</h4>
+                    <ul>
+                        <li>코칭 우선순위가 높은 팀원 목록</li>
+                        <li>팀원별 Behavior Score</li>
+                        <li>주요 개선 영역 표시</li>
+                        <li>코칭 액션 제안</li>
+                    </ul>
+                </div>
+
+                <div class="component-card">
+                    <h4>TeamBalanceRadar</h4>
+                    <ul>
+                        <li>팀 전체 지표 밸런스</li>
+                        <li>4개 지표 평균 시각화</li>
+                        <li>강점/약점 영역 파악</li>
+                    </ul>
+                </div>
+
+                <div class="component-card">
+                    <h4>MarketIntel</h4>
+                    <ul>
+                        <li>시장 정보 및 인사이트</li>
+                        <li>업계 평균 대비 비교</li>
+                        <li>시장 트렌드</li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+
+        <!-- 성장 맵 대시보드 -->
+        <div class="dashboard-section">
+            <div class="dashboard-header">
+                <div class="dashboard-icon">🌱</div>
+                <div>
+                    <h2 class="dashboard-title">성장 맵 (Growth Map)</h2>
+                    <p style="color: #718096; margin-top: 5px;">행동 품질과 성과의 인과관계 분석</p>
+                </div>
+            </div>
+
+            <h3 style="margin-top: 30px; color: #2d3748;">주요 컴포넌트</h3>
+            <div class="component-grid">
+                <div class="component-card">
+                    <h4>GamificationTier</h4>
+                    <ul>
+                        <li>레벨/경험치 시스템</li>
+                        <li>현재 티어 표시</li>
+                        <li>다음 티어까지 진행률</li>
+                        <li>게이미피케이션 요소</li>
+                    </ul>
+                </div>
+
+                <div class="component-card">
+                    <h4>BehaviorOutcomeTrendChart</h4>
+                    <ul>
+                        <li>Dual-Axis 트렌드 차트</li>
+                        <li>행동 점수 vs 성과</li>
+                        <li>인과관계 시각화</li>
+                        <li>시간대별 트렌드</li>
+                    </ul>
+                </div>
+
+                <div class="component-card">
+                    <h4>SkillTree</h4>
+                    <ul>
+                        <li>3단계 성장 로드맵</li>
+                        <li>달성한 스킬 표시</li>
+                        <li>다음 단계 제안</li>
+                        <li>성장 경로 시각화</li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+
+        <!-- 공통 UI 패턴 -->
+        <div class="dashboard-section">
+            <div class="dashboard-header">
+                <div class="dashboard-icon">🎨</div>
+                <div>
+                    <h2 class="dashboard-title">공통 UI 패턴</h2>
+                    <p style="color: #718096; margin-top: 5px;">일관된 디자인 시스템</p>
+                </div>
+            </div>
+
+            <h3 style="margin-top: 30px; color: #2d3748;">컴포넌트 스타일</h3>
+            <ul>
+                <li><strong>카드 기반 레이아웃:</strong> 모든 지표는 Card 컴포넌트로 표시</li>
+                <li><strong>로딩 상태:</strong> Skeleton 컴포넌트로 로딩 중 표시</li>
+                <li><strong>에러 처리:</strong> 에러 발생 시 사용자 친화적 메시지</li>
+                <li><strong>색상 코딩:</strong> 지표별 의미에 맞는 색상 사용</li>
+                <li><strong>반응형 디자인:</strong> 모바일/태블릿/데스크톱 대응</li>
+            </ul>
+
+            <h3 style="margin-top: 30px; color: #2d3748;">색상 시스템</h3>
+            <table style="width: 100%; margin-top: 20px;">
+                <tr>
+                    <th>지표</th>
+                    <th>색상</th>
+                    <th>의미</th>
+                </tr>
+                <tr>
+                    <td>HIR</td>
+                    <td style="color: #48bb78;">녹색</td>
+                    <td>정직입력, 신뢰도</td>
+                </tr>
+                <tr>
+                    <td>RTR</td>
+                    <td style="color: #ed8936;">노란색</td>
+                    <td>관계 온도</td>
+                </tr>
+                <tr>
+                    <td>BCR</td>
+                    <td style="color: #4299e1;">파란색</td>
+                    <td>루틴, 일관성</td>
+                </tr>
+                <tr>
+                    <td>PHR</td>
+                    <td style="color: #9f7aea;">보라색</td>
+                    <td>선제적 관리</td>
+                </tr>
+                <tr>
+                    <td>Revenue</td>
+                    <td style="color: #48bb78;">녹색</td>
+                    <td>매출, 성장</td>
+                </tr>
+            </table>
+        </div>
+
+        <div style="text-align: center; margin-top: 50px; padding-top: 30px; border-top: 2px solid #e2e8f0;">
+            <a href="index.html" class="back-link">← 목차로 돌아가기</a>
+        </div>
+    </div>
+</body>
+</html>
+
+

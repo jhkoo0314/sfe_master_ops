@@ -1,0 +1,439 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Outcome Layer 지표 - BehaviorCRM</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Noto Sans KR', sans-serif;
+            line-height: 1.6;
+            color: #333;
+            background: #f7fafc;
+            padding: 40px 20px;
+        }
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 20px;
+            box-shadow: 0 10px 40px rgba(0,0,0,0.1);
+            padding: 60px;
+        }
+        .header {
+            text-align: center;
+            margin-bottom: 50px;
+            padding-bottom: 30px;
+            border-bottom: 3px solid #48bb78;
+        }
+        h1 {
+            font-size: 2.5em;
+            color: #2d3748;
+            margin-bottom: 15px;
+        }
+        .back-link {
+            display: inline-block;
+            margin-top: 20px;
+            color: #48bb78;
+            text-decoration: none;
+            font-weight: 600;
+        }
+        .back-link:hover {
+            text-decoration: underline;
+        }
+        .metric-section {
+            margin-bottom: 60px;
+            padding: 40px;
+            background: #f7fafc;
+            border-radius: 15px;
+            border-left: 5px solid #48bb78;
+        }
+        .metric-header {
+            display: flex;
+            align-items: center;
+            gap: 20px;
+            margin-bottom: 30px;
+        }
+        .metric-icon {
+            font-size: 3em;
+        }
+        .metric-title {
+            font-size: 2em;
+            color: #2d3748;
+        }
+        .metric-subtitle {
+            color: #718096;
+            font-size: 1.1em;
+            margin-top: 5px;
+        }
+        .info-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 30px;
+            margin-top: 30px;
+        }
+        .info-box {
+            background: white;
+            padding: 25px;
+            border-radius: 10px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.05);
+        }
+        .info-box h3 {
+            color: #48bb78;
+            margin-bottom: 15px;
+            font-size: 1.3em;
+        }
+        .formula {
+            background: #2d3748;
+            color: #e2e8f0;
+            padding: 20px;
+            border-radius: 10px;
+            font-family: 'Courier New', monospace;
+            margin: 20px 0;
+            overflow-x: auto;
+        }
+        .formula code {
+            font-size: 1.1em;
+        }
+        .example {
+            background: #edf2f7;
+            padding: 20px;
+            border-radius: 10px;
+            margin: 20px 0;
+        }
+        .example h4 {
+            color: #2d3748;
+            margin-bottom: 10px;
+        }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 20px 0;
+        }
+        th, td {
+            padding: 15px;
+            text-align: left;
+            border-bottom: 1px solid #e2e8f0;
+        }
+        th {
+            background: #48bb78;
+            color: white;
+            font-weight: 600;
+        }
+        tr:hover {
+            background: #f7fafc;
+        }
+        .kpi-card {
+            background: white;
+            padding: 25px;
+            border-radius: 10px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.05);
+            margin: 20px 0;
+        }
+        .kpi-value {
+            font-size: 2.5em;
+            font-weight: bold;
+            color: #48bb78;
+            margin: 10px 0;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>💰 Outcome Layer 지표</h1>
+            <p class="subtitle">실제 성과를 측정하는 핵심 지표</p>
+            <a href="index.html" class="back-link">← 목차로 돌아가기</a>
+        </div>
+
+        <!-- Revenue -->
+        <div class="metric-section">
+            <div class="metric-header">
+                <div class="metric-icon">💵</div>
+                <div>
+                    <h2 class="metric-title">매출 달성액 (Revenue)</h2>
+                    <p class="metric-subtitle">총 매출 및 목표 대비 달성률</p>
+                </div>
+            </div>
+
+            <div class="info-grid">
+                <div class="info-box">
+                    <h3>📝 정의</h3>
+                    <p>Prescriptions 테이블의 <code>price</code> 필드를 합산하여 계산되는 총 매출액입니다.</p>
+                </div>
+                <div class="info-box">
+                    <h3>🎯 목적</h3>
+                    <p>실제 매출 성과를 측정하고, 목표 대비 달성률을 파악합니다.</p>
+                </div>
+            </div>
+
+            <h3 style="margin-top: 30px; color: #2d3748;">계산 공식</h3>
+            <div class="formula">
+                <code>
+                    총 매출 = Σ(모든 Prescription의 price)<br>
+                    <br>
+                    목표 매출 = 총 매출 × 1.2 (또는 설정된 목표값)<br>
+                    달성률 = (총 매출 / 목표 매출) × 100%<br>
+                    남은 금액 = 목표 매출 - 총 매출<br>
+                    <br>
+                    월별 매출 집계:<br>
+                    - prescription_date를 기준으로 월별로 그룹화<br>
+                    - 각 월의 price 합계 계산
+                </code>
+            </div>
+
+            <div class="example">
+                <h4>예시 계산</h4>
+                <p>2024년 1월~12월 Prescriptions:</p>
+                <ul>
+                    <li>1월: ₩12,000,000</li>
+                    <li>2월: ₩15,000,000</li>
+                    <li>3월: ₩18,000,000</li>
+                    <li>... (12개월)</li>
+                </ul>
+                <p><strong>총 매출 = ₩180,000,000</strong></p>
+                <p><strong>목표 매출 = ₩180,000,000 × 1.2 = ₩216,000,000</strong></p>
+                <p><strong>달성률 = (180,000,000 / 216,000,000) × 100% = 83.3%</strong></p>
+                <p><strong>남은 금액 = ₩36,000,000</strong></p>
+            </div>
+
+            <h3 style="margin-top: 30px; color: #2d3748;">대시보드 표시</h3>
+            <div class="kpi-card">
+                <h4>RevenueKpiCard 컴포넌트</h4>
+                <div class="kpi-value">₩ 180,000,000</div>
+                <p>목표까지 <strong>₩ 36,000,000</strong> 남음</p>
+                <div style="background: #e2e8f0; height: 10px; border-radius: 5px; margin-top: 15px;">
+                    <div style="background: #48bb78; height: 100%; width: 83.3%; border-radius: 5px;"></div>
+                </div>
+                <p style="margin-top: 10px;">🎯 83%</p>
+            </div>
+        </div>
+
+        <!-- Growth Rate -->
+        <div class="metric-section">
+            <div class="metric-header">
+                <div class="metric-icon">📈</div>
+                <div>
+                    <h2 class="metric-title">전년 대비 성장률 (YoY Growth)</h2>
+                    <p class="metric-subtitle">Year-over-Year 성장률</p>
+                </div>
+            </div>
+
+            <div class="info-grid">
+                <div class="info-box">
+                    <h3>📝 정의</h3>
+                    <p>전년 동일 기간 대비 매출 증가율을 계산합니다.</p>
+                </div>
+                <div class="info-box">
+                    <h3>🎯 목적</h3>
+                    <p>성장 추세를 파악하고, 시장 대비 성과를 평가합니다.</p>
+                </div>
+            </div>
+
+            <h3 style="margin-top: 30px; color: #2d3748;">계산 공식</h3>
+            <div class="formula">
+                <code>
+                    YoY 성장률 = ((현재 기간 매출 - 전년 동일 기간 매출) / 전년 동일 기간 매출) × 100%<br>
+                    <br>
+                    계산 단계:<br>
+                    1. 현재 기간: periodStart ~ periodEnd<br>
+                    2. 전년 기간: (periodStart - 1년) ~ (periodEnd - 1년)<br>
+                    3. 각 기간의 총 매출 계산<br>
+                    4. 성장률 계산
+                </code>
+            </div>
+
+            <div class="example">
+                <h4>예시 계산</h4>
+                <p>2024년 1월~12월: ₩180,000,000</p>
+                <p>2023년 1월~12월: ₩150,000,000</p>
+                <p><strong>YoY 성장률 = ((180,000,000 - 150,000,000) / 150,000,000) × 100% = +20%</strong></p>
+            </div>
+
+            <h3 style="margin-top: 30px; color: #2d3748;">대시보드 표시</h3>
+            <div class="kpi-card">
+                <h4>GrowthKpiCard 컴포넌트</h4>
+                <div class="kpi-value" style="color: #48bb78;">+20.0%</div>
+                <p style="background: #c6f6d5; padding: 10px; border-radius: 5px; margin-top: 10px;">
+                    ▲ 업계 평균 대비 5% 상회
+                </p>
+            </div>
+        </div>
+
+        <!-- Pipeline -->
+        <div class="metric-section">
+            <div class="metric-header">
+                <div class="metric-icon">🔮</div>
+                <div>
+                    <h2 class="metric-title">파이프라인 (Pipeline)</h2>
+                    <p class="metric-subtitle">예상 매출 및 진행 중인 거래</p>
+                </div>
+            </div>
+
+            <div class="info-grid">
+                <div class="info-box">
+                    <h3>📝 정의</h3>
+                    <p>현재 진행 중인 거래의 예상 매출액을 집계합니다. (현재는 임시로 0 표시)</p>
+                </div>
+                <div class="info-box">
+                    <h3>🎯 목적</h3>
+                    <p>향후 예상 매출을 파악하고, 파이프라인 건강도를 관리합니다.</p>
+                </div>
+            </div>
+
+            <h3 style="margin-top: 30px; color: #2d3748;">계산 공식</h3>
+            <div class="formula">
+                <code>
+                    Active Pipeline = Σ(진행 중인 거래의 예상 금액)<br>
+                    <br>
+                    향후 구현 예정:<br>
+                    - Opportunities 테이블 또는 Account의 예상 매출 필드 활용<br>
+                    - 단계별(Prospect, Proposal, Negotiation 등) 집계<br>
+                    - 예상 종료일 기반 필터링
+                </code>
+            </div>
+
+            <h3 style="margin-top: 30px; color: #2d3748;">대시보드 표시</h3>
+            <div class="kpi-card">
+                <h4>PipelineKpiCard 컴포넌트</h4>
+                <div class="kpi-value">₩ 0</div>
+                <p>현재 파이프라인 데이터 없음</p>
+            </div>
+        </div>
+
+        <!-- Prediction -->
+        <div class="metric-section">
+            <div class="metric-header">
+                <div class="metric-icon">🔮</div>
+                <div>
+                    <h2 class="metric-title">예측 지표 (Prediction)</h2>
+                    <p class="metric-subtitle">향후 성과 예측</p>
+                </div>
+            </div>
+
+            <div class="info-grid">
+                <div class="info-box">
+                    <h3>📝 정의</h3>
+                    <p>현재 추세를 기반으로 향후 성과를 예측하는 지표입니다.</p>
+                </div>
+                <div class="info-box">
+                    <h3>🎯 목적</h3>
+                    <p>목표 달성 가능성을 사전에 파악하고, 필요한 조치를 계획합니다.</p>
+                </div>
+            </div>
+
+            <h3 style="margin-top: 30px; color: #2d3748;">계산 공식</h3>
+            <div class="formula">
+                <code>
+                    예측 지표 = 현재 추세 기반 예측값<br>
+                    <br>
+                    계산 방법 (향후 구현):<br>
+                    - 이동 평균 기반 추세 분석<br>
+                    - 시계열 예측 모델 적용<br>
+                    - Behavior Score와 Outcome의 상관관계 활용
+                </code>
+            </div>
+
+            <h3 style="margin-top: 30px; color: #2d3748;">대시보드 표시</h3>
+            <div class="kpi-card">
+                <h4>PredictionKpiCard 컴포넌트</h4>
+                <div class="kpi-value">예측 데이터 준비 중</div>
+            </div>
+        </div>
+
+        <!-- Field Growth Rate -->
+        <div class="metric-section">
+            <div class="metric-header">
+                <div class="metric-icon">🌱</div>
+                <div>
+                    <h2 class="metric-title">필드 성장률 (Field Growth Rate)</h2>
+                    <p class="metric-subtitle">처방량 및 매출 기반 성장률</p>
+                </div>
+            </div>
+
+            <h3 style="margin-top: 30px; color: #2d3748;">계산 공식</h3>
+            <div class="formula">
+                <code>
+                    필드 성장률 = (처방량 성장률 × 0.6) + (매출 성장률 × 0.4)<br>
+                    <br>
+                    처방량 성장률 = ((현재 기간 처방량 - 비교 기간 처방량) / 비교 기간 처방량) × 100%<br>
+                    매출 성장률 = ((현재 기간 매출 - 비교 기간 매출) / 비교 기간 매출) × 100%<br>
+                    <br>
+                    비교 기간 옵션:<br>
+                    - previous_month: 전월 동일 기간<br>
+                    - previous_year: 전년 동일 기간<br>
+                    - custom: 사용자 지정 기간
+                </code>
+            </div>
+
+            <div class="example">
+                <h4>예시 계산</h4>
+                <p>현재 기간 (2024년 1월):</p>
+                <ul>
+                    <li>처방량: 1,000개</li>
+                    <li>매출: ₩15,000,000</li>
+                </ul>
+                <p>비교 기간 (2023년 12월):</p>
+                <ul>
+                    <li>처방량: 800개</li>
+                    <li>매출: ₩12,000,000</li>
+                </ul>
+                <p>처방량 성장률 = ((1,000 - 800) / 800) × 100% = +25%</p>
+                <p>매출 성장률 = ((15,000,000 - 12,000,000) / 12,000,000) × 100% = +25%</p>
+                <p><strong>필드 성장률 = (25% × 0.6) + (25% × 0.4) = 25%</strong></p>
+            </div>
+        </div>
+
+        <!-- Prescription Index -->
+        <div class="metric-section">
+            <div class="metric-header">
+                <div class="metric-icon">💊</div>
+                <div>
+                    <h2 class="metric-title">처방 기반 성과지수 (Prescription Index)</h2>
+                    <p class="metric-subtitle">가중 처방량 및 증가율 기반 성과 점수</p>
+                </div>
+            </div>
+
+            <h3 style="margin-top: 30px; color: #2d3748;">계산 공식</h3>
+            <div class="formula">
+                <code>
+                    처방 기반 성과지수 = (가중 처방량 점수 × 0.7) + (증가율 점수 × 0.3)<br>
+                    <br>
+                    가중 처방량 계산:<br>
+                    - 각 처방에 대해: quantity × account_type_weight × price_weight<br>
+                    - account_type_weight:<br>
+                      * 종합병원: 1.5<br>
+                      * 병원: 1.2<br>
+                      * 의원: 1.0<br>
+                      * 약국: 0.8<br>
+                    - price_weight = log10(price + 1) / 10<br>
+                    <br>
+                    증가율 점수 = 정규화된 증가율 (0-100 스케일)
+                </code>
+            </div>
+
+            <div class="example">
+                <h4>예시 계산</h4>
+                <p>처방 1: quantity=100, price=₩10,000, account_type=종합병원</p>
+                <p>가중치 = 1.5 × (log10(10001) / 10) = 1.5 × 1.0 = 1.5</p>
+                <p>가중 처방량 = 100 × 1.5 = 150</p>
+                <p>...</p>
+                <p>총 가중 처방량 = 1,500 (정규화 후 75점)</p>
+                <p>증가율 = +20% (정규화 후 70점)</p>
+                <p><strong>처방 기반 성과지수 = (75 × 0.7) + (70 × 0.3) = 73.5점</strong></p>
+            </div>
+        </div>
+
+        <div style="text-align: center; margin-top: 50px; padding-top: 30px; border-top: 2px solid #e2e8f0;">
+            <a href="index.html" class="back-link">← 목차로 돌아가기</a>
+        </div>
+    </div>
+</body>
+</html>
+
+

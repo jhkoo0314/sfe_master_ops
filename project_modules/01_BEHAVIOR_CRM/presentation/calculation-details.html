@@ -1,0 +1,502 @@
+<!DOCTYPE html>
+<html lang="ko">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>상세 계산 로직 - BehaviorCRM</title>
+    <style>
+      * {
+        margin: 0;
+        padding: 0;
+        box-sizing: border-box;
+      }
+      body {
+        font-family: -apple-system, BlinkMacSystemFont, "Segoe UI",
+          "Noto Sans KR", sans-serif;
+        line-height: 1.6;
+        color: #333;
+        background: #f7fafc;
+        padding: 40px 20px;
+      }
+      .container {
+        max-width: 1200px;
+        margin: 0 auto;
+        background: white;
+        border-radius: 20px;
+        box-shadow: 0 10px 40px rgba(0, 0, 0, 0.1);
+        padding: 60px;
+      }
+      .header {
+        text-align: center;
+        margin-bottom: 50px;
+        padding-bottom: 30px;
+        border-bottom: 3px solid #ed8936;
+      }
+      h1 {
+        font-size: 2.5em;
+        color: #2d3748;
+        margin-bottom: 15px;
+      }
+      .back-link {
+        display: inline-block;
+        margin-top: 20px;
+        color: #ed8936;
+        text-decoration: none;
+        font-weight: 600;
+      }
+      .back-link:hover {
+        text-decoration: underline;
+      }
+      .section {
+        margin-bottom: 60px;
+        padding: 40px;
+        background: #f7fafc;
+        border-radius: 15px;
+        border-left: 5px solid #ed8936;
+      }
+      .code-block {
+        background: #2d3748;
+        color: #e2e8f0;
+        padding: 25px;
+        border-radius: 10px;
+        font-family: "Courier New", monospace;
+        margin: 20px 0;
+        overflow-x: auto;
+        font-size: 0.95em;
+        line-height: 1.8;
+      }
+      .code-block code {
+        white-space: pre-wrap;
+      }
+      .step-box {
+        background: white;
+        padding: 20px;
+        border-radius: 10px;
+        margin: 15px 0;
+        border-left: 4px solid #ed8936;
+      }
+      .step-box h4 {
+        color: #ed8936;
+        margin-bottom: 10px;
+      }
+      table {
+        width: 100%;
+        border-collapse: collapse;
+        margin: 20px 0;
+      }
+      th,
+      td {
+        padding: 15px;
+        text-align: left;
+        border-bottom: 1px solid #e2e8f0;
+      }
+      th {
+        background: #ed8936;
+        color: white;
+        font-weight: 600;
+      }
+      tr:hover {
+        background: #f7fafc;
+      }
+      .algorithm-flow {
+        background: white;
+        padding: 30px;
+        border-radius: 10px;
+        margin: 20px 0;
+      }
+      .flow-step {
+        padding: 15px;
+        margin: 10px 0;
+        background: #edf2f7;
+        border-radius: 5px;
+        border-left: 3px solid #ed8936;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="container">
+      <div class="header">
+        <h1>🔬 상세 계산 로직</h1>
+        <p class="subtitle">각 지표의 수학적 공식 및 알고리즘 상세 설명</p>
+        <a href="index.html" class="back-link">← 목차로 돌아가기</a>
+      </div>
+
+      <!-- HIR 상세 계산 -->
+      <div class="section">
+        <h2 style="color: #2d3748; margin-bottom: 20px">
+          HIR (High-Impact Rate) 상세 계산 로직
+        </h2>
+
+        <div class="algorithm-flow">
+          <h3>알고리즘 흐름</h3>
+          <div class="flow-step">
+            <strong>1단계: 데이터 조회</strong>
+            <p>최근 30일간의 behavior_scores 테이블에서 사용자별 데이터 조회</p>
+          </div>
+          <div class="flow-step">
+            <strong>2단계: Behavior 타입별 점수 추출</strong>
+            <p>
+              8개 Behavior 타입 (Call, Visit, Email, Presentation 등)별로 가장
+              최근 quality_score 추출
+            </p>
+          </div>
+          <div class="flow-step">
+            <strong>3단계: 평균 계산</strong>
+            <p>추출된 quality_score들의 산술 평균 계산</p>
+          </div>
+          <div class="flow-step">
+            <strong>4단계: 정규화</strong>
+            <p>0-100 스케일로 정규화 (이미 0-100 범위이므로 그대로 사용)</p>
+          </div>
+        </div>
+
+        <h3 style="margin-top: 30px; color: #2d3748">코드 로직</h3>
+        <div class="code-block">
+          <code
+            >// 1. Behavior Score 조회 const behaviorScores = await
+            getBehaviorScoresForPeriod( userId, periodStart, periodEnd ); // 2.
+            각 Behavior 타입별 quality_score 추출 const qualityScores: number[]
+            = []; for (const behaviorType of BEHAVIOR_TYPE_LIST) { const
+            scoresForType = behaviorScores .filter((bs) => bs.behavior ===
+            behaviorType) .sort((a, b) => new Date(b.period_start).getTime() -
+            new Date(a.period_start).getTime() ); if (scoresForType.length > 0)
+            { qualityScores.push(scoresForType[0].quality_score); } } // 3. 평균
+            계산 const avgQualityScore = qualityScores.reduce( (sum, score) =>
+            sum + score, 0 ) / qualityScores.length; // 4. 정규화 const hirScore
+            = Math.round( Math.min(100, Math.max(0, avgQualityScore)) );</code
+          >
+        </div>
+
+        <h3 style="margin-top: 30px; color: #2d3748">수학적 공식</h3>
+        <div class="code-block">
+          <code
+            >HIR = (1/n) × Σ(Q_i) 여기서: - n = Behavior 타입 수 (8개) - Q_i =
+            i번째 Behavior 타입의 가장 최근 quality_score - 범위: 0 ≤ HIR ≤
+            100</code
+          >
+        </div>
+      </div>
+
+      <!-- RTR 상세 계산 -->
+      <div class="section">
+        <h2 style="color: #2d3748; margin-bottom: 20px">
+          RTR (Relationship Temperature Rate) 상세 계산 로직
+        </h2>
+
+        <div class="algorithm-flow">
+          <h3>알고리즘 흐름</h3>
+          <div class="flow-step">
+            <strong>1단계: Activity 조회</strong>
+            <p>최근 30일간의 activities 테이블에서 사용자별 데이터 조회</p>
+          </div>
+          <div class="flow-step">
+            <strong>2단계: Sentiment Score 필터링</strong>
+            <p>sentiment_score가 null이 아닌 Activity만 필터링</p>
+          </div>
+          <div class="flow-step">
+            <strong>3단계: 평균 계산</strong>
+            <p>필터링된 Activity들의 sentiment_score 평균 계산</p>
+          </div>
+          <div class="flow-step">
+            <strong>4단계: 정규화</strong>
+            <p>0-100 스케일로 정규화</p>
+          </div>
+        </div>
+
+        <h3 style="margin-top: 30px; color: #2d3748">코드 로직</h3>
+        <div class="code-block">
+          <code
+            >// 1. Activity 조회 const { data: activities } = await
+            getActivities({ startDate, endDate, }); // 2. Sentiment Score 필터링
+            const activitiesWithSentiment = activities.filter( (act) =>
+            act.sentiment_score !== null && act.sentiment_score !== undefined );
+            // 3. 평균 계산 const sum = activitiesWithSentiment.reduce( (acc,
+            act) => acc + (act.sentiment_score || 0), 0 ); const avgSentiment =
+            sum / activitiesWithSentiment.length; // 4. 정규화 const rtrScore =
+            Math.round( Math.min(100, Math.max(0, avgSentiment)) );</code
+          >
+        </div>
+
+        <h3 style="margin-top: 30px; color: #2d3748">수학적 공식</h3>
+        <div class="code-block">
+          <code
+            >RTR = (1/m) × Σ(S_i) 여기서: - m = sentiment_score가 있는 Activity
+            수 - S_i = i번째 Activity의 sentiment_score - 범위: 0 ≤ RTR ≤
+            100</code
+          >
+        </div>
+      </div>
+
+      <!-- BCR 상세 계산 -->
+      <div class="section">
+        <h2 style="color: #2d3748; margin-bottom: 20px">
+          BCR (Behavior Consistency Rate) 상세 계산 로직
+        </h2>
+
+        <div class="algorithm-flow">
+          <h3>알고리즘 흐름</h3>
+          <div class="flow-step">
+            <strong>1단계: 빈도 점수 계산 (40점 만점)</strong>
+            <p>활동 일수 / 총 일수 × 40</p>
+          </div>
+          <div class="flow-step">
+            <strong>2단계: 규칙성 점수 계산 (30점 만점)</strong>
+            <p>활동 간격의 표준편차를 기반으로 규칙성 평가</p>
+          </div>
+          <div class="flow-step">
+            <strong>3단계: 품질 일관성 점수 계산 (30점 만점)</strong>
+            <p>Behavior Score의 quality_score 표준편차 기반 점수</p>
+          </div>
+          <div class="flow-step">
+            <strong>4단계: 총점 계산</strong>
+            <p>빈도 점수 + 규칙성 점수 + 품질 일관성 점수</p>
+          </div>
+        </div>
+
+        <h3 style="margin-top: 30px; color: #2d3748">코드 로직</h3>
+        <div class="code-block">
+          <code
+            >// 1. 빈도 점수 계산 const activityDates = new Set(
+            activities.map((act) => { const date = new Date(act.performed_at);
+            return `${date.getFullYear()}-${date.getMonth()}-${date.getDate()}`;
+            }) ); const activeDays = activityDates.size; const totalDays =
+            Math.ceil( (endDate.getTime() - startDate.getTime()) / (24 * 60 * 60
+            * 1000) ); const frequencyScore = Math.min(40, (activeDays /
+            totalDays) * 40); // 2. 규칙성 점수 계산 const sortedActivities =
+            [...activities].sort( (a, b) => new Date(a.performed_at).getTime() -
+            new Date(b.performed_at).getTime() ); const intervals: number[] =
+            []; for (let i = 1; i < sortedActivities.length; i++) { const
+            prevTime = new Date(sortedActivities[i - 1].performed_at).getTime();
+            const currTime = new
+            Date(sortedActivities[i].performed_at).getTime(); const
+            intervalHours = (currTime - prevTime) / (1000 * 60 * 60);
+            intervals.push(intervalHours); } const avgInterval =
+            intervals.reduce((sum, val) => sum + val, 0) / intervals.length;
+            const variance = intervals.reduce( (sum, val) => sum + Math.pow(val
+            - avgInterval, 2), 0 ) / intervals.length; const stdDev =
+            Math.sqrt(variance); const consistencyRatio = avgInterval > 0 ?
+            Math.min(1, 24 / avgInterval) : 0; const regularityRatio = stdDev >
+            0 ? Math.min(1, 24 / stdDev) : 1; const consistencyScore =
+            consistencyRatio * regularityRatio * 30; // 3. 품질 일관성 점수 계산
+            const behaviorScores = await getBehaviorScores({ periodStart:
+            startDate, periodEnd: endDate, }); let qualityConsistencyScore = 0;
+            if (behaviorScores.length > 0) { const qualityScores =
+            behaviorScores.map((bs) => bs.quality_score); const avgQuality =
+            qualityScores.reduce((sum, val) => sum + val, 0) /
+            qualityScores.length; const qualityVariance = qualityScores.reduce(
+            (sum, val) => sum + Math.pow(val - avgQuality, 2), 0 ) /
+            qualityScores.length; const qualityStdDev =
+            Math.sqrt(qualityVariance); qualityConsistencyScore = Math.max(0, 30
+            - qualityStdDev); } // 4. 총점 계산 const bcrScore = Math.round(
+            frequencyScore + consistencyScore + qualityConsistencyScore );</code
+          >
+        </div>
+
+        <h3 style="margin-top: 30px; color: #2d3748">수학적 공식</h3>
+        <div class="code-block">
+          <code
+            >BCR = F_score + C_score + Q_score F_score = min(40, (D_active /
+            D_total) × 40) 여기서: - D_active = 활동한 일수 - D_total = 총 일수
+            C_score = (24 / I_avg) × (24 / σ_I) × 30 여기서: - I_avg = 평균 활동
+            간격 (시간) - σ_I = 활동 간격의 표준편차 Q_score = max(0, 30 - σ_Q)
+            여기서: - σ_Q = quality_score의 표준편차 범위: 0 ≤ BCR ≤ 100</code
+          >
+        </div>
+      </div>
+
+      <!-- PHR 상세 계산 -->
+      <div class="section">
+        <h2 style="color: #2d3748; margin-bottom: 20px">
+          PHR (Proactive Health Rate) 상세 계산 로직
+        </h2>
+
+        <div class="algorithm-flow">
+          <h3>알고리즘 흐름</h3>
+          <div class="flow-step">
+            <strong>1단계: Activity 조회</strong>
+            <p>최근 30일간의 activities 테이블 조회</p>
+          </div>
+          <div class="flow-step">
+            <strong>2단계: Activity별 점수 계산</strong>
+            <p>next_action_date를 기준으로 각 Activity에 점수 부여</p>
+          </div>
+          <div class="flow-step">
+            <strong>3단계: 평균 계산</strong>
+            <p>모든 Activity 점수의 평균 계산</p>
+          </div>
+        </div>
+
+        <h3 style="margin-top: 30px; color: #2d3748">점수 기준표</h3>
+        <table>
+          <tr>
+            <th>조건</th>
+            <th>점수</th>
+            <th>설명</th>
+          </tr>
+          <tr>
+            <td>next_action_date가 지남</td>
+            <td>0점</td>
+            <td>Dead Lead - 즉시 조치 필요</td>
+          </tr>
+          <tr>
+            <td>0-7일 이내</td>
+            <td>100점</td>
+            <td>적극적 관리</td>
+          </tr>
+          <tr>
+            <td>8-14일</td>
+            <td>80점</td>
+            <td>양호한 관리</td>
+          </tr>
+          <tr>
+            <td>15-30일</td>
+            <td>60점</td>
+            <td>보통 관리</td>
+          </tr>
+          <tr>
+            <td>30일 이상</td>
+            <td>40점</td>
+            <td>관리 부족</td>
+          </tr>
+          <tr>
+            <td>next_action_date 없음</td>
+            <td>0점</td>
+            <td>계획 없음</td>
+          </tr>
+        </table>
+
+        <h3 style="margin-top: 30px; color: #2d3748">코드 로직</h3>
+        <div class="code-block">
+          <code
+            >const now = new Date(); let totalScore = 0; let validActivities =
+            0; for (const activity of activities) { if
+            (!activity.next_action_date) { totalScore += 0; validActivities++;
+            continue; } validActivities++; const nextActionDate = new
+            Date(activity.next_action_date); const daysUntilNextAction =
+            Math.ceil( (nextActionDate.getTime() - now.getTime()) / (24 * 60 *
+            60 * 1000) ); let activityScore = 0; if (daysUntilNextAction < 0) {
+            activityScore = 0; // Dead Lead } else if (daysUntilNextAction <= 7)
+            { activityScore = 100; } else if (daysUntilNextAction <= 14) {
+            activityScore = 80; } else if (daysUntilNextAction <= 30) {
+            activityScore = 60; } else { activityScore = 40; } totalScore +=
+            activityScore; } const avgScore = totalScore / validActivities;
+            const phrScore = Math.round(Math.min(100, Math.max(0,
+            avgScore)));</code
+          >
+        </div>
+
+        <h3 style="margin-top: 30px; color: #2d3748">수학적 공식</h3>
+        <div class="code-block">
+          <code
+            >PHR = (1/n) × Σ(Score_i) Score_i = f(days_until_next_action)
+            여기서: - n = Activity 수 - days_until_next_action = 다음 활동까지
+            남은 일수 - f(x) = 점수 함수: * x < 0: 0 * 0 ≤ x ≤ 7: 100 * 8 ≤ x ≤
+            14: 80 * 15 ≤ x ≤ 30: 60 * x > 30: 40 범위: 0 ≤ PHR ≤ 100</code
+          >
+        </div>
+      </div>
+
+      <!-- Field Growth Rate 상세 계산 -->
+      <div class="section">
+        <h2 style="color: #2d3748; margin-bottom: 20px">
+          필드 성장률 (Field Growth Rate) 상세 계산 로직
+        </h2>
+
+        <h3 style="margin-top: 30px; color: #2d3748">코드 로직</h3>
+        <div class="code-block">
+          <code
+            >// 현재 기간의 처방량과 매출 조회 const currentMetrics = await
+            getPrescriptionMetrics( periodStart, periodEnd, accountId ); // 비교
+            기간 계산 const comparisonPeriod = input.comparisonPeriod ||
+            'previous_month'; const { start: compStart, end: compEnd } =
+            calculateComparisonPeriod( periodStart, periodEnd, comparisonPeriod
+            ); // 비교 기간의 처방량과 매출 조회 const comparisonMetrics = await
+            getPrescriptionMetrics( compStart, compEnd, accountId ); // 성장률
+            계산 let quantityGrowthRate = 0; if (comparisonMetrics.totalQuantity
+            > 0) { quantityGrowthRate = ((currentMetrics.totalQuantity -
+            comparisonMetrics.totalQuantity) / comparisonMetrics.totalQuantity)
+            * 100; } else if (currentMetrics.totalQuantity > 0) {
+            quantityGrowthRate = 100; // 비교 기간이 0이지만 현재 기간에 처방이
+            있으면 100% 증가 } let revenueGrowthRate = 0; if
+            (comparisonMetrics.totalRevenue > 0) { revenueGrowthRate =
+            ((currentMetrics.totalRevenue - comparisonMetrics.totalRevenue) /
+            comparisonMetrics.totalRevenue) * 100; } else if
+            (currentMetrics.totalRevenue > 0) { revenueGrowthRate = 100; } //
+            가중 평균 (처방량 60%, 매출 40%) const fieldGrowthRate =
+            quantityGrowthRate * 0.6 + revenueGrowthRate * 0.4;</code
+          >
+        </div>
+
+        <h3 style="margin-top: 30px; color: #2d3748">수학적 공식</h3>
+        <div class="code-block">
+          <code
+            >Field Growth Rate = (Q_growth × 0.6) + (R_growth × 0.4) Q_growth =
+            ((Q_current - Q_prev) / Q_prev) × 100% R_growth = ((R_current -
+            R_prev) / R_prev) × 100% 여기서: - Q_current = 현재 기간 처방량 -
+            Q_prev = 비교 기간 처방량 - R_current = 현재 기간 매출 - R_prev =
+            비교 기간 매출 범위: -100% ~ +∞</code
+          >
+        </div>
+      </div>
+
+      <!-- Prescription Index 상세 계산 -->
+      <div class="section">
+        <h2 style="color: #2d3748; margin-bottom: 20px">
+          처방 기반 성과지수 (Prescription Index) 상세 계산 로직
+        </h2>
+
+        <h3 style="margin-top: 30px; color: #2d3748">코드 로직</h3>
+        <div class="code-block">
+          <code
+            >// 가중 처방량 계산 let weightedQuantity = 0; let totalQuantity =
+            0; for (const prescription of prescriptions) { // 병원 타입별 가중치
+            const account = await getAccount(prescription.account_id); const
+            accountWeight = account ? getAccountTypeWeight(account.type) : 1.0;
+            // 가격 가중치 const priceWeight = prescription.price > 0 ?
+            Math.log10(prescription.price + 1) / 10 : 1.0; // 최종 가중치 const
+            finalWeight = accountWeight * priceWeight; weightedQuantity +=
+            prescription.quantity * finalWeight; totalQuantity +=
+            prescription.quantity; } // 처방량 증가율 계산 const
+            previousTotalQuantity = previousPrescriptions.reduce( (sum, p) =>
+            sum + p.quantity, 0 ); let growthRate = 0; if (previousTotalQuantity
+            > 0) { growthRate = ((totalQuantity - previousTotalQuantity) /
+            previousTotalQuantity) * 100; } else if (totalQuantity > 0) {
+            growthRate = 100; } // 정규화 const avgPrescriptionQuantity =
+            totalQuantity / prescriptions.length; const maxExpectedQuantity =
+            avgPrescriptionQuantity * 2 * prescriptions.length; const
+            normalizedWeightedQuantity = maxExpectedQuantity > 0 ? Math.min(100,
+            (weightedQuantity / maxExpectedQuantity) * 100) : 0; const
+            normalizedGrowthRate = Math.min(100, Math.max(0, growthRate + 50));
+            // 최종 성과지수 const prescriptionIndex =
+            normalizedWeightedQuantity * 0.7 + normalizedGrowthRate * 0.3;</code
+          >
+        </div>
+
+        <h3 style="margin-top: 30px; color: #2d3748">수학적 공식</h3>
+        <div class="code-block">
+          <code
+            >Prescription Index = (W_score × 0.7) + (G_score × 0.3) W_score =
+            min(100, (W_qty / W_max) × 100) W_qty = Σ(q_i × w_account × w_price)
+            여기서: - q_i = i번째 처방의 quantity - w_account = 병원 타입 가중치
+            (종합병원: 1.5, 병원: 1.2, 의원: 1.0, 약국: 0.8) - w_price =
+            log10(price + 1) / 10 - W_max = 예상 최대 가중 처방량 G_score =
+            min(100, max(0, growth_rate + 50)) 여기서: - growth_rate =
+            ((Q_current - Q_prev) / Q_prev) × 100% 범위: 0 ≤ Prescription Index
+            ≤ 100</code
+          >
+        </div>
+      </div>
+
+      <div
+        style="
+          text-align: center;
+          margin-top: 50px;
+          padding-top: 30px;
+          border-top: 2px solid #e2e8f0;
+        "
+      >
+        <a href="index.html" class="back-link">← 목차로 돌아가기</a>
+      </div>
+    </div>
+  </body>
+</html>
