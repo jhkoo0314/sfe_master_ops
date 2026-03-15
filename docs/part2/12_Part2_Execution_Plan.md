@@ -16,6 +16,9 @@
 - Territory KPI 엔진 분리 완료 (`modules/kpi/territory_engine.py`)
   - 조치: Territory 계산 로직을 엔진으로 이동, `service` 호출 경유로 정리
   - 검증: `validate_territory_with_ops.py` / `validate_builder_with_ops.py` 통과
+- Prescription KPI 엔진 분리 완료 (`modules/kpi/prescription_engine.py`)
+  - 조치: Prescription 계산 로직을 엔진으로 이동, `service` 호출 경유로 정리
+  - 검증: `validate_prescription_with_ops.py` / `validate_builder_with_ops.py` 통과
 
 ## 0. 문서 목적
 

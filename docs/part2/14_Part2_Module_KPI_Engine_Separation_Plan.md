@@ -196,6 +196,16 @@ Sandbox 공식 KPI 목록(고정):
 완료 기준:
 - Prescription 공식 KPI 계산 위치가 명시적으로 분리됨
 
+상태: `완료 (2026-03-16)`
+
+반영 내용:
+1. `modules/kpi/prescription_engine.py`로 Prescription 계산 로직 이동
+2. `modules/prescription/service.py`는 엔진 호출 + 조립 경유로 정리
+3. `modules/prescription/builder_payload.py`는 계산 없이 payload 조립/분할만 수행
+4. 회귀/출력 검증:
+   - `validate_prescription_with_ops.py` 통과
+   - `validate_builder_with_ops.py` 통과
+
 ---
 
 ## 8. 검증 기준

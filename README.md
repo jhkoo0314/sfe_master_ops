@@ -53,6 +53,7 @@
 - CRM KPI는 `modules/kpi/crm_engine.py`를 공식 계산 소스로 사용
 - Sandbox KPI 1차 계산 분리는 `modules/kpi/sandbox_engine.py`로 시작
 - Territory KPI 계산 분리는 `modules/kpi/territory_engine.py`로 반영
+- Prescription KPI 계산 분리는 `modules/kpi/prescription_engine.py`로 반영
 - CRM 표준 활동유형은 8대 행동으로 고정
   - `PT / Demo / Closing / Needs / FaceToFace / Contact / Access / Feedback`
 - Adapter는 원본과 표준을 분리 저장
@@ -61,6 +62,7 @@
 - CRM Builder는 KPI를 재계산하지 않고 `crm_result_asset`만 주입
 - Sandbox도 CRM KPI를 재계산하지 않고 CRM 공식 KPI 입력값만 사용
 - Territory Builder payload는 KPI 계산 없이 엔진 결과를 조립/분할만 수행
+- Prescription Builder payload는 KPI 계산 없이 엔진 결과를 조립/분할만 수행
 - `hangyeol_pharma`, `daon_pharma` 기준 CRM->Builder->Sandbox KPI 전달 불일치 0건 확인
 - Sandbox + Builder 최종 HTML 5종 검증도 2개 회사 모두 통과
 

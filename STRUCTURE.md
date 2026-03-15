@@ -63,7 +63,8 @@ sfe_master_ops/
   - `builder_payload.py`는 CRM 자산 주입 전용(재계산 없음)
 - `modules/prescription/`
   - Prescription Result Asset 생성
-  - `builder_payload.py`에서 처방 보고서용 payload 생성
+  - `service.py`는 Prescription KPI 엔진 호출 + Result Asset/Builder payload 조립
+  - `builder_payload.py`는 계산 없이 처방 보고서용 payload 조립/분할만 수행
 - `modules/sandbox/`
   - Sandbox Result Asset 생성
   - CRM KPI는 입력값을 사용하고 Sandbox에서 재계산하지 않음
@@ -86,6 +87,7 @@ sfe_master_ops/
 - 현재 CRM KPI 엔진(`crm_engine.py`) 운영 중
 - Sandbox KPI 엔진(`sandbox_engine.py`) 운영 중
 - Territory KPI 엔진(`territory_engine.py`) 운영 중
+- Prescription KPI 엔진(`prescription_engine.py`) 운영 중
 
 ### `ops_core/`
 

@@ -8,6 +8,9 @@ from collections import Counter
 from typing import Optional
 
 from modules.prescription.schemas import PrescriptionStandardFlow, PrescriptionGapRecord
+from modules.prescription.builder_payload import (
+    build_prescription_builder_payload as _build_prescription_builder_payload,
+)
 from result_assets.prescription_result_asset import (
     PrescriptionResultAsset,
     LineageSummary,
@@ -128,4 +131,25 @@ def build_prescription_result_asset(
         validation_gap_summary=gap_summary,
         mapping_quality=quality,
         notes=notes,
+    )
+
+
+def build_prescription_builder_payload(
+    *,
+    company_name: str,
+    summary: dict,
+    claim_df,
+    flow_df,
+    gap_df,
+    rep_kpi_df,
+    download_files: Optional[dict[str, str]] = None,
+) -> dict:
+    return _build_prescription_builder_payload(
+        company_name=company_name,
+        summary=summary,
+        claim_df=claim_df,
+        flow_df=flow_df,
+        gap_df=gap_df,
+        rep_kpi_df=rep_kpi_df,
+        download_files=download_files,
     )
