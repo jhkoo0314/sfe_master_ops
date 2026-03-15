@@ -51,6 +51,7 @@
 이번 동기화에서 반영된 핵심:
 
 - CRM KPI는 `modules/kpi/crm_engine.py`를 공식 계산 소스로 사용
+- Sandbox KPI 1차 계산 분리는 `modules/kpi/sandbox_engine.py`로 시작
 - CRM 표준 활동유형은 8대 행동으로 고정
   - `PT / Demo / Closing / Needs / FaceToFace / Contact / Access / Feedback`
 - Adapter는 원본과 표준을 분리 저장
@@ -59,6 +60,7 @@
 - CRM Builder는 KPI를 재계산하지 않고 `crm_result_asset`만 주입
 - Sandbox도 CRM KPI를 재계산하지 않고 CRM 공식 KPI 입력값만 사용
 - `hangyeol_pharma`, `daon_pharma` 기준 CRM->Builder->Sandbox KPI 전달 불일치 0건 확인
+- Sandbox + Builder 최종 HTML 5종 검증도 2개 회사 모두 통과
 
 ## 핵심 원칙
 
@@ -269,6 +271,7 @@ uv run streamlit run ui/ops_console.py --server.port 8501
 - Territory는 이제 `ops_standard/{company_key}/territory/ops_territory_activity.xlsx`를 만들고, Builder는 이 표준 파일 기반 payload를 읽습니다.
 - Sandbox 보고서는 이제 전체 지점 상세를 처음부터 싣지 않습니다.
 - Sandbox 보고서는 먼저 요약만 열고, 지점을 고르면 `builder/sandbox_report_preview_assets/*.js`에서 해당 지점 상세를 읽습니다.
+- Sandbox 필터(지점/담당자)는 `branch_index + branch asset` 기준으로 동작하며, 지점 선택 시 해당 지점 asset을 지연 로딩해 담당자 목록을 채웁니다.
 - Territory 지도는 기본값이 `담당자 미선택` 상태입니다.
 - Territory 지도는 초기 전체 마커를 한 번에 뿌리지 않고, 담당자를 고른 뒤 해당 담당자의 `catalog asset`과 선택한 `월 asset`만 순차 로딩합니다.
 - Territory Builder 출력에는 `builder/territory_map_preview_assets/*.js`가 같이 생기며, 지도는 이 분리 asset을 필요할 때만 읽습니다.

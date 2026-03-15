@@ -67,6 +67,7 @@ sfe_master_ops/
 - `modules/sandbox/`
   - Sandbox Result Asset 생성
   - CRM KPI는 입력값을 사용하고 Sandbox에서 재계산하지 않음
+  - KPI 계산 1차 분리는 `modules/kpi/sandbox_engine.py` 호출로 수행
   - `builder_payload.py`에서 지점 상세 분리용 manifest 생성
   - `dashboard_payload.template_payload`를 Builder 입력으로 사용
   - 현재는 `manifest + 지점 asset` 구조로 Sandbox Builder 데이터를 분리 생성
@@ -274,6 +275,7 @@ Builder는 직접 raw를 읽지 않습니다.
 - Territory Builder payload는 기본 화면에서 전체 병원 좌표를 다 싣지 않습니다.
 - Sandbox 보고서도 기본 화면에서 전체 지점 상세를 다 싣지 않습니다.
 - Sandbox는 요약만 먼저 열고, 지점을 고르면 해당 지점 asset만 읽습니다.
+- Sandbox 필터는 `branch_index`로 지점 목록을 먼저 구성하고, 선택된 지점의 `branch asset`을 로딩한 뒤 담당자 필터를 채웁니다.
 - 기본값은 `담당자 미선택`이고, 담당자를 고르면 해당 담당자용 `catalog asset`과 선택 월용 `route asset`만 읽습니다.
 - `total_valid_preview.html`은 Builder 단계에서 별도로 생성됩니다.
 - 회사별 현재 저장 상태는 다릅니다.

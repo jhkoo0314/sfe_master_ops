@@ -2,58 +2,47 @@
 
 ## 현재 단계 정의
 
-현재 단계는 Part 1 구조 안정화 완료 이후, Codex 작업 기준을 정리하는 문서화 단계다.
+현재 단계는 `Part2 초기 실행` 단계다.
 
-지금은 새 기능 추가보다 현재 구조를 흔들리지 않게 고정하는 것이 우선이다.
+Part1 기준 구조 고정과 CRM KPI 거버넌스 복구(Phase 1~6)는 완료 상태로 본다.
 
 ## 현재 상태 요약
 
-- CRM / Prescription / Sandbox / Territory / Builder 실행 가능
-- OPS 콘솔에서 파이프라인 실행 가능
-- HTML 보고서 5종 생성 가능
-- 회사 코드 기준 경로 구조 정리 완료
-- 공통 실행 스크립트 정리 완료
-- Builder는 payload 주입기 역할 유지
-- 세계관은 OPS 중심으로 안정화됨
-
-즉 현재는 운영 직전 단계다.
+- CRM 공식 KPI 계산: `modules/kpi/crm_engine.py`
+- Sandbox KPI 분리 1차: `modules/kpi/sandbox_engine.py`
+- Builder는 KPI 재계산 없이 payload 주입만 수행
+- Sandbox는 CRM KPI 재계산 없이 입력 KPI 사용
+- `hangyeol_pharma`, `daon_pharma` 회귀 검증 통과
+- 최종 HTML 5종 생성 검증 통과(2개 회사)
+- Sandbox 최종 HTML 지점/담당자 필터 복구 완료
+  - `report_template`에 지점 chunk 로더 반영
+  - `branch_index` 기반 지점 옵션 + 선택 지점 asset 로딩 방식으로 동작
 
 ## 이번 단계의 목적
 
-1. `ai/` 최소 문서 세트 확정
-2. Codex 작업 기준 통일
-3. 현재 구조와 설명 기준 정렬
-4. Part 1 범위 고정
+1. 모듈별 KPI 엔진 분리를 순차 진행
+2. 모듈 하나 완료 후 다음 모듈로 이동
+3. 매 단계마다 회귀 + 문서 동기화 마감
 
 ## 지금 해야 할 것
 
-- `ai/` 문서 세트 작성
-- 마스터 문서와 AGENTS 기준 압축
-- CRM 규칙 별도 고정
-- 저장소 구조와 실행 순서 문서화
-- Builder와 산출물 규칙 정리
+- Sandbox 모듈 분리 완료 기준 확정/고정
+- Sandbox 회귀/문서 동기화 마감
+- 다음 모듈(Territory) 분리 착수 준비
 
 ## 지금 하지 않을 것
 
-- Part 2 운영화 착수
-- 배치 자동화 설계 확정
-- 승인/권한 흐름 설계
-- 장기 관제 대시보드 설계
-- 운영 알림 체계 설계
+- 여러 모듈 동시 대규모 분리
+- OPS/Builder 역할 재정의
+- 공식 KPI 정의 확정 전 무리한 엔진 확장
 
 ## Codex 작업 제한
 
 - 세계관을 바꾸지 않는다.
-- Sandbox를 허브로 재정의하지 않는다.
-- Builder를 계산 엔진처럼 확장하지 않는다.
-- `company_key` 구조를 무시하지 않는다.
-- 실제 저장소와 다른 구조를 상상해 쓰지 않는다.
-- 문서 없는 큰 방향 전환을 하지 않는다.
-
-## 다음 순서
-
-`Part 1 구조 고정 -> ai 문서 세트 정리 -> 이후 Part 2 판단`
+- Builder를 계산 엔진으로 확장하지 않는다.
+- Sandbox에서 CRM KPI를 재계산하지 않는다.
+- `company_key` 경로 원칙을 무시하지 않는다.
 
 ## 결론
 
-지금의 우선순위는 Part 2가 아니라, Part 1에서 안정화된 OPS 구조를 ai 문서 세트로 고정하는 것이다.
+지금의 우선순위는 `Sandbox 분리 마감 -> 회귀/문서 마감 -> 다음 모듈 착수`다.

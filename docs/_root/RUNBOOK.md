@@ -207,6 +207,7 @@ Builder 결과:
 - Territory 보고서도 이제 Builder 안에서 계산하지 않고 `territory_builder_payload.json`을 읽습니다.
 - Sandbox 보고서는 `sandbox_result_asset.json` 안의 payload를 그대로 쓰되, 무거운 지점 상세는 `manifest + branch asset` 구조로 분리됩니다.
 - Sandbox 보고서는 첫 화면에 요약만 먼저 열고, 지점을 고를 때만 해당 지점 asset을 읽습니다.
+- Sandbox 필터는 `branch_index`를 기준으로 지점 목록을 먼저 보여주고, 지점 선택 시 `branch asset`을 로딩해 담당자 목록을 채웁니다.
 - Territory payload는 `manifest + 분리 asset` 구조입니다.
 - 기본 화면은 `담당자 미선택` 상태로 시작하고, 담당자를 고른 뒤 해당 담당자 asset과 선택 월 asset만 읽습니다.
 - `total_valid_preview.html`은 개별 HTML을 한 화면에서 묶어 보여주는 허브입니다.
@@ -215,11 +216,15 @@ Builder 결과:
 ### 8-1. 2026-03-15 CRM KPI 고정 규칙
 
 - CRM KPI 공식 계산 소스: `modules/kpi/crm_engine.py`
+- Sandbox KPI 1차 계산 소스: `modules/kpi/sandbox_engine.py`
 - CRM 표준 활동유형: 8대 행동 고정
   - `PT / Demo / Closing / Needs / FaceToFace / Contact / Access / Feedback`
 - Adapter는 `activity_type_raw`와 `activity_type_standard`를 함께 저장
 - CRM Builder는 KPI를 재계산하지 않음 (`crm_result_asset` 주입 전용)
 - Sandbox도 CRM KPI를 재계산하지 않음 (CRM 입력 KPI 사용)
+- 회귀 기준:
+  - `hangyeol_pharma`, `daon_pharma` Sandbox 검증 `pass`
+  - Builder HTML 5종 생성 검증 `pass`
 
 ## 9. 처방 보고서 운영 메모
 

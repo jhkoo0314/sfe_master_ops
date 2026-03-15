@@ -2,6 +2,18 @@
 
 작성일: 2026-03-11
 
+연계 문서:
+- `13_Part2_Module_Studio_Planning.md`
+- `14_Part2_Module_KPI_Engine_Separation_Plan.md`
+
+진행 체크포인트 (2026-03-15):
+- Sandbox KPI 엔진 분리 1차 완료 (`modules/kpi/sandbox_engine.py`)
+- Sandbox 회귀 검증 완료 (`hangyeol_pharma`, `daon_pharma`)
+- Builder 최종 HTML 5종 생성 검증 완료 (2개 회사)
+- Sandbox 보고서 지점/담당자 필터 복구 완료
+  - 원인: chunked payload에서 `branches` 비워진 상태 + 템플릿 로더 누락
+  - 조치: `templates/report_template.html`에 `branch_index` 기반 지점 옵션 + 선택 지점 `branch asset` 지연 로더 반영
+
 ## 0. 문서 목적
 
 이 문서는 Part 1 완료 이후  

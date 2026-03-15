@@ -513,6 +513,80 @@
             return { pi, fgr, scale };
         }
 
+        function setBranchLoadStatus(message, isError = false) {
+            const statusEl = document.getElementById('branchLoadStatus');
+            if (!statusEl) return;
+            statusEl.innerText = message;
+            statusEl.className = 'text-[10px] font-bold uppercase ' + (isError ? 'text-rose-600' : 'text-slate-500');
+        }
+
+        function isChunkedBranchMode() {
+            return String(db.data_mode || '').startsWith('chunked_');
+        }
+
+        function getBranchOptions() {
+            if (isChunkedBranchMode() && Array.isArray(db.branch_index) && db.branch_index.length > 0) {
+                return db.branch_index.map(item => String(item.key || item.label || '')).filter(Boolean);
+            }
+            return Object.keys(db.branches || {});
+        }
+
+        function getBranchAssetPath(fileName) {
+            const assetBase = String(db.asset_base || '').trim();
+            if (!assetBase) return fileName;
+            return `${assetBase}/${fileName}`;
+        }
+
+        function loadBranchChunk(branchKey) {
+            return new Promise((resolve) => {
+                if (!branchKey || branchKey === 'TOTAL') {
+                    resolve(true);
+                    return;
+                }
+                if (db.branches && db.branches[branchKey]) {
+                    resolve(true);
+                    return;
+                }
+                const branchManifest = db.branch_asset_manifest || {};
+                const chunkFile = branchManifest[branchKey];
+                if (!chunkFile) {
+                    resolve(false);
+                    return;
+                }
+
+                const cached = (window.__SANDBOX_BRANCH_DATA__ || {})[branchKey];
+                if (cached) {
+                    db.branches[branchKey] = cached;
+                    resolve(true);
+                    return;
+                }
+
+                const script = document.createElement('script');
+                script.src = getBranchAssetPath(chunkFile);
+                script.async = true;
+                script.onload = () => {
+                    const loaded = (window.__SANDBOX_BRANCH_DATA__ || {})[branchKey];
+                    if (loaded) db.branches[branchKey] = loaded;
+                    resolve(Boolean(loaded));
+                };
+                script.onerror = () => resolve(false);
+                document.head.appendChild(script);
+            });
+        }
+
+        function refillRepOptions(branchKey) {
+            rSel.innerHTML = '<option value="NONE">담당자 선택</option>';
+            if (branchKey === 'TOTAL') return;
+            const branch = (db.branches || {})[branchKey];
+            const members = (branch && Array.isArray(branch.members)) ? branch.members : [];
+            members.forEach(m => { rSel.add(new Option(m.성명, m.성명)); });
+        }
+
+        function refillBranchOptions() {
+            const options = getBranchOptions();
+            bSel.innerHTML = '<option value="TOTAL">전체 지점</option>' + options.map(b => `<option value="${b}">${b}</option>`).join('');
+        }
+
         function update() {
             const fallbackAct = db.total.monthly_actual;
             let rawMonth = 0;
@@ -684,12 +758,27 @@
             });
         }
 
-        bSel.innerHTML = '<option value="TOTAL">전체 지점</option>' + Object.keys(db.branches).map(b=>`<option value="${b}">${b}</option>`).join('');
+        refillBranchOptions();
         pSel.innerHTML = '<option value="ALL">모든 품목</option>' + (db.products || []).map(product => `<option value="${product}">${product}</option>`).join('');
-        bSel.onchange = () => {
+
+        if (isChunkedBranchMode()) {
+            setBranchLoadStatus('지점 상세는 선택 시 로드됩니다.');
+        }
+
+        bSel.onchange = async () => {
             const b = bSel.value;
-            rSel.innerHTML = '<option value="NONE">담당자 선택</option>';
-            if(b!=='TOTAL') db.branches[b].members.forEach(m=> { rSel.add(new Option(m.성명, m.성명)); });
+            if (isChunkedBranchMode() && b !== 'TOTAL') {
+                setBranchLoadStatus(`${b} 상세 로딩 중...`);
+                const loaded = await loadBranchChunk(b);
+                if (!loaded) {
+                    setBranchLoadStatus(`${b} 상세 로딩 실패`, true);
+                    refillRepOptions('TOTAL');
+                    update();
+                    return;
+                }
+                setBranchLoadStatus(`${b} 상세 로드 완료`);
+            }
+            refillRepOptions(b);
             update();
         };
         rSel.onchange = update;

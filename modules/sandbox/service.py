@@ -12,6 +12,12 @@ Sandbox Service - SandboxInputStandard → SandboxResultAsset 생성
 from collections import defaultdict
 from typing import Optional
 
+from modules.kpi.sandbox_engine import (
+    OFFICIAL_SANDBOX_KPI6_KEYS,
+    compute_sandbox_official_kpi_6,
+    compute_sandbox_rep_kpis,
+    validate_official_kpi_6_payload,
+)
 from modules.sandbox.schemas import (
     SandboxInputStandard,
     HospitalAnalysisRecord,
@@ -116,6 +122,20 @@ def build_sandbox_result_asset(
     rx_linked = sum(1 for r in records if r.has_rx)
     months = sorted({r.metric_month for r in records})
 
+    sales_by_month: dict[str, float] = defaultdict(float)
+    for row in input_std.sales_records:
+        sales_by_month[str(row.metric_month)] += float(row.sales_amount or 0.0)
+
+    target_by_month: dict[str, float] = defaultdict(float)
+    for row in input_std.target_records:
+        target_by_month[str(row.metric_month)] += float(row.target_amount or 0.0)
+
+    official_kpi_6 = compute_sandbox_official_kpi_6(
+        sales_by_month=sales_by_month,
+        target_by_month=target_by_month,
+    )
+    official_kpi_6 = validate_official_kpi_6_payload(official_kpi_6)
+
     analysis_summary = AnalysisSummary(
         total_hospitals=len(unique_hospitals),
         total_months=len(months),
@@ -126,6 +146,12 @@ def build_sandbox_result_asset(
         fully_joined_hospitals=fully_joined,
         rx_linked_hospitals=rx_linked,
         metric_months=months,
+        custom_metrics={
+            **{
+                key: float(official_kpi_6[key])  # type: ignore[arg-type]
+                for key in OFFICIAL_SANDBOX_KPI6_KEYS
+            },
+        },
     )
 
     # ── 8. DomainQualitySummary ───────────────────────
@@ -164,6 +190,24 @@ def build_sandbox_result_asset(
         orphan_crm_hospitals=len(crm_hosps - sales_hosps),
     )
 
+    # 보조지표는 서비스 계층에서 계산하되, 공식 KPI 키와 섞이지 않게 prefix를 고정한다.
+    proxy_metrics = {
+        "sandbox_proxy_integrity_score": float(
+            round(
+                min(
+                    100.0,
+                    (crm_sales_rate * 50.0)
+                    + (full_join_rate * 40.0)
+                    + (10.0 if domain_quality.target_record_count > 0 else 0.0),
+                ),
+                1,
+            )
+        ),
+        "sandbox_proxy_orphan_sales_hospitals": float(len(sales_hosps - crm_hosps)),
+        "sandbox_proxy_orphan_crm_hospitals": float(len(crm_hosps - sales_hosps)),
+    }
+    analysis_summary.custom_metrics.update(proxy_metrics)
+
     # ── 10. Handoff 후보 판단 ─────────────────────────
     handoff_candidates = _evaluate_handoff_candidates(
         join_quality=join_quality,
@@ -183,6 +227,7 @@ def build_sandbox_result_asset(
         analysis_summary=analysis_summary,
         domain_quality=domain_quality,
         join_quality=join_quality,
+        official_kpi_6=official_kpi_6,
     )
 
     return SandboxResultAsset(
@@ -223,6 +268,8 @@ def _inject_data_to_template(
             
         # AnalysisSummary에서 해당 키의 값을 추출
         raw_val = getattr(summary, card.metric_key, None)
+        if raw_val is None and isinstance(summary.custom_metrics, dict):
+            raw_val = summary.custom_metrics.get(card.metric_key)
         
         # 값의 성격에 따른 자동 포맷팅
         if raw_val is None:
@@ -257,6 +304,7 @@ def _build_report_template_payload(
     analysis_summary: AnalysisSummary,
     domain_quality: DomainQualitySummary,
     join_quality: JoinQualitySummary,
+    official_kpi_6: dict[str, float | str],
 ) -> dict:
     months = sorted(input_std.metric_months)
     month_index = {month: idx for idx, month in enumerate(months[:12])}
@@ -469,29 +517,13 @@ def _build_report_template_payload(
         total_actual = sum(monthly_actual)
         total_target = sum(monthly_target)
         total_visits = sum(vals["visits"] for vals in month_stats.values())
-        total_detail_calls = sum(vals["detail_calls"] for vals in month_stats.values())
-        total_active_days = sum(vals["active_days"] for vals in month_stats.values())
-        total_next_actions = sum(vals["next_actions"] for vals in month_stats.values())
-        hir_sum = sum(vals["hir_sum"] for vals in month_stats.values())
-        hir_count = sum(vals["hir_count"] for vals in month_stats.values())
-        rtr_sum = sum(vals["rtr_sum"] for vals in month_stats.values())
-        rtr_count = sum(vals["rtr_count"] for vals in month_stats.values())
-        bcr_sum = sum(vals["bcr_sum"] for vals in month_stats.values())
-        bcr_count = sum(vals["bcr_count"] for vals in month_stats.values())
-        phr_sum = sum(vals["phr_sum"] for vals in month_stats.values())
-        phr_count = sum(vals["phr_count"] for vals in month_stats.values())
-        pi_sum = sum(vals["pi_sum"] for vals in month_stats.values())
-        pi_count = sum(vals["pi_count"] for vals in month_stats.values())
-        fgr_sum = sum(vals["fgr_sum"] for vals in month_stats.values())
-        fgr_count = sum(vals["fgr_count"] for vals in month_stats.values())
-
-        # Phase 5: CRM KPI는 Sandbox에서 재계산하지 않고 CRM Result Asset 값을 사용한다.
-        hir = round((hir_sum / hir_count), 1) if hir_count > 0 else 0.0
-        rtr = round((rtr_sum / rtr_count), 1) if rtr_count > 0 else 0.0
-        bcr = round((bcr_sum / bcr_count), 1) if bcr_count > 0 else 0.0
-        phr = round((phr_sum / phr_count), 1) if phr_count > 0 else 0.0
-        pi = round((pi_sum / pi_count), 1) if pi_count > 0 else 0.0
-        fgr = round((fgr_sum / fgr_count), 1) if fgr_count > 0 else 0.0
+        rep_kpis = compute_sandbox_rep_kpis(month_stats)
+        hir = float(rep_kpis["hir"])
+        rtr = float(rep_kpis["rtr"])
+        bcr = float(rep_kpis["bcr"])
+        phr = float(rep_kpis["phr"])
+        pi = float(rep_kpis["pi"])
+        fgr = float(rep_kpis["fgr"])
         efficiency = round(total_actual / max(total_visits, 1), 0)
         sustainability = round(min(100.0, (bcr * 0.4) + (phr * 0.35) + (max(pi, 0.0) * 0.25)), 1)
         gini = calc_gini(list(rep_hospital_sales.get(rep_id, {}).values()))
@@ -678,16 +710,12 @@ def _build_report_template_payload(
         missing_data.append({"지점": "OPS", "성명": "UNMAPPED", "품목": "orphan_crm_hospitals"})
 
     integrity_score = round(
-        min(
-            100.0,
-            (join_quality.crm_sales_join_rate * 50.0)
-            + (join_quality.full_join_rate * 40.0)
-            + (10.0 if domain_quality.target_record_count > 0 else 0.0),
-        ),
+        float(analysis_summary.custom_metrics.get("sandbox_proxy_integrity_score", 0.0)),
         1,
     )
 
     return {
+        "official_kpi_6": official_kpi_6,
         "branches": dict(branches),
         "products": sorted(products),
         "total_prod_analysis": total_prod_analysis,
