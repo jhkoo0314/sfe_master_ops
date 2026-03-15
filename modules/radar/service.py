@@ -25,6 +25,7 @@ def build_radar_result_asset(radar_input: RadarInputStandard) -> RadarResultAsse
     return RadarResultAsset(
         meta=radar_input.meta,
         kpi_summary=radar_input.kpi_summary,
+        scope_summaries=radar_input.scope_summaries,
         validation_summary=radar_input.validation_summary,
         summary=summary,
         signals=finalized,

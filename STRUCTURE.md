@@ -154,10 +154,11 @@ OPS 판단과 파이프라인 실행을 담당합니다.
 - [crm_analysis_template.html](/C:/sfe_master_ops/templates/crm_analysis_template.html)
 - [territory_optimizer_template.html](/C:/sfe_master_ops/templates/territory_optimizer_template.html)
 - [prescription_flow_template.html](/C:/sfe_master_ops/templates/prescription_flow_template.html)
+- [radar_report_template.html](/C:/sfe_master_ops/templates/radar_report_template.html)
 - [total_valid_templates.html](/C:/sfe_master_ops/templates/total_valid_templates.html)
 
 참고:
-- 현재 운영 기준 템플릿은 위 5개입니다.
+- 현재 운영 기준 템플릿은 위 6개입니다.
 - 예전 문서에 남아 있던 `hh.html`, `hh_builder_template.js`, `hhb.js`는 현재 저장소에 없습니다.
 
 ### `scripts/`
@@ -198,7 +199,7 @@ OPS 판단과 파이프라인 실행을 담당합니다.
 - CRM Builder 결과에도 `crm_analysis_preview_assets/*.js`가 같이 복사될 수 있음
 - Prescription Builder 결과에도 `prescription_flow_preview_assets/*.js`가 같이 복사될 수 있음
 - Territory Builder 결과에는 `territory_map_preview_assets/*.js`가 같이 복사됨
-- 코드상으로는 CRM / Sandbox / Territory / Prescription / Total Valid 5종 생성 가능
+- 코드상으로는 CRM / Sandbox / Territory / Prescription / RADAR / Total Valid 6종 생성 가능
 - 실제 저장된 HTML은 회사별 마지막 실행 시점에 따라 일부만 있을 수 있음
 
 ### `common/`
@@ -273,6 +274,9 @@ Builder는 직접 raw를 읽지 않습니다.
   - `sandbox_template_payload_assets/*.js`
   - `sandbox_report_preview_assets/*.js`
   - `sandbox_report_preview.html`
+- RADAR
+  - `radar_result_asset.json`
+  - `radar_report_preview.html`
 
 즉 Builder는 `표현 단계`이고, 계산은 앞단 모듈에 둡니다.
 
@@ -284,8 +288,8 @@ Builder는 직접 raw를 읽지 않습니다.
 - 기본값은 `담당자 미선택`이고, 담당자를 고르면 해당 담당자용 `catalog asset`과 선택 월용 `route asset`만 읽습니다.
 - `total_valid_preview.html`은 Builder 단계에서 별도로 생성됩니다.
 - 회사별 현재 저장 상태는 다릅니다.
-- `daon_pharma`는 Builder 5종 저장이 확인됩니다.
-- `hangyeol_pharma`는 현재 Builder 5종 저장이 확인됩니다.
+- `daon_pharma`는 Builder 6종 저장이 확인됩니다.
+- `hangyeol_pharma`는 현재 Builder 6종 저장이 확인됩니다.
 
 ## 현재 UI 기준 흐름
 
@@ -325,11 +329,12 @@ Builder는 직접 raw를 읽지 않습니다.
 - Sandbox 성과 보고서
 - Territory 권역 지도 보고서
 - PDF 처방흐름 보고서
+- RADAR Decision Brief
 
 통합 보고서:
 - `total_valid_preview.html`
 - 생성된 개별 HTML을 한 화면에서 묶어 보는 허브
-- 사이드바에는 4개 보고서가 항상 보이고
+- 사이드바에는 5개 보고서가 항상 보이고
 - 생성 안 된 것은 비활성 표시
 
 즉 통합 보고서도 OPS가 새 계산을 하는 곳이 아니라,

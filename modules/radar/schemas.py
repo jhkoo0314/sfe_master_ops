@@ -149,6 +149,7 @@ class RadarResultAsset(BaseModel):
     asset_type: str = "radar_result_asset"
     meta: RadarMeta
     kpi_summary: RadarKpiSummary
+    scope_summaries: RadarScopeSummaries = Field(default_factory=RadarScopeSummaries)
     validation_summary: RadarValidationSummary
     summary: RadarSummary
     signals: list[RadarSignal] = Field(default_factory=list)

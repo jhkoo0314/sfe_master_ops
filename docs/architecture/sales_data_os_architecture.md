@@ -97,6 +97,9 @@ OPS는 다음을 담당하지 않는다.
   - KPI engine output
   - validation-approved result asset
   - sandbox summary metrics
+- 출력:
+  - `radar_result_asset.json`
+  - Builder preview payload -> `radar_report_preview.html` (render는 Builder 담당)
 - 역할:
   - signal detection
   - issue prioritization

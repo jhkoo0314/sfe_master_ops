@@ -23,7 +23,7 @@ Validation Layer (OPS) 역할은 이렇게 이해하면 됩니다.
 
 현재 운영 범위 한 줄 요약:
 - CRM / Prescription / Sandbox / Territory / Builder는 실행 가능
-- Builder는 코드상 보고서 5종 생성 가능
+- Builder는 코드상 보고서 6종 생성 가능
 - 실제 저장된 보고서 수는 회사별 마지막 실행 상태에 따라 다를 수 있음
 
 ## 2. 실행 전 준비
@@ -90,7 +90,7 @@ uv run streamlit run ui/ops_console.py --server.port 8501
 를 한 번에 실행합니다.
 
 주의:
-- `통합 실행`은 코드상으로 `crm_analysis_preview.html`, `sandbox_report_preview.html`, `territory_map_preview.html`, `prescription_flow_preview.html`, `total_valid_preview.html`까지 연결되는 흐름입니다.
+- `통합 실행`은 코드상으로 `crm_analysis_preview.html`, `sandbox_report_preview.html`, `territory_map_preview.html`, `prescription_flow_preview.html`, `radar_report_preview.html`, `total_valid_preview.html`까지 연결되는 흐름입니다.
 - 다만 실제 저장은 회사별 입력 상태와 마지막 실행 결과에 따라 일부만 남아 있을 수 있습니다.
 
 ## 5. 업로드 파일 기준
@@ -192,6 +192,7 @@ Builder 결과:
 - `data/ops_validation/{company_key}/builder/territory_map_preview.html`
 - `data/ops_validation/{company_key}/builder/territory_map_preview_assets/*.js`
 - `data/ops_validation/{company_key}/builder/prescription_flow_preview.html`
+- `data/ops_validation/{company_key}/builder/radar_report_preview.html`
 - `data/ops_validation/{company_key}/builder/total_valid_preview.html`
 
 추가로 같이 저장되는 것:
@@ -211,6 +212,7 @@ Builder 결과:
 - Territory payload는 `manifest + 분리 asset` 구조입니다.
 - 기본 화면은 `담당자 미선택` 상태로 시작하고, 담당자를 고른 뒤 해당 담당자 asset과 선택 월 asset만 읽습니다.
 - `total_valid_preview.html`은 개별 HTML을 한 화면에서 묶어 보여주는 허브입니다.
+- `total_valid_preview.html` 사이드바에는 CRM/Sandbox/Territory/Prescription/RADAR 5개 보고서 카드가 표시됩니다.
 - 통합 보고서도 새 계산을 하지 않고, 이미 만든 HTML을 연결해서 보여주는 역할입니다.
 
 ### 8-1. 2026-03-15 CRM KPI 고정 규칙
@@ -228,7 +230,7 @@ Builder 결과:
 - Prescription builder payload는 KPI를 재계산하지 않음 (KPI 엔진 결과 조립/분할 전용)
 - 회귀 기준:
   - `hangyeol_pharma`, `daon_pharma` Sandbox 검증 `pass`
-  - Builder HTML 5종 생성 검증 `pass`
+  - Builder HTML 6종 생성 검증 `pass`
 
 ## 9. 처방 보고서 운영 메모
 
@@ -253,8 +255,8 @@ data/ops_validation/{company_key}/pipeline/console_run_history.jsonl
 - 실제 어느 경로에 반영했는지
 
 현재 확인된 예시:
-- `daon_pharma`는 Builder 보고서 5종 저장이 확인됩니다.
-- `hangyeol_pharma`는 현재 Builder 보고서 5종 저장이 확인됩니다.
+- `daon_pharma`는 Builder 보고서 6종 저장이 확인됩니다.
+- `hangyeol_pharma`는 현재 Builder 보고서 6종 저장이 확인됩니다.
 
 ## 11. 문제 해결
 
@@ -266,7 +268,7 @@ data/ops_validation/{company_key}/pipeline/console_run_history.jsonl
 보고서가 비활성일 때:
 - 해당 HTML이 아직 생성되지 않은 상태입니다.
 - 관련 실행모드를 먼저 돌립니다.
-- 회사별 마지막 실행 결과가 달라서 어떤 회사는 5종, 어떤 회사는 일부만 있을 수 있습니다.
+- 회사별 마지막 실행 결과가 달라서 어떤 회사는 6종, 어떤 회사는 일부만 있을 수 있습니다.
 
 Territory가 WARN일 때:
 - 현실 raw 데이터에서 일부 연결 누락이나 좌표 품질 이슈가 있을 수 있습니다.

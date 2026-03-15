@@ -7,7 +7,7 @@
 - 회사별 raw를 같은 틀로 흡수하고 어디까지 연결되는지 검증
 - CRM, Prescription, Sandbox, Territory, Builder를 실제로 실행 가능
 - 회사 코드별로 결과 폴더를 분리
-- 코드 기준으로 HTML 보고서 5종과 통합 허브까지 생성 가능
+- 코드 기준으로 HTML 보고서 6종과 통합 허브까지 생성 가능
 - 실제 저장된 보고서 수는 회사별 마지막 실행 상태에 따라 다를 수 있음
 
 ## Part 1 상태
@@ -64,7 +64,7 @@
 - Territory Builder payload는 KPI 계산 없이 엔진 결과를 조립/분할만 수행
 - Prescription Builder payload는 KPI 계산 없이 엔진 결과를 조립/분할만 수행
 - `hangyeol_pharma`, `daon_pharma` 기준 CRM->Builder->Sandbox KPI 전달 불일치 0건 확인
-- Sandbox + Builder 최종 HTML 5종 검증도 2개 회사 모두 통과
+- Sandbox + Builder 최종 HTML 6종 검증도 2개 회사 모두 통과
 
 ## 핵심 원칙
 
@@ -94,6 +94,7 @@
 - Sandbox 성과 보고서
 - Territory 권역 지도 보고서
 - PDF 처방흐름 보고서
+- RADAR Decision Brief
 - 통합 검증 보고서
 
 운영 콘솔:
@@ -137,6 +138,9 @@
   - `sandbox/sandbox_template_payload_assets/*.js`
   - `builder/sandbox_report_preview_assets/*.js`
   - `sandbox_report_preview.html`
+- RADAR
+  - `radar_result_asset.json`
+  - `radar_report_preview.html`
 
 즉 Builder는 `모듈이 먼저 만든 재료`만 받아서 화면을 만듭니다.
 
@@ -157,11 +161,11 @@ data/
 - `data/ops_validation/daon_pharma`
 
 현재 확인된 회사 예시:
-- `daon_pharma`: Builder 보고서 5종 저장 확인
-- `hangyeol_pharma`: Builder 보고서 5종 저장 확인
+- `daon_pharma`: Builder 보고서 6종 저장 확인
+- `hangyeol_pharma`: Builder 보고서 6종 저장 확인
 
 즉:
-- 코드 구조는 5종 보고서를 지원
+- 코드 구조는 6종 보고서를 지원
 - 실제 저장 산출물은 회사별 마지막 실행 결과에 따라 다름
 
 원천 파일 이름 규칙:
@@ -224,10 +228,11 @@ Builder 템플릿:
 - [crm_analysis_template.html](/C:/sfe_master_ops/templates/crm_analysis_template.html)
 - [territory_optimizer_template.html](/C:/sfe_master_ops/templates/territory_optimizer_template.html)
 - [prescription_flow_template.html](/C:/sfe_master_ops/templates/prescription_flow_template.html)
+- [radar_report_template.html](/C:/sfe_master_ops/templates/radar_report_template.html)
 - [total_valid_templates.html](/C:/sfe_master_ops/templates/total_valid_templates.html)
 
 참고:
-- `templates/`에는 현재 위 5개 템플릿만 운영 기준으로 유지
+- `templates/`에는 현재 위 6개 템플릿을 운영 기준으로 유지
 - 예전 문서에 남아 있던 `hh.html`, `hh_builder_template.js`, `hhb.js`는 현재 저장소에 없음
 
 ## 실행 방식
@@ -260,9 +265,10 @@ uv run streamlit run ui/ops_console.py --server.port 8501
 - `sandbox_report_preview.html`
 - `territory_map_preview.html`
 - `prescription_flow_preview.html`
+- `radar_report_preview.html`
 - `total_valid_preview.html`
 
-단, 위 5개는 `입력 데이터 + 모듈 산출물 + Builder payload`가 모두 준비됐을 때 기준입니다.
+단, 위 6개는 `입력 데이터 + 모듈 산출물 + Builder payload`가 모두 준비됐을 때 기준입니다.
 즉 회사별 마지막 실행 상태에 따라 일부만 저장돼 있을 수 있습니다.
 
 ## 현재 주의할 점

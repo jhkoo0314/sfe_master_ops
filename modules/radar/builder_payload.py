@@ -17,6 +17,17 @@ from modules.radar.schemas import RadarResultAsset
 
 def build_radar_builder_payload(asset: RadarResultAsset) -> dict:
     top_signal = asset.signals[0] if asset.signals else None
+    branch_options: list[str] = []
+    for row in asset.scope_summaries.by_branch:
+        branch_name = str(row.get("branch_name") or row.get("branch_key") or "").strip()
+        if branch_name and branch_name not in branch_options:
+            branch_options.append(branch_name)
+    for signal in asset.signals:
+        for branch_name in list((signal.scope or {}).get("branch_keys") or []):
+            branch_key = str(branch_name).strip()
+            if branch_key and branch_key not in branch_options:
+                branch_options.append(branch_key)
+
     trend_labels = [
         f"{asset.meta.period_value}-2",
         f"{asset.meta.period_value}-1",
@@ -39,6 +50,7 @@ def build_radar_builder_payload(asset: RadarResultAsset) -> dict:
         "decision_readiness": int(top_signal.priority_score if top_signal is not None else 40),
         "validation_status": str(asset.validation_summary.status).upper(),
         "signal_count": int(asset.summary.signal_count),
+        "branch_options": branch_options,
         "confidence": round(float(asset.validation_summary.quality_score), 2),
         "kpi_snapshot": {
             "goal_attainment_pct": goal,

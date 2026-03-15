@@ -166,6 +166,17 @@
       height: 260px;
       width: 100%;
     }
+
+    .branch-filter {
+      border: 1px solid var(--border-color);
+      border-radius: 8px;
+      background: #fff;
+      color: var(--text-main);
+      font-size: 12px;
+      font-weight: 700;
+      padding: 0.45rem 0.55rem;
+      min-width: 170px;
+    }
   </style>
 </head>
 <body>
@@ -259,51 +270,16 @@
 
     <!-- TOP SIGNALS -->
     <div class="section-header">
-      <h3>Layer 01 : Top Signals</h3>
+      <div class="w-full flex items-center justify-between gap-3">
+        <h3>Layer 01 : Top Signals</h3>
+        <div class="flex items-center gap-2">
+          <span class="mini-label">지점 필터</span>
+          <select id="branchFilter" class="branch-filter"></select>
+        </div>
+      </div>
     </div>
 
-    <div class="grid grid-cols-12 gap-4 mb-8">
-      <div class="col-span-12 md:col-span-4 card signal-card critical">
-        <div class="flex items-center justify-between">
-          <span class="status-badge status-critical">Critical</span>
-          <span class="mini-label">Priority 91</span>
-        </div>
-        <h4 class="mt-4 text-lg font-bold text-slate-900">Goal Underperformance</h4>
-        <p class="text-sm text-slate-600 mt-2">
-          목표 달성률이 기준 미만이며, 최근 1개월 성과 하락이 동반됨.
-        </p>
-        <div class="mt-4 text-xs text-slate-500">
-          Scope: Company / Branch 2개
-        </div>
-      </div>
-
-      <div class="col-span-12 md:col-span-4 card signal-card">
-        <div class="flex items-center justify-between">
-          <span class="status-badge status-warning">Warning</span>
-          <span class="mini-label">Priority 82</span>
-        </div>
-        <h4 class="mt-4 text-lg font-bold text-slate-900">RTR Weakness</h4>
-        <p class="text-sm text-slate-600 mt-2">
-          관계 유지 지표가 기대 범위 아래로 하락하며 성과 미달과 동시에 나타남.
-        </p>
-        <div class="mt-4 text-xs text-slate-500">
-          Scope: Branch / Daegu
-        </div>
-      </div>
-
-      <div class="col-span-12 md:col-span-4 card signal-card normal">
-        <div class="flex items-center justify-between">
-          <span class="status-badge status-normal">Monitor</span>
-          <span class="mini-label">Priority 61</span>
-        </div>
-        <h4 class="mt-4 text-lg font-bold text-slate-900">HIR Weakness</h4>
-        <p class="text-sm text-slate-600 mt-2">
-          핵심 타겟 접촉 강도가 약화되고 있으나 아직 치명 수준은 아님.
-        </p>
-        <div class="mt-4 text-xs text-slate-500">
-          Scope: Company
-        </div>
-      </div>
+    <div id="topSignalsContainer" class="grid grid-cols-12 gap-4 mb-8">
     </div>
 
     <!-- ISSUE SUMMARY -->
@@ -324,16 +300,7 @@
 
       <div class="col-span-12 md:col-span-5 card">
         <h4 class="text-[11px] font-black text-slate-500 uppercase mb-4">Possible Explanations</h4>
-        <div class="space-y-3 text-sm">
-          <div class="p-3 bg-slate-50 border border-slate-200 rounded-lg">
-            관계 유지 활동의 일관성 저하 가능성
-          </div>
-          <div class="p-3 bg-slate-50 border border-slate-200 rounded-lg">
-            핵심 타겟 접촉 우선순위 분산 가능성
-          </div>
-          <div class="p-3 bg-slate-50 border border-slate-200 rounded-lg">
-            최근 field execution slowdown 가능성
-          </div>
+        <div id="possibleExplanations" class="space-y-3 text-sm">
         </div>
         <p class="mt-4 text-[11px] text-slate-400 font-bold uppercase">
           * 확정 원인이 아닌 관리 해석용 힌트
@@ -409,28 +376,7 @@
         </thead>
         <tbody>
           <tr>
-            <td>Goal Underperformance</td>
-            <td>Critical</td>
-            <td>91</td>
-            <td>Company</td>
-            <td>93.2%</td>
-            <td>3</td>
-          </tr>
-          <tr>
-            <td>RTR Weakness</td>
-            <td>Warning</td>
-            <td>82</td>
-            <td>Daegu</td>
-            <td>67.1</td>
-            <td>2</td>
-          </tr>
-          <tr>
-            <td>HIR Weakness</td>
-            <td>Monitor</td>
-            <td>61</td>
-            <td>Company</td>
-            <td>58.3</td>
-            <td>2</td>
+            <td colspan="6" class="text-slate-400">No signal data</td>
           </tr>
         </tbody>
       </table>
@@ -453,6 +399,7 @@
       decision_readiness: 82,
       validation_status: "APPROVED",
       signal_count: 3,
+      branch_options: ["서울", "대구"],
       confidence: 0.94,
       kpi_snapshot: {
         goal_attainment_pct: 93.2,
@@ -460,6 +407,41 @@
         hir: 58.3,
         rtr: 67.1
       },
+      signals: [
+        {
+          signal_type: "goal_underperformance",
+          severity: "critical",
+          priority_score: 91,
+          title: "Goal Underperformance",
+          message: "목표 달성률이 기준 미만이며 성과 저하가 동반됩니다.",
+          scope: { level: "company", branch_keys: ["서울", "대구"] },
+          evidence: { metric: "goal_attainment_pct", current_value: 93.2, threshold: 95 },
+          possible_explanations: ["관계 유지 활동 일관성 저하 가능성", "핵심 타겟 접촉 우선순위 분산 가능성"],
+          decision_options: [{ option_code: "A" }, { option_code: "B" }, { option_code: "C" }]
+        },
+        {
+          signal_type: "rtr_weakness",
+          severity: "warning",
+          priority_score: 82,
+          title: "RTR Weakness",
+          message: "관계 유지 지표가 기대 범위 아래로 하락했습니다.",
+          scope: { level: "branch", branch_keys: ["대구"] },
+          evidence: { metric: "rtr", current_value: 67.1, threshold: 70 },
+          possible_explanations: ["relationship maintenance 약화 가능성"],
+          decision_options: [{ option_code: "A" }, { option_code: "B" }]
+        },
+        {
+          signal_type: "hir_weakness",
+          severity: "warning",
+          priority_score: 61,
+          title: "HIR Weakness",
+          message: "핵심 타겟 접촉 강도가 약화되고 있습니다.",
+          scope: { level: "company", branch_keys: [] },
+          evidence: { metric: "hir", current_value: 58.3, threshold: 60 },
+          possible_explanations: ["타겟 접촉 밀도 저하 가능성"],
+          decision_options: [{ option_code: "A" }, { option_code: "B" }]
+        }
+      ],
       trend_chart: {
         labels: ['2026.01', '2026.02', '2026.03'],
         goal_attainment: [101, 97, 93.2],
@@ -475,6 +457,10 @@
       const el = document.getElementById(id);
       if (el && value !== undefined && value !== null) el.textContent = String(value);
     };
+    const branchFilter = document.getElementById("branchFilter");
+    const topSignalsContainer = document.getElementById("topSignalsContainer");
+    const signalTableBody = document.querySelector("table.radar-table tbody");
+    const possibleExplanations = document.getElementById("possibleExplanations");
 
     setText("reportTitle", radarData.report_title || defaultRadarData.report_title);
     setText("periodLabel", radarData.period_label || defaultRadarData.period_label);
@@ -490,6 +476,142 @@
     setText("kpiRtr", Number(kpi.rtr || 0).toFixed(1));
     setText("kpiSignalCount", String(radarData.signal_count ?? 0));
     setText("kpiConfidence", Number(radarData.confidence || 0).toFixed(2));
+
+    const allSignals = Array.isArray(radarData.signals) ? radarData.signals : [];
+
+    const buildBranchOptions = () => {
+      const options = new Set(["전체"]);
+      const payloadBranches = Array.isArray(radarData.branch_options) ? radarData.branch_options : [];
+      payloadBranches.forEach((b) => {
+        const t = String(b || "").trim();
+        if (t) options.add(t);
+      });
+      allSignals.forEach((signal) => {
+        const branchKeys = Array.isArray(signal?.scope?.branch_keys) ? signal.scope.branch_keys : [];
+        branchKeys.forEach((b) => {
+          const t = String(b || "").trim();
+          if (t) options.add(t);
+        });
+      });
+      return Array.from(options);
+    };
+
+    const renderSignalCards = (signals) => {
+      if (!topSignalsContainer) return;
+      if (!signals.length) {
+        topSignalsContainer.innerHTML = `
+          <div class="col-span-12 card">
+            <div class="text-sm text-slate-500">선택한 지점에서 표시할 신호가 없습니다.</div>
+          </div>`;
+        return;
+      }
+      topSignalsContainer.innerHTML = signals.slice(0, 3).map((signal) => {
+        const sev = String(signal.severity || "warning").toLowerCase();
+        const badgeClass = sev === "critical" ? "status-critical" : "status-warning";
+        const cardClass = sev === "critical" ? "critical" : "normal";
+        const scopeLevel = String(signal?.scope?.level || "company");
+        const branchCount = (Array.isArray(signal?.scope?.branch_keys) ? signal.scope.branch_keys.length : 0);
+        const scopeText = scopeLevel === "branch" ? `Branch ${branchCount}개` : "Company";
+        return `
+          <div class="col-span-12 md:col-span-4 card signal-card ${cardClass}">
+            <div class="flex items-center justify-between">
+              <span class="status-badge ${badgeClass}">${sev === "critical" ? "Critical" : "Warning"}</span>
+              <span class="mini-label">Priority ${Number(signal.priority_score || 0)}</span>
+            </div>
+            <h4 class="mt-4 text-lg font-bold text-slate-900">${signal.title || signal.signal_type}</h4>
+            <p class="text-sm text-slate-600 mt-2">${signal.message || ""}</p>
+            <div class="mt-4 text-xs text-slate-500">Scope: ${scopeText}</div>
+          </div>`;
+      }).join("");
+    };
+
+    const renderSignalTable = (signals) => {
+      if (!signalTableBody) return;
+      if (!signals.length) {
+        signalTableBody.innerHTML = `<tr><td colspan="6" class="text-slate-400">No signal data</td></tr>`;
+        return;
+      }
+      signalTableBody.innerHTML = signals.map((signal) => {
+        const scopeLevel = String(signal?.scope?.level || "company");
+        const scopeText = scopeLevel === "branch"
+          ? (Array.isArray(signal?.scope?.branch_keys) ? signal.scope.branch_keys.join(", ") : "-")
+          : "Company";
+        const evidenceValue = Number(signal?.evidence?.current_value ?? 0);
+        return `
+          <tr>
+            <td>${signal.title || signal.signal_type}</td>
+            <td>${signal.severity || "-"}</td>
+            <td>${Number(signal.priority_score || 0)}</td>
+            <td>${scopeText}</td>
+            <td>${evidenceValue}</td>
+            <td>${Array.isArray(signal.decision_options) ? signal.decision_options.length : 0}</td>
+          </tr>`;
+      }).join("");
+    };
+
+    const renderExplanations = (signals) => {
+      if (!possibleExplanations) return;
+      const items = [];
+      signals.forEach((signal) => {
+        (Array.isArray(signal.possible_explanations) ? signal.possible_explanations : []).forEach((exp) => {
+          if (exp && !items.includes(exp)) items.push(exp);
+        });
+      });
+      if (!items.length) {
+        possibleExplanations.innerHTML = `
+          <div class="p-3 bg-slate-50 border border-slate-200 rounded-lg">
+            선택한 지점에서 요약 가능한 해석 힌트가 없습니다.
+          </div>`;
+        return;
+      }
+      possibleExplanations.innerHTML = items.slice(0, 5).map((text) => (
+        `<div class="p-3 bg-slate-50 border border-slate-200 rounded-lg">${text}</div>`
+      )).join("");
+    };
+
+    const filterSignalsByBranch = (branchName) => {
+      if (!branchName || branchName === "전체") return allSignals;
+      return allSignals.filter((signal) => {
+        const scopeLevel = String(signal?.scope?.level || "company");
+        if (scopeLevel === "company") return true;
+        const keys = Array.isArray(signal?.scope?.branch_keys) ? signal.scope.branch_keys : [];
+        return keys.map((v) => String(v)).includes(branchName);
+      });
+    };
+
+    const updateHeaderWithSignals = (signals) => {
+      const top = signals.length ? signals[0] : null;
+      if (top) {
+        setText("topIssue", top.title || top.signal_type || "Top issue");
+        setText("topIssueDesc", top.message || "");
+        setText("decisionReadiness", Number(top.priority_score || 0));
+        setText("kpiSignalCount", signals.length);
+      } else {
+        setText("topIssue", "선택 지점에서 감지된 핵심 신호 없음");
+        setText("topIssueDesc", "현재 선택한 지점 기준으로 경보 신호가 생성되지 않았습니다.");
+        setText("decisionReadiness", 40);
+        setText("kpiSignalCount", 0);
+      }
+    };
+
+    const applyBranchFilter = () => {
+      const selected = branchFilter ? branchFilter.value : "전체";
+      const filtered = filterSignalsByBranch(selected);
+      renderSignalCards(filtered);
+      renderSignalTable(filtered);
+      renderExplanations(filtered);
+      updateHeaderWithSignals(filtered);
+    };
+
+    const branchOptions = buildBranchOptions();
+    if (branchFilter) {
+      branchFilter.innerHTML = branchOptions
+        .map((branch) => `<option value="${branch}">${branch}</option>`)
+        .join("");
+      branchFilter.addEventListener("change", applyBranchFilter);
+    }
+
+    applyBranchFilter();
 
     const badge = document.getElementById("overallStatusBadge");
     if (badge) {
