@@ -8,6 +8,7 @@ from .sandbox_engine import (
     compute_sandbox_rep_kpis,
     validate_official_kpi_6_payload,
 )
+from .territory_engine import build_territory_builder_context
 
 __all__ = [
     "compute_crm_kpi_bundle",
@@ -16,4 +17,5 @@ __all__ = [
     "validate_official_kpi_6_payload",
     "SANDBOX_KPI_ENGINE_VERSION",
     "OFFICIAL_SANDBOX_KPI6_KEYS",
+    "build_territory_builder_context",
 ]

@@ -217,11 +217,13 @@ Builder 결과:
 
 - CRM KPI 공식 계산 소스: `modules/kpi/crm_engine.py`
 - Sandbox KPI 1차 계산 소스: `modules/kpi/sandbox_engine.py`
+- Territory KPI 계산 소스: `modules/kpi/territory_engine.py`
 - CRM 표준 활동유형: 8대 행동 고정
   - `PT / Demo / Closing / Needs / FaceToFace / Contact / Access / Feedback`
 - Adapter는 `activity_type_raw`와 `activity_type_standard`를 함께 저장
 - CRM Builder는 KPI를 재계산하지 않음 (`crm_result_asset` 주입 전용)
 - Sandbox도 CRM KPI를 재계산하지 않음 (CRM 입력 KPI 사용)
+- Territory builder payload는 KPI를 재계산하지 않음 (KPI 엔진 결과 조립/분할 전용)
 - 회귀 기준:
   - `hangyeol_pharma`, `daon_pharma` Sandbox 검증 `pass`
   - Builder HTML 5종 생성 검증 `pass`

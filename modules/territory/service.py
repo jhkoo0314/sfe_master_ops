@@ -23,6 +23,7 @@ from modules.territory.schemas import (
     GeoCoord, SIDO_CENTROIDS,
 )
 from modules.territory.templates import TerritoryMapContract
+from modules.territory.builder_payload import build_territory_builder_payload as _build_territory_builder_payload
 from modules.sandbox.schemas import HospitalAnalysisRecord
 from result_assets.territory_result_asset import TerritoryResultAsset
 from common.exceptions import MissingResultAssetError
@@ -326,4 +327,14 @@ def build_territory_result_asset(
         gaps=gaps,
         coverage_summary=coverage_summary,
         optimization_summary=opt_summary,
+    )
+
+
+def build_territory_builder_payload(
+    asset: TerritoryResultAsset,
+    territory_activity_path: str | None = None,
+) -> dict:
+    return _build_territory_builder_payload(
+        asset=asset,
+        territory_activity_path=territory_activity_path,
     )

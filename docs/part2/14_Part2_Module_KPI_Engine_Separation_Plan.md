@@ -1,7 +1,7 @@
 # Part2 모듈별 KPI 엔진 분리 설계 계획
 
 작성일: 2026-03-15
-최종 업데이트: 2026-03-15
+최종 업데이트: 2026-03-16
 
 ## 0. 상태 선언
 
@@ -176,6 +176,16 @@ Sandbox 공식 KPI 목록(고정):
 
 완료 기준:
 - Territory 공식 KPI 계산 위치가 명시적으로 분리됨
+
+상태: `완료 (2026-03-16)`
+
+반영 내용:
+1. `modules/kpi/territory_engine.py`로 Territory 계산 로직 이동
+2. `modules/territory/service.py`는 엔진 호출 + 조립 경유로 정리
+3. `modules/territory/builder_payload.py`는 계산 없이 payload 조립/분할만 수행
+4. 회귀/출력 검증:
+   - `validate_territory_with_ops.py` 통과
+   - `validate_builder_with_ops.py` 통과
 
 ## 7-3. Prescription 엔진 뼈대 생성
 

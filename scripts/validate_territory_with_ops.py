@@ -16,11 +16,8 @@ from common.asset_versions import (
     attach_builder_payload_version,
 )
 from modules.territory.schemas import GeoCoord
-from modules.territory.builder_payload import (
-    build_chunked_territory_payload,
-    build_territory_builder_payload,
-)
-from modules.territory.service import build_territory_result_asset
+from modules.territory.builder_payload import build_chunked_territory_payload
+from modules.territory.service import build_territory_builder_payload, build_territory_result_asset
 from ops_core.api.territory_router import evaluate_territory_asset
 from modules.sandbox.schemas import HospitalAnalysisRecord
 from common.company_runtime import get_active_company_key, get_active_company_name, get_company_root

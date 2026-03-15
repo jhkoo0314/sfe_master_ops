@@ -73,7 +73,8 @@ sfe_master_ops/
   - 현재는 `manifest + 지점 asset` 구조로 Sandbox Builder 데이터를 분리 생성
 - `modules/territory/`
   - Territory Result Asset 생성
-  - `builder_payload.py`에서 지도 보고서용 payload 생성
+  - `service.py`는 Territory KPI 엔진 호출 + Result Asset/Builder payload 조립
+  - `builder_payload.py`는 계산 없이 지도 보고서용 payload 조립/분할만 수행
   - 현재는 `manifest + 담당자/월 asset` 구조로 Territory Builder 데이터를 분리 생성
 - `modules/builder/`
   - 모듈이 만든 payload를 읽어 HTML로 주입
@@ -82,7 +83,9 @@ sfe_master_ops/
 
 - `modules/kpi/`
   - 모듈 내부 KPI 계산 엔진 모음
-  - 현재 CRM KPI 엔진(`crm_engine.py`) 운영 중
+- 현재 CRM KPI 엔진(`crm_engine.py`) 운영 중
+- Sandbox KPI 엔진(`sandbox_engine.py`) 운영 중
+- Territory KPI 엔진(`territory_engine.py`) 운영 중
 
 ### `ops_core/`
 
