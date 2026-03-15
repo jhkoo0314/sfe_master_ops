@@ -5,8 +5,14 @@
 연계 문서:
 - `13_Part2_Module_Studio_Planning.md`
 - `14_Part2_Module_KPI_Engine_Separation_Plan.md`
+- `15_Part2_Module_Role_Definition_Frozen.md`
 
 진행 체크포인트 (2026-03-16):
+- KPI 엔진 모듈 체계 생성 완료
+  - CRM: `modules/kpi/crm_engine.py`
+  - Sandbox: `modules/kpi/sandbox_engine.py`
+  - Territory: `modules/kpi/territory_engine.py`
+  - Prescription: `modules/kpi/prescription_engine.py`
 - Sandbox KPI 엔진 분리 1차 완료 (`modules/kpi/sandbox_engine.py`)
 - Sandbox 회귀 검증 완료 (`hangyeol_pharma`, `daon_pharma`)
 - Builder 최종 HTML 5종 생성 검증 완료 (2개 회사)
@@ -24,6 +30,12 @@
 
 이 문서는 Part 1 완료 이후  
 Part 2를 실제로 어떤 순서로 진행할지 정하는 실행계획서다.
+
+현재 상태 선언:
+
+- 외부 공식 모듈 흐름(`CRM -> Prescription -> Sandbox -> Territory -> Builder`)은 유지한다.
+- 내부 계산 전담 모듈로 `KPI Engine`이 추가되었고, 생성/분리 반영까지 완료했다.
+- 즉 Part2 현재 구조는 `외부 흐름 유지 + 내부 계산 모듈 추가` 상태다.
 
 핵심 목적은 3가지다.
 
@@ -59,11 +71,18 @@ Part 2에서도 아래 원칙은 그대로 유지한다.
 원천데이터 -> Adapter -> Module -> Result Asset -> OPS -> Builder
 ```
 
+내부 계산 흐름은 아래처럼 고정한다.
+
+```text
+원천데이터 -> Adapter -> Module Core -> KPI Engine -> Result Asset
+```
+
 즉:
 
 - raw를 새 화면이 직접 읽지 않는다
 - OPS가 직접 분석 계산 엔진처럼 비대해지지 않는다
 - 새 모듈도 Result Asset 또는 검증 결과를 재료로 쓴다
+- 공식 KPI 계산은 KPI 엔진이 전담한다
 - Builder는 끝까지 표현 단계로 유지한다
 - Builder는 독립 분석 모듈이 아니며, 외부 템플릿에 데이터를 주입하는 마지막 단계로만 본다
 - Builder 자체의 별도 Result Asset을 새로 만들지 않는다
@@ -78,6 +97,10 @@ Part 2에서도 아래 원칙은 그대로 유지한다.
 
 ```text
 원천데이터 -> Adapter -> Module -> Result Asset -> OPS -> Builder
+```
+
+```text
+원천데이터 -> Adapter -> Module Core -> KPI Engine -> Result Asset
 ```
 
 즉 Studio는 공식 파이프라인을 대체하지 않고,
