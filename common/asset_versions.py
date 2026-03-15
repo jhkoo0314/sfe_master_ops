@@ -4,7 +4,7 @@ from collections.abc import Mapping
 from typing import Any
 
 
-CRM_RESULT_SCHEMA_VERSION = "crm_result_asset_v1"
+CRM_RESULT_SCHEMA_VERSION = "crm_result_asset_v2"
 PRESCRIPTION_RESULT_SCHEMA_VERSION = "prescription_result_asset_v1"
 SANDBOX_INPUT_SCHEMA_VERSION = "sandbox_input_standard_v1"
 SANDBOX_RESULT_SCHEMA_VERSION = "sandbox_result_asset_v1"

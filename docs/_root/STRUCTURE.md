@@ -59,12 +59,14 @@ sfe_master_ops/
 
 - `modules/crm/`
   - CRM Result Asset 생성
-  - `builder_payload.py`에서 CRM 보고서용 payload 생성
+  - `modules/kpi/crm_engine.py` 기준으로 CRM 11 KPI 계산
+  - `builder_payload.py`는 CRM 자산 주입 전용(재계산 없음)
 - `modules/prescription/`
   - Prescription Result Asset 생성
   - `builder_payload.py`에서 처방 보고서용 payload 생성
 - `modules/sandbox/`
   - Sandbox Result Asset 생성
+  - CRM KPI는 입력값을 사용하고 Sandbox에서 재계산하지 않음
   - `builder_payload.py`에서 지점 상세 분리용 manifest 생성
   - `dashboard_payload.template_payload`를 Builder 입력으로 사용
   - 현재는 `manifest + 지점 asset` 구조로 Sandbox Builder 데이터를 분리 생성
@@ -76,6 +78,10 @@ sfe_master_ops/
   - 모듈이 만든 payload를 읽어 HTML로 주입
   - Territory, Prescription, CRM, Sandbox처럼 큰 payload는 Builder 단계에서도 분리 asset 구조를 유지하도록 보정
   - 직접 계산 엔진 역할은 하지 않음
+
+- `modules/kpi/`
+  - 모듈 내부 KPI 계산 엔진 모음
+  - 현재 CRM KPI 엔진(`crm_engine.py`) 운영 중
 
 ### `ops_core/`
 
@@ -246,6 +252,7 @@ Builder는 직접 raw를 읽지 않습니다.
   - `crm_builder_payload.json`
   - `crm_builder_payload_assets/*.js`
   - `crm_analysis_preview.html`
+  - 표준 활동유형은 8대 행동(`PT/Demo/Closing/Needs/FaceToFace/Contact/Access/Feedback`)
 - Prescription
   - `prescription_result_asset.json`
   - `prescription_builder_payload.json`

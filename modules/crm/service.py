@@ -14,6 +14,7 @@ from collections import Counter
 from typing import Optional
 
 from modules.crm.schemas import CrmStandardActivity, CompanyMasterStandard
+from modules.kpi.crm_engine import compute_crm_kpi_bundle
 from result_assets.crm_result_asset import (
     CrmResultAsset,
     RepBehaviorProfile,
@@ -63,7 +64,8 @@ def build_crm_result_asset(
     rep_visits: dict[str, int] = Counter()
     rep_hospitals: dict[str, set] = {}
     rep_detail_counts: dict[str, int] = Counter()
-    rep_activity_types: dict[str, list] = {}
+    rep_activity_types_raw: dict[str, list] = {}
+    rep_activity_types_standard: dict[str, list] = {}
     rep_months: dict[str, set] = {}
 
     for act in activities:
@@ -72,7 +74,12 @@ def build_crm_result_asset(
         rep_hospitals.setdefault(rep_id, set()).add(act.hospital_id)
         if act.has_detail_call:
             rep_detail_counts[rep_id] += 1
-        rep_activity_types.setdefault(rep_id, []).append(act.activity_type)
+        raw_type = str(act.activity_type_raw or "").strip()
+        std_type = str(act.activity_type_standard or act.activity_type or "").strip()
+        if raw_type:
+            rep_activity_types_raw.setdefault(rep_id, []).append(raw_type)
+        if std_type:
+            rep_activity_types_standard.setdefault(rep_id, []).append(std_type)
         rep_months.setdefault(rep_id, set()).add(act.metric_month)
 
     behavior_profiles = []
@@ -82,8 +89,10 @@ def build_crm_result_asset(
         total_v = rep_visits.get(rep_id, 0)
         unique_h = len(rep_hospitals.get(rep_id, set()))
         detail_c = rep_detail_counts.get(rep_id, 0)
-        type_counter = Counter(rep_activity_types.get(rep_id, []))
-        top_types = [t for t, _ in type_counter.most_common(3)]
+        type_counter_raw = Counter(rep_activity_types_raw.get(rep_id, []))
+        type_counter_standard = Counter(rep_activity_types_standard.get(rep_id, []))
+        top_types_raw = [t for t, _ in type_counter_raw.most_common(3)]
+        top_types_standard = [t for t, _ in type_counter_standard.most_common(3)]
         months = sorted(rep_months.get(rep_id, set()))
 
         meta = rep_meta.get(rep_id)
@@ -96,7 +105,9 @@ def build_crm_result_asset(
             unique_hospitals=unique_h,
             avg_visits_per_hospital=round(total_v / unique_h, 2) if unique_h > 0 else 0.0,
             detail_call_rate=round(detail_c / max(total_v, 1), 3),
-            top_activity_types=top_types,
+            top_activity_types=top_types_standard,
+            top_activity_types_raw=top_types_raw,
+            top_activity_types_standard=top_types_standard,
             active_months=months,
         )
         behavior_profiles.append(profile)
@@ -132,10 +143,16 @@ def build_crm_result_asset(
     # ── 4. 활동 문맥 요약 ─────────────────────────────────────────────────────
     all_dates = [act.activity_date for act in activities]
     all_products: set[str] = set()
-    all_activity_types: set[str] = set()
+    all_activity_types_raw: set[str] = set()
+    all_activity_types_standard: set[str] = set()
     for act in activities:
         all_products.update(act.products_mentioned)
-        all_activity_types.add(act.activity_type)
+        raw_type = str(act.activity_type_raw or "").strip()
+        std_type = str(act.activity_type_standard or act.activity_type or "").strip()
+        if raw_type:
+            all_activity_types_raw.add(raw_type)
+        if std_type:
+            all_activity_types_standard.add(std_type)
 
     activity_context = ActivityContextSummary(
         total_activity_records=len(activities),
@@ -144,7 +161,9 @@ def build_crm_result_asset(
         unique_reps=len(all_rep_ids),
         unique_hospitals=len(set(act.hospital_id for act in activities)),
         unique_branches=len(set(act.branch_id for act in activities)),
-        activity_types_found=sorted(all_activity_types),
+        activity_types_found=sorted(all_activity_types_standard),
+        activity_types_raw_found=sorted(all_activity_types_raw),
+        activity_types_standard_found=sorted(all_activity_types_standard),
         products_mentioned=sorted(all_products),
     )
 
@@ -164,11 +183,16 @@ def build_crm_result_asset(
     )
 
     # ── 6. Result Asset 조립 ──────────────────────────────────────────────────
+    rep_monthly_kpi_11, monthly_kpi_11, metric_version = compute_crm_kpi_bundle(activities)
+
     return CrmResultAsset(
         behavior_profiles=behavior_profiles,
         monthly_kpi=monthly_kpi,
         activity_context=activity_context,
         mapping_quality=mapping_quality,
+        metric_version=metric_version,
+        rep_monthly_kpi_11=rep_monthly_kpi_11,
+        monthly_kpi_11=monthly_kpi_11,
         notes=notes,
     )
 

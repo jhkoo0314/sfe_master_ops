@@ -32,7 +32,9 @@ class RepBehaviorProfile(BaseModel):
     unique_hospitals: int = Field(0, description="방문한 고유 병원 수")
     avg_visits_per_hospital: float = Field(0.0, description="병원당 평균 방문 횟수")
     detail_call_rate: float = Field(0.0, ge=0.0, le=1.0, description="상세 설명 비율 (0~1)")
-    top_activity_types: list[str] = Field(default_factory=list, description="주요 활동 유형 상위 3개")
+    top_activity_types: list[str] = Field(default_factory=list, description="주요 활동 유형 상위 3개(표준)")
+    top_activity_types_raw: list[str] = Field(default_factory=list, description="주요 활동 유형 상위 3개(원본)")
+    top_activity_types_standard: list[str] = Field(default_factory=list, description="주요 활동 유형 상위 3개(표준)")
     active_months: list[str] = Field(default_factory=list, description="활동이 있는 월 목록 (YYYYMM)")
 
 
@@ -54,7 +56,9 @@ class ActivityContextSummary(BaseModel):
     unique_reps: int = 0
     unique_hospitals: int = 0
     unique_branches: int = 0
-    activity_types_found: list[str] = Field(default_factory=list)
+    activity_types_found: list[str] = Field(default_factory=list, description="발견된 활동 유형(표준)")
+    activity_types_raw_found: list[str] = Field(default_factory=list, description="발견된 활동 유형(원본)")
+    activity_types_standard_found: list[str] = Field(default_factory=list, description="발견된 활동 유형(표준)")
     products_mentioned: list[str] = Field(default_factory=list)
 
 
@@ -71,6 +75,39 @@ class MappingQualitySummary(BaseModel):
     hospital_mapping_rate: float = Field(0.0, ge=0.0, le=1.0, description="병원 매핑 성공률 (0~1)")
     rep_coverage_rate: float = Field(0.0, ge=0.0, le=1.0, description="담당자 커버리지 (0~1)")
     unmapped_hospital_names: list[str] = Field(default_factory=list, description="매핑 실패 병원명 목록 (최대 20개)")
+
+
+class CrmKpiMetricSet(BaseModel):
+    """CRM 11개 KPI 점수 세트."""
+    hir: float = 0.0
+    rtr: float = 0.0
+    bcr: float = 0.0
+    phr: float = 0.0
+    nar: float = 0.0
+    ahs: float = 0.0
+    pv: float = 0.0
+    fgr: float = 0.0
+    pi: float = 0.0
+    trg: float = 0.0
+    swr: float = 0.0
+    coach_score: float = 0.0
+
+
+class RepMonthlyKpi11(BaseModel):
+    """담당자 x 월 단위 CRM KPI."""
+    rep_id: str
+    metric_month: str = Field(..., description="집계 기준 월 (YYYYMM)")
+    metric_set: CrmKpiMetricSet = Field(default_factory=CrmKpiMetricSet)
+    behavior_mix_8: dict[str, float] = Field(default_factory=dict, description="HIR 8대 행동축 분포(0~1)")
+    unscored_reasons: list[str] = Field(default_factory=list)
+
+
+class MonthlyKpi11Summary(BaseModel):
+    """월 단위 CRM KPI 요약."""
+    metric_month: str = Field(..., description="집계 기준 월 (YYYYMM)")
+    metric_set: CrmKpiMetricSet = Field(default_factory=CrmKpiMetricSet)
+    rep_count: int = 0
+    unscored_count: int = 0
 
 
 # ────────────────────────────────────────
@@ -116,6 +153,18 @@ class CrmResultAsset(BaseModel):
     mapping_quality: MappingQualitySummary = Field(
         default_factory=MappingQualitySummary,
         description="매핑 품질 요약 (OPS 판단 핵심)"
+    )
+    metric_version: str = Field(
+        default="crm_kpi_engine_v1",
+        description="CRM KPI 계산 규격 버전"
+    )
+    rep_monthly_kpi_11: list[RepMonthlyKpi11] = Field(
+        default_factory=list,
+        description="담당자 x 월 단위 11 KPI 목록"
+    )
+    monthly_kpi_11: list[MonthlyKpi11Summary] = Field(
+        default_factory=list,
+        description="월 단위 11 KPI 요약"
     )
 
     # OPS와의 연결 메타

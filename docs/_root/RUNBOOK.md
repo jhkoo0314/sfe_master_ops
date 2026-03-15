@@ -212,6 +212,15 @@ Builder 결과:
 - `total_valid_preview.html`은 개별 HTML을 한 화면에서 묶어 보여주는 허브입니다.
 - 통합 보고서도 새 계산을 하지 않고, 이미 만든 HTML을 연결해서 보여주는 역할입니다.
 
+### 8-1. 2026-03-15 CRM KPI 고정 규칙
+
+- CRM KPI 공식 계산 소스: `modules/kpi/crm_engine.py`
+- CRM 표준 활동유형: 8대 행동 고정
+  - `PT / Demo / Closing / Needs / FaceToFace / Contact / Access / Feedback`
+- Adapter는 `activity_type_raw`와 `activity_type_standard`를 함께 저장
+- CRM Builder는 KPI를 재계산하지 않음 (`crm_result_asset` 주입 전용)
+- Sandbox도 CRM KPI를 재계산하지 않음 (CRM 입력 KPI 사용)
+
 ## 9. 처방 보고서 운영 메모
 
 - 미리보기 HTML은 경량화된 버전입니다.

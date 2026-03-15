@@ -1,6 +1,7 @@
 # SFE OPS Master Document Index
 
 작성일: 2026-03-10
+최종 업데이트: 2026-03-15
 
 ## 0. 이 문서의 역할
 
@@ -75,9 +76,14 @@
 ### Step 4. 다음 세션 handoff 읽기
 
 10. `10_Next_Session_Engineering_Roadmap.md`
+11. `12_CRM_KPI_Governance_Recovery_Plan.md`
 
 이 문서는 현재 구현이 어디까지 끝났는지와
 다음 우선순위를 새 세션에서 어떻게 이어갈지 정리한 문서다.
+
+현재 상태 메모:
+- `12_CRM_KPI_Governance_Recovery_Plan.md`는 Phase 1~6 실행 완료 상태까지 반영됨
+- 다음 우선순위는 Phase 7(모듈별 KPI 엔진 분리 설계) 문서화
 
 ---
 

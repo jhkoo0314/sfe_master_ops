@@ -252,7 +252,7 @@ class CrmActivityAdapterConfig(BaseModel):
     activity_date_col: str    # 활동 일자 컬럼명
 
     # 활동 상세 (필수)
-    activity_type_col: str    # 활동 유형 컬럼명 (방문/전화 등)
+    activity_type_col: str    # 활동 유형 컬럼명 (표준화 후 8대 행동으로 변환)
 
     # 선택 컬럼
     visit_count_col: Optional[str] = None        # 방문 건수 컬럼명 (없으면 1로 처리)
@@ -279,9 +279,9 @@ class CrmActivityAdapterConfig(BaseModel):
     # 활동 유형 표준화 매핑
     activity_type_map: Optional[dict[str, str]] = None
     """
-    회사별 활동 유형 표현 → 공통 표현 매핑.
+    회사별 활동 유형 표현 → 8대 행동(PT/Demo/Closing/Needs/FaceToFace/Contact/Access/Feedback) 매핑.
     None이면 기본 매핑 사용.
-    예: {"F2F": "방문", "Phone call": "전화", "e-detail": "디지털"}
+    예: {"F2F": "FaceToFace", "Phone call": "Contact", "e-detail": "Demo"}
     """
 
     @classmethod
@@ -316,11 +316,11 @@ class CrmActivityAdapterConfig(BaseModel):
             notes_col="Comments",
             date_format="%m/%d/%Y",
             activity_type_map={
-                "Face to Face": "방문",
-                "Phone": "전화",
-                "Email": "이메일",
-                "Remote": "화상",
-                "Group": "행사",
+                "Face to Face": "FaceToFace",
+                "Phone": "Contact",
+                "Email": "Contact",
+                "Remote": "Contact",
+                "Group": "Demo",
             },
         )
 
@@ -365,13 +365,13 @@ class CrmActivityAdapterConfig(BaseModel):
             weighted_activity_score_col="가중활동점수",
             next_action_text_col="차기액션",
             activity_type_map={
-                "접근": "방문",
-                "컨택": "전화",
-                "대면": "방문",
-                "pt": "행사",
-                "시연": "디지털",
-                "니즈환기": "방문",
-                "클로징": "방문",
-                "피드백": "전화",
+                "접근": "Access",
+                "컨택": "Contact",
+                "대면": "FaceToFace",
+                "pt": "PT",
+                "시연": "Demo",
+                "니즈환기": "Needs",
+                "클로징": "Closing",
+                "피드백": "Feedback",
             },
         )

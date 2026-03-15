@@ -269,14 +269,18 @@ def _build_report_template_payload(
         "detail_calls": 0.0,
         "active_days": 0.0,
         "next_actions": 0.0,
-        "weighted_sum": 0.0,
-        "weighted_count": 0.0,
-        "sentiment_sum": 0.0,
-        "sentiment_count": 0.0,
-        "quality_sum": 0.0,
-        "quality_count": 0.0,
-        "impact_sum": 0.0,
-        "impact_count": 0.0,
+        "hir_sum": 0.0,
+        "hir_count": 0.0,
+        "rtr_sum": 0.0,
+        "rtr_count": 0.0,
+        "bcr_sum": 0.0,
+        "bcr_count": 0.0,
+        "phr_sum": 0.0,
+        "phr_count": 0.0,
+        "pi_sum": 0.0,
+        "pi_count": 0.0,
+        "fgr_sum": 0.0,
+        "fgr_count": 0.0,
     }))
     rep_product: dict[str, dict[str, dict]] = defaultdict(lambda: defaultdict(lambda: {
         "product_name": None,
@@ -371,19 +375,31 @@ def _build_report_template_payload(
         bucket["detail_calls"] += row.detail_call_count
         bucket["active_days"] += row.active_day_count
         bucket["next_actions"] += row.next_action_count
-        if row.avg_weighted_activity_score is not None:
-            bucket["weighted_sum"] += row.avg_weighted_activity_score
-            bucket["weighted_count"] += 1
-        if row.avg_sentiment_score is not None:
-            bucket["sentiment_sum"] += row.avg_sentiment_score
-            bucket["sentiment_count"] += 1
-        if row.avg_quality_factor is not None:
-            bucket["quality_sum"] += row.avg_quality_factor
-            bucket["quality_count"] += 1
-        if row.avg_impact_factor is not None:
-            bucket["impact_sum"] += row.avg_impact_factor
-            bucket["impact_count"] += 1
-        if row.activity_types:
+        if row.hir is not None:
+            bucket["hir_sum"] += float(row.hir)
+            bucket["hir_count"] += 1
+        if row.rtr is not None:
+            bucket["rtr_sum"] += float(row.rtr)
+            bucket["rtr_count"] += 1
+        if row.bcr is not None:
+            bucket["bcr_sum"] += float(row.bcr)
+            bucket["bcr_count"] += 1
+        if row.phr is not None:
+            bucket["phr_sum"] += float(row.phr)
+            bucket["phr_count"] += 1
+        if row.pi is not None:
+            bucket["pi_sum"] += float(row.pi)
+            bucket["pi_count"] += 1
+        if row.fgr is not None:
+            bucket["fgr_sum"] += float(row.fgr)
+            bucket["fgr_count"] += 1
+
+        if row.behavior_mix_8:
+            visit_weight = max(float(row.total_visits), 1.0)
+            for behavior_key, mix_value in row.behavior_mix_8.items():
+                norm_key = normalize_behavior_key(behavior_key)
+                rep_activity_counts[row.rep_id][norm_key] += max(float(mix_value), 0.0) * visit_weight
+        elif row.activity_types:
             distributed_count = max(float(row.total_visits) / max(len(row.activity_types), 1), 1.0)
             for activity_type in row.activity_types:
                 rep_activity_counts[row.rep_id][normalize_behavior_key(activity_type)] += distributed_count
@@ -456,29 +472,37 @@ def _build_report_template_payload(
         total_detail_calls = sum(vals["detail_calls"] for vals in month_stats.values())
         total_active_days = sum(vals["active_days"] for vals in month_stats.values())
         total_next_actions = sum(vals["next_actions"] for vals in month_stats.values())
-        weighted_sum = sum(vals["weighted_sum"] for vals in month_stats.values())
-        weighted_count = sum(vals["weighted_count"] for vals in month_stats.values())
-        sentiment_sum = sum(vals["sentiment_sum"] for vals in month_stats.values())
-        sentiment_count = sum(vals["sentiment_count"] for vals in month_stats.values())
-        quality_sum = sum(vals["quality_sum"] for vals in month_stats.values())
-        quality_count = sum(vals["quality_count"] for vals in month_stats.values())
-        impact_sum = sum(vals["impact_sum"] for vals in month_stats.values())
-        impact_count = sum(vals["impact_count"] for vals in month_stats.values())
+        hir_sum = sum(vals["hir_sum"] for vals in month_stats.values())
+        hir_count = sum(vals["hir_count"] for vals in month_stats.values())
+        rtr_sum = sum(vals["rtr_sum"] for vals in month_stats.values())
+        rtr_count = sum(vals["rtr_count"] for vals in month_stats.values())
+        bcr_sum = sum(vals["bcr_sum"] for vals in month_stats.values())
+        bcr_count = sum(vals["bcr_count"] for vals in month_stats.values())
+        phr_sum = sum(vals["phr_sum"] for vals in month_stats.values())
+        phr_count = sum(vals["phr_count"] for vals in month_stats.values())
+        pi_sum = sum(vals["pi_sum"] for vals in month_stats.values())
+        pi_count = sum(vals["pi_count"] for vals in month_stats.values())
+        fgr_sum = sum(vals["fgr_sum"] for vals in month_stats.values())
+        fgr_count = sum(vals["fgr_count"] for vals in month_stats.values())
 
-        hir = round(((weighted_sum / weighted_count) * 55.0) if weighted_count else ((total_detail_calls / max(total_visits, 1)) * 100.0), 1)
-        rtr = round(((sentiment_sum / sentiment_count) * 100.0) if sentiment_count else 0.0, 1)
-        bcr = round((total_active_days / max(len(months) * 20, 1)) * 100.0, 1)
-        phr = round((total_next_actions / max(total_visits, 1)) * 100.0, 1)
-        pi = round((total_actual / total_target) * 100.0, 1) if total_target > 0 else 0.0
-        prev_sales = monthly_actual[max(len(months) - 2, 0)] if len(months) >= 2 else 0.0
-        cur_sales = monthly_actual[max(len(months) - 1, 0)] if months else 0.0
-        fgr = round(((cur_sales - prev_sales) / prev_sales) * 100.0, 1) if prev_sales > 0 else 0.0
+        # Phase 5: CRM KPI는 Sandbox에서 재계산하지 않고 CRM Result Asset 값을 사용한다.
+        hir = round((hir_sum / hir_count), 1) if hir_count > 0 else 0.0
+        rtr = round((rtr_sum / rtr_count), 1) if rtr_count > 0 else 0.0
+        bcr = round((bcr_sum / bcr_count), 1) if bcr_count > 0 else 0.0
+        phr = round((phr_sum / phr_count), 1) if phr_count > 0 else 0.0
+        pi = round((pi_sum / pi_count), 1) if pi_count > 0 else 0.0
+        fgr = round((fgr_sum / fgr_count), 1) if fgr_count > 0 else 0.0
         efficiency = round(total_actual / max(total_visits, 1), 0)
         sustainability = round(min(100.0, (bcr * 0.4) + (phr * 0.35) + (max(pi, 0.0) * 0.25)), 1)
         gini = calc_gini(list(rep_hospital_sales.get(rep_id, {}).values()))
         activity_counts = {
             key: round(value, 1)
             for key, value in rep_activity_counts.get(rep_id, {}).items()
+        }
+        activity_total = max(sum(activity_counts.values()), 1.0)
+        shap = {
+            key: round(float(activity_counts.get(key, 0.0)) / activity_total, 2)
+            for key in ["PT", "Demo", "Closing", "Needs", "FaceToFace", "Contact", "Access", "Feedback"]
         }
 
         product_rows = []
@@ -547,16 +571,7 @@ def _build_report_template_payload(
             "gini": gini,
             "coach_scenario": coach_scenario,
             "coach_action": coach_action,
-            "shap": {
-                "PT": round((impact_sum / impact_count), 2) if impact_count else 0.0,
-                "Demo": round((quality_sum / quality_count), 2) if quality_count else 0.0,
-                "Closing": round((total_detail_calls / max(total_visits, 1)), 2),
-                "Needs": round((total_visits / max(len(months) * 30, 1)), 2),
-                "FaceToFace": round((total_active_days / max(len(months) * 20, 1)), 2),
-                "Contact": round((total_next_actions / max(total_visits, 1)), 2),
-                "Access": round((sentiment_sum / sentiment_count), 2) if sentiment_count else 0.0,
-                "Feedback": round((weighted_sum / weighted_count), 2) if weighted_count else 0.0,
-            },
+            "shap": shap,
             "activity_counts": activity_counts,
             "prod_matrix": product_rows[:8] if product_rows else [{"name": "NO_PRODUCT", "ms": 0.0, "growth": 0.0}],
             "prod_analysis": member_prod_analysis,

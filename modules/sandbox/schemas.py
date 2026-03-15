@@ -94,6 +94,20 @@ class CrmDomainRecord(BaseModel):
     avg_weighted_activity_score: Optional[float] = None
     next_action_count: int = 0
     activity_types: list[str] = Field(default_factory=list)
+    # CRM Result Asset 공식 KPI (Sandbox는 이 값을 재계산하지 않고 사용)
+    hir: Optional[float] = None
+    rtr: Optional[float] = None
+    bcr: Optional[float] = None
+    phr: Optional[float] = None
+    nar: Optional[float] = None
+    ahs: Optional[float] = None
+    pv: Optional[float] = None
+    fgr: Optional[float] = None
+    pi: Optional[float] = None
+    trg: Optional[float] = None
+    swr: Optional[float] = None
+    coach_score: Optional[float] = None
+    behavior_mix_8: dict[str, float] = Field(default_factory=dict)
 
 
 class PrescriptionDomainRecord(BaseModel):

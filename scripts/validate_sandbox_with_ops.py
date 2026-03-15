@@ -25,6 +25,7 @@ COMPANY_KEY = get_active_company_key()
 COMPANY_NAME = get_active_company_name(COMPANY_KEY)
 CRM_STANDARD_ROOT = get_company_root(ROOT, "ops_standard", COMPANY_KEY) / "crm"
 SANDBOX_STANDARD_ROOT = get_company_root(ROOT, "ops_standard", COMPANY_KEY) / "sandbox"
+CRM_VALIDATION_ROOT = get_company_root(ROOT, "ops_validation", COMPANY_KEY) / "crm"
 OUTPUT_ROOT = get_company_root(ROOT, "ops_validation", COMPANY_KEY) / "sandbox"
 
 
@@ -54,9 +55,33 @@ def load_crm_domain_records() -> list[CrmDomainRecord]:
             activity_types=("activity_type", lambda s: sorted(set(str(v) for v in s if pd.notna(v)))),
         )
     )
+
+    crm_asset_path = CRM_VALIDATION_ROOT / "crm_result_asset.json"
+    rep_month_kpi: dict[tuple[str, str], dict] = {}
+    if crm_asset_path.exists():
+        asset = json.loads(crm_asset_path.read_text(encoding="utf-8"))
+        for row in asset.get("rep_monthly_kpi_11", []):
+            metric_set = row.get("metric_set", {}) or {}
+            rep_month_kpi[(str(row.get("rep_id", "")), str(row.get("metric_month", "")))] = {
+                "hir": metric_set.get("hir"),
+                "rtr": metric_set.get("rtr"),
+                "bcr": metric_set.get("bcr"),
+                "phr": metric_set.get("phr"),
+                "nar": metric_set.get("nar"),
+                "ahs": metric_set.get("ahs"),
+                "pv": metric_set.get("pv"),
+                "fgr": metric_set.get("fgr"),
+                "pi": metric_set.get("pi"),
+                "trg": metric_set.get("trg"),
+                "swr": metric_set.get("swr"),
+                "coach_score": metric_set.get("coach_score"),
+                "behavior_mix_8": row.get("behavior_mix_8", {}) or {},
+            }
+
     records = []
     for row in grouped.itertuples(index=False):
         meta = rep_meta_map.get(str(row.rep_id), {})
+        kpi = rep_month_kpi.get((str(row.rep_id), str(row.metric_month)), {})
         records.append(CrmDomainRecord(
             hospital_id=str(row.hospital_id),
             rep_id=str(row.rep_id),
@@ -73,6 +98,19 @@ def load_crm_domain_records() -> list[CrmDomainRecord]:
             avg_weighted_activity_score=None if pd.isna(row.avg_weighted_activity_score) else float(row.avg_weighted_activity_score),
             next_action_count=int(row.next_action_count),
             activity_types=list(row.activity_types),
+            hir=None if kpi.get("hir") is None else float(kpi.get("hir")),
+            rtr=None if kpi.get("rtr") is None else float(kpi.get("rtr")),
+            bcr=None if kpi.get("bcr") is None else float(kpi.get("bcr")),
+            phr=None if kpi.get("phr") is None else float(kpi.get("phr")),
+            nar=None if kpi.get("nar") is None else float(kpi.get("nar")),
+            ahs=None if kpi.get("ahs") is None else float(kpi.get("ahs")),
+            pv=None if kpi.get("pv") is None else float(kpi.get("pv")),
+            fgr=None if kpi.get("fgr") is None else float(kpi.get("fgr")),
+            pi=None if kpi.get("pi") is None else float(kpi.get("pi")),
+            trg=None if kpi.get("trg") is None else float(kpi.get("trg")),
+            swr=None if kpi.get("swr") is None else float(kpi.get("swr")),
+            coach_score=None if kpi.get("coach_score") is None else float(kpi.get("coach_score")),
+            behavior_mix_8={str(k): float(v) for k, v in (kpi.get("behavior_mix_8") or {}).items()},
         ))
     return records
 

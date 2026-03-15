@@ -13,6 +13,7 @@ CRM Activity Adapter - CRM 활동 파일 → CrmStandardActivity 변환
 
 from datetime import date
 from pathlib import Path
+import re
 from typing import Any
 try:
     import polars as pl
@@ -27,13 +28,44 @@ from common.exceptions import AdapterInputError, AdapterMappingError
 
 # 기본 활동 유형 표준화 매핑 (Config에서 오버라이드 가능)
 _DEFAULT_ACTIVITY_TYPE_MAP: dict[str, str] = {
-    "방문": "방문", "visit": "방문", "f2f": "방문", "face to face": "방문",
-    "전화": "전화", "phone": "전화", "call": "전화", "phone call": "전화",
-    "이메일": "이메일", "email": "이메일", "e-mail": "이메일",
-    "행사": "행사", "event": "행사", "group": "행사",
-    "디지털": "디지털", "digital": "디지털", "e-detail": "디지털",
-    "화상": "화상", "video": "화상", "remote": "화상",
+    "pt": "PT",
+    "제품설명": "PT",
+    "detailing": "PT",
+    "detail": "PT",
+    "시연": "Demo",
+    "demo": "Demo",
+    "행사": "Demo",
+    "event": "Demo",
+    "group": "Demo",
+    "디지털": "Demo",
+    "edetail": "Demo",
+    "closing": "Closing",
+    "close": "Closing",
+    "클로징": "Closing",
+    "니즈환기": "Needs",
+    "needs": "Needs",
+    "needcreation": "Needs",
+    "need": "Needs",
+    "대면": "FaceToFace",
+    "방문": "FaceToFace",
+    "visit": "FaceToFace",
+    "f2f": "FaceToFace",
+    "facetoface": "FaceToFace",
+    "컨택": "Contact",
+    "전화": "Contact",
+    "call": "Contact",
+    "phone": "Contact",
+    "email": "Contact",
+    "이메일": "Contact",
+    "video": "Contact",
+    "remote": "Contact",
+    "접근": "Access",
+    "access": "Access",
+    "피드백": "Feedback",
+    "feedback": "Feedback",
 }
+
+_BEHAVIOR8_CANONICAL = ("PT", "Demo", "Closing", "Needs", "FaceToFace", "Contact", "Access", "Feedback")
 
 
 def load_crm_activity_from_file(
@@ -141,7 +173,8 @@ def _convert_dataframe_to_standard_activity(
         )
 
     # 활동 유형 표준화 맵 (Config 우선, 없으면 기본 맵)
-    act_type_map = config.activity_type_map or _DEFAULT_ACTIVITY_TYPE_MAP
+    source_map = config.activity_type_map or _DEFAULT_ACTIVITY_TYPE_MAP
+    act_type_map = {str(k).strip().lower(): str(v).strip() for k, v in source_map.items()}
 
     # 회사 마스터 인덱스: (rep_id, normalized_hospital_name) → (hospital_id, branch_id, rep_name, branch_name)
     master_name_index: dict[tuple[str, str], tuple[str, str, str, str]] = {}
@@ -198,8 +231,10 @@ def _convert_dataframe_to_standard_activity(
             continue
 
         # 활동 유형 표준화 (Config 맵 사용)
-        raw_type = str(row.get(config.activity_type_col, "방문")).strip().lower()
-        activity_type = act_type_map.get(raw_type, raw_type)
+        raw_type_value = str(row.get(config.activity_type_col, "방문")).strip()
+        raw_type = raw_type_value.lower()
+        mapped_type = act_type_map.get(raw_type, raw_type_value)
+        activity_type = _normalize_to_behavior8(mapped_type, raw_type_value)
 
         # 방문 건수
         visit_count = 1
@@ -265,6 +300,8 @@ def _convert_dataframe_to_standard_activity(
                 activity_date=act_date,
                 metric_month=metric_month,
                 activity_type=activity_type,
+                activity_type_raw=raw_type_value or None,
+                activity_type_standard=activity_type,
                 visit_count=visit_count,
                 products_mentioned=products,
                 has_detail_call=has_detail,
@@ -304,3 +341,72 @@ def _parse_date_flexible(raw: str) -> date:
         except ValueError:
             continue
     raise ValueError(f"날짜 파싱 실패: '{raw}'")
+
+
+def _normalize_to_behavior8(mapped: str | None, raw: str | None) -> str:
+    """
+    어떤 입력이 와도 표준 활동유형을 8대 행동값으로 고정한다.
+    """
+    candidates = [mapped, raw]
+    direct = {
+        "pt": "PT",
+        "demo": "Demo",
+        "closing": "Closing",
+        "needs": "Needs",
+        "facetoface": "FaceToFace",
+        "contact": "Contact",
+        "access": "Access",
+        "feedback": "Feedback",
+    }
+    aliases = {
+        "제품설명": "PT",
+        "detail": "PT",
+        "detailing": "PT",
+        "시연": "Demo",
+        "행사": "Demo",
+        "event": "Demo",
+        "group": "Demo",
+        "디지털": "Demo",
+        "edetail": "Demo",
+        "close": "Closing",
+        "클로징": "Closing",
+        "니즈환기": "Needs",
+        "need": "Needs",
+        "needcreation": "Needs",
+        "대면": "FaceToFace",
+        "방문": "FaceToFace",
+        "visit": "FaceToFace",
+        "f2f": "FaceToFace",
+        "컨택": "Contact",
+        "전화": "Contact",
+        "call": "Contact",
+        "phone": "Contact",
+        "email": "Contact",
+        "이메일": "Contact",
+        "video": "Contact",
+        "remote": "Contact",
+        "접근": "Access",
+        "피드백": "Feedback",
+    }
+    for value in candidates:
+        token = _normalize_type_token(value)
+        if not token:
+            continue
+        if token in direct:
+            return direct[token]
+        if token in aliases:
+            return aliases[token]
+    return "FaceToFace"
+
+
+def _normalize_type_token(value: str | None) -> str:
+    text = str(value or "").strip()
+    if not text:
+        return ""
+    for canonical in _BEHAVIOR8_CANONICAL:
+        if text == canonical:
+            return canonical.lower()
+    text = text.lower()
+    text = re.sub(r"\(.*?\)", "", text)
+    text = re.sub(r"[\s\-_\/]+", "", text)
+    return text

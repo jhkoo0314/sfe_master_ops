@@ -20,6 +20,24 @@ CRM은 5개 모듈 중 가장 먼저 공통 문맥을 만든다.
 
 `hospital_public -> hospital_master -> company_master_standard -> crm_standard_activity -> crm_result_asset -> OPS`
 
+## 활동유형 표준
+
+CRM 표준 활동유형은 8대 행동으로 고정한다.
+
+- PT
+- Demo
+- Closing
+- Needs
+- FaceToFace
+- Contact
+- Access
+- Feedback
+
+원칙:
+- 원본값은 `activity_type_raw`로 보존한다.
+- 표준값은 `activity_type_standard`로 저장한다.
+- KPI 엔진은 표준값/원본값을 함께 참고할 수 있어야 한다.
+
 ## 공통 계산 원칙
 
 - 기본 단위: 사용자 x 기간(일/주/월)
@@ -118,6 +136,12 @@ CoachScore는 코칭 우선순위용 내부 지표다.
 - `metric_version`
 - `unscored` 상태
 - 신뢰도 분포
+
+## 전달 원칙
+
+- CRM KPI 계산 소스는 `modules/kpi/crm_engine.py` 하나로 유지한다.
+- Builder는 CRM KPI를 재계산하지 않는다.
+- Sandbox도 CRM KPI를 재계산하지 않고 CRM Result Asset 입력값을 사용한다.
 
 ## 철학
 

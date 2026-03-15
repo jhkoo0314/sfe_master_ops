@@ -46,6 +46,20 @@
 4. `Action Queue`
 5. `규칙 / 임계치 외부화`
 
+## 2026-03-15 동기화 상태 (CRM KPI 거버넌스)
+
+이번 동기화에서 반영된 핵심:
+
+- CRM KPI는 `modules/kpi/crm_engine.py`를 공식 계산 소스로 사용
+- CRM 표준 활동유형은 8대 행동으로 고정
+  - `PT / Demo / Closing / Needs / FaceToFace / Contact / Access / Feedback`
+- Adapter는 원본과 표준을 분리 저장
+  - `activity_type_raw` (원본)
+  - `activity_type_standard` (표준 8대 행동)
+- CRM Builder는 KPI를 재계산하지 않고 `crm_result_asset`만 주입
+- Sandbox도 CRM KPI를 재계산하지 않고 CRM 공식 KPI 입력값만 사용
+- `hangyeol_pharma`, `daon_pharma` 기준 CRM->Builder->Sandbox KPI 전달 불일치 0건 확인
+
 ## 핵심 원칙
 
 ```text
