@@ -1,7 +1,7 @@
 """
 Prescription Module Service - PrescriptionStandardFlow → PrescriptionResultAsset
 
-흐름 레코드를 집계하여 OPS에 전달할 Result Asset을 생성한다.
+흐름 레코드를 집계하여 Validation Layer(OPS)에 전달할 Result Asset을 생성한다.
 """
 
 from collections import Counter

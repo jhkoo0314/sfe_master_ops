@@ -1,5 +1,5 @@
 """
-OPS Pipeline API Router
+Validation Layer (OPS) Pipeline API Router
 
 POST /ops/pipeline/run       - 전체 파이프라인 실행
 GET  /ops/pipeline/status    - 현재 파이프라인 상태 요약
@@ -51,7 +51,7 @@ class ModuleInfo(BaseModel):
 @router.post("/run", response_model=PipelineRunResult)
 async def run_full_pipeline(request: PipelineRunRequest):
     """
-    OPS 전체 파이프라인 실행.
+    Sales Data OS 파이프라인의 OPS 검증 단계를 실행.
 
     각 모듈의 Result Asset을 순서대로 평가하고
     전체 흐름의 결과를 반환합니다.
@@ -91,7 +91,7 @@ async def get_status():
 
 @router.get("/modules", response_model=list[ModuleInfo])
 async def list_modules():
-    """활성화된 모든 OPS 모듈 목록 반환."""
+    """활성화된 Validation Layer(OPS) 연계 모듈 목록 반환."""
     status = get_pipeline_status()
     modules = [
         ModuleInfo(
@@ -122,7 +122,7 @@ async def list_modules():
             module="builder",
             endpoint="UI: templates/total_valid_templates.html",
             status=status.module_statuses.get("builder", "미실행"),
-            description="OPS 보고서 HTML 생성 허브"
+            description="검증 승인 payload 기반 HTML 보고서 생성 허브"
         ),
     ]
     return modules

@@ -91,7 +91,7 @@ def _materialize_periodized_report(report_output_path: str, report_period: str, 
 
 def render_dashboard_tab() -> None:
     render_page_hero(
-        "SFE OPERATION SYSTEM",
+        "Sales Data OS Console",
         "",
     )
     result = st.session_state.pipeline_result
@@ -110,7 +110,7 @@ def render_dashboard_tab() -> None:
         dur = f"{result['total_duration_ms']}ms" if result else "—"
         st.markdown(f"""<div class="metric-card"><div class="metric-lbl">엔진 응답 속도</div><div class="metric-val">{dur}</div><div class="metric-sub">전체 파이프라인 수행 시간</div></div>""", unsafe_allow_html=True)
 
-    render_panel_header("SFE 전략 피드백 루프", "실제 OPS 흐름에 맞춰 입력, 정규화, 샌드박스 판단, 산출물 핸드오프 단계로 다시 구성했습니다.")
+    render_panel_header("Sales Data OS 피드백 루프", "Validation Layer (OPS) 흐름에 맞춰 입력, 정규화, 샌드박스 판단, 산출물 핸드오프 단계로 구성했습니다.")
     st.markdown(
         """
         <div class="ops-network">
@@ -128,7 +128,7 @@ def render_dashboard_tab() -> None:
             <div class="flow-arrow">→</div>
             <div class="decision-core">
               <div class="core-icon">🔬</div>
-              <div class="core-title">Operation System Engine</div>
+              <div class="core-title">Validation Layer (OPS)</div>
               <div class="core-copy">정규화된 데이터를 검증하고, 점수와 이유를 만든 뒤 다음 모듈 핸드오프 여부를 결정합니다.</div>
               <div class="decision-badges"><span>Normalize</span><span>Scoring</span><span>Handoff</span></div>
             </div>
@@ -144,7 +144,7 @@ def render_dashboard_tab() -> None:
               </div>
             </div>
           </div>
-          <div class="helper-note" style="text-align:center; margin-top:18px;">입력 데이터가 Sandbox를 거쳐 Territory와 Builder로 전달되고, 결과가 다시 입력 품질 개선으로 연결되는 OPS 루프입니다.</div>
+          <div class="helper-note" style="text-align:center; margin-top:18px;">입력 데이터가 Sandbox를 거쳐 Territory와 Builder로 전달되고, 결과가 다시 입력 품질 개선으로 연결되는 Sales Data OS 루프입니다.</div>
         </div>
         """,
         unsafe_allow_html=True,
@@ -232,7 +232,7 @@ def render_upload_tab() -> None:
 
 def render_pipeline_tab() -> None:
     company_name = get_active_company_name()
-    render_page_hero("OPS 파이프라인 실행", f"{company_name} 원천 파일을 실제 source 경로에 반영한 뒤, 정규화와 검증 스크립트를 순서대로 실행합니다.", "ENGINE RUN")
+    render_page_hero("Validation Layer (OPS) 실행", f"{company_name} 원천 파일을 실제 source 경로에 반영한 뒤, 정규화와 검증 스크립트를 순서대로 실행합니다.", "ENGINE RUN")
     uploaded = st.session_state.uploaded_data
     crm_status = get_crm_package_status(uploaded)
     ready = [k for k, v in uploaded.items() if v is not None]
@@ -279,7 +279,7 @@ def render_pipeline_tab() -> None:
 
     if run_btn:
         try:
-            with st.spinner("OPS 파이프라인 실행 중..."):
+            with st.spinner("Validation Layer (OPS) 파이프라인 실행 중..."):
                 add_log(f"파이프라인 시작 — 실행 모드: {get_execution_mode_label(current_mode)}")
                 result = run_actual_pipeline(execution_mode=current_mode, uploaded=uploaded)
                 st.session_state.pipeline_result = result
@@ -375,7 +375,7 @@ def render_builder_tab() -> None:
             unsafe_allow_html=True,
         )
 
-    render_block_card("📊 OPS 분석 보고서", "현재 검증이 끝난 결과물 중 어떤 HTML 보고서를 열고 확인할지 선택하는 블록입니다.", "Output Block 01")
+    render_block_card("📊 OPS Validation Result", "현재 검증이 끝난 결과물 중 어떤 HTML 보고서를 열고 확인할지 선택하는 블록입니다.", "Output Block 01")
     report_type = st.selectbox("보고서 유형", get_report_type_options())
     period_col1, period_col2, period_col3 = st.columns(3)
     current_year = datetime.now().year

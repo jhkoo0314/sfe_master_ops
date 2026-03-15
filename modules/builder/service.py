@@ -1,6 +1,9 @@
 """
 HTML Builder Service
-OPS Result Asset / Builder Payload → 분석 보고 HTML 자동 생성
+Validation-approved Result Asset / Builder Payload → 분석 보고 HTML 자동 생성
+
+Builder is render-only and does not recalculate KPI.
+Builder consumes validated payloads only.
 """
 
 from __future__ import annotations

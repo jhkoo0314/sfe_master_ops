@@ -14,7 +14,7 @@ def render_page_hero(title: str, subtitle: str, badge: str | None = None) -> Non
         f"""
         <div class="page-hero">
           <div>
-            <div class="hero-kicker">SFE MASTER OPS</div>
+            <div class="hero-kicker">Sales Data OS Console</div>
             <h1>{title}</h1>
             <p>{subtitle}</p>
           </div>

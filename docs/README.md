@@ -1,6 +1,6 @@
 # Documentation Hub
 
-이 폴더는 SFE OPS 문서 허브다.
+이 폴더는 Sales Data OS 문서 허브다.
 
 ## 문서 위치
 
@@ -11,6 +11,8 @@
   - `RUNBOOK.md`
   - `STRUCTURE.md`
 - `docs/ai/`: Codex 작업용 축약 문서 세트
+- `docs/architecture/`: Sales Data OS 아키텍처 감사/목표/리팩토링 계획
+- `docs/runbook/`: Sales Data OS 기준 운영 런북
 
 ## 권장 읽기 순서
 

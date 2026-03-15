@@ -1,5 +1,5 @@
 """
-SFE OPS 운영 콘솔 (Streamlit)
+Sales Data OS 운영 콘솔 (Streamlit)
 
 실행 방법:
   cd c:\\sfe_master_ops
@@ -25,7 +25,7 @@ from ui.console_tabs import (
 
 
 st.set_page_config(
-    page_title="SFE OPS 운영 콘솔",
+    page_title="Sales Data OS Console",
     page_icon="⚡",
     layout="wide",
     initial_sidebar_state="expanded",

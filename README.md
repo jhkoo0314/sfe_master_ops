@@ -1,6 +1,6 @@
-# SFE OPS
+# Sales Data OS
 
-원천데이터를 넣으면 `정규화 -> 모듈 분석 -> OPS 검증 게이트 -> Builder HTML 생성`까지 이어지는 SFE 운영 검증 프로젝트입니다.
+원천데이터를 넣으면 `정규화 -> 모듈 분석 -> OPS 검증 게이트 -> Builder HTML 생성`까지 이어지는 Sales Data OS 운영 검증 프로젝트입니다.
 
 지금 상태의 핵심은 이것입니다.
 
@@ -36,7 +36,7 @@
 - 콘솔, 모듈, Builder, 문서가 같은 구조를 바라보도록 맞춰졌습니다.
 
 따라서 Part 2는 새 기능을 억지로 많이 붙이는 단계보다,
-`OPS를 실제 운영 허브로 키우는 단계`로 가는 것이 맞습니다.
+`Validation Layer(OPS)를 안정화하고 Intelligence Layer를 확장하는 단계`로 가는 것이 맞습니다.
 
 권장 우선순위:
 
@@ -75,7 +75,7 @@
 - OPS는 raw를 직접 읽지 않습니다.
 - Adapter가 먼저 회사별 차이를 정리합니다.
 - 모듈은 자기 Result Asset과 Builder용 payload를 만듭니다.
-- OPS는 계산기보다 `중간 검증 게이트 / 관제실` 역할에 가깝습니다.
+- OPS는 시스템 전체가 아니라 `Validation / Orchestration Layer` 역할에 가깝습니다.
 - Builder는 계산보다는 `payload를 읽어 템플릿에 주입하는 단계`입니다.
 
 ## 현재 동작 범위

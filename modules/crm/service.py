@@ -3,7 +3,7 @@ CRM Module Service - CrmStandardActivity -> CrmResultAsset 생성기
 
 CRM 모듈의 핵심 처리기.
 adapter가 만든 CrmStandardActivity 목록을 집계하여
-OPS에 전달할 CrmResultAsset을 생성한다.
+Validation Layer(OPS)에 전달할 CrmResultAsset을 생성한다.
 
 흐름:
   list[CrmStandardActivity] + list[CompanyMasterStandard]

@@ -14,9 +14,9 @@ def render_sidebar() -> None:
         st.markdown(
             """
             <div class="sidebar-shell">
-              <div class="sidebar-kicker">SFE MASTER OPS</div>
-              <h3>운영 콘솔</h3>
-              <p>html_builder와 같은 톤으로 연결되는 컨트롤 허브입니다.</p>
+              <div class="sidebar-kicker">Sales Data OS Console</div>
+              <h3>Validation Layer (OPS)</h3>
+              <p>검증/오케스트레이션 흐름을 운영하는 컨트롤 허브입니다.</p>
             </div>
             """,
             unsafe_allow_html=True,

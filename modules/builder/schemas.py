@@ -1,9 +1,10 @@
 """
 HTML Builder 스키마
 
-OPS Report Builder
+Sales Data OS Presentation Builder
   - Sandbox/Territory/CRM/Prescription payload → 분석 보고 HTML 자동 생성
   - 정해진 템플릿 슬롯에 데이터 자동 주입
+  - Builder is render-only and does not recalculate KPI.
 """
 
 from __future__ import annotations
@@ -19,7 +20,7 @@ from common.asset_versions import (
 
 
 # ────────────────────────────────────────
-# Layer 1: OPS Report Builder 스키마
+# Layer 1: Presentation Builder 스키마
 # ────────────────────────────────────────
 
 ReportSourceModule = Literal["crm", "sandbox", "territory", "prescription"]
@@ -35,7 +36,7 @@ class ReportSection(BaseModel):
 
 class OpsReportPayload(BaseModel):
     """
-    OPS Result Asset → HTML 렌더링을 위한 표준 페이로드.
+    Validation-approved Result Asset → HTML 렌더링을 위한 표준 페이로드.
     Builder는 이 객체를 받아 HTML을 생성한다.
     """
     report_title: str
@@ -49,7 +50,7 @@ class OpsReportPayload(BaseModel):
 class BuilderInputReference(BaseModel):
     """
     Builder가 어떤 자산을 어떤 템플릿으로 보낼지 설명하는 참조 정보.
-    OPS는 이 메타를 보고 표현 연결을 판단한다.
+    Validation Layer (OPS)는 이 메타를 보고 표현 연결을 판단한다.
     """
     template_key: BuilderTemplateKey
     template_path: str
@@ -98,7 +99,7 @@ class BuilderPayloadStandard(BaseModel):
 class HtmlBuilderResultAsset(BaseModel):
     """
     HTML Builder 최종 산출물.
-    OPS가 이 자산을 평가하여 보고 자산으로 승인한다.
+    Validation Layer (OPS)가 이 자산을 평가하여 보고 자산으로 승인한다.
     """
     schema_version: str = Field(default=HTML_BUILDER_RESULT_SCHEMA_VERSION)
     asset_type: str = "html_builder_result_asset"

@@ -1,4 +1,4 @@
-# SFE OPS RUNBOOK
+# Sales Data OS RUNBOOK
 
 작성일: 2026-03-11
 
@@ -10,7 +10,7 @@
 
 운영 점검 단계에서는 `실행모드`를 고르고 필요한 raw만 넣어 검증합니다.
 
-OPS 역할은 이렇게 이해하면 됩니다.
+Validation Layer (OPS) 역할은 이렇게 이해하면 됩니다.
 
 - 직접 계산 엔진
   - 아님
@@ -19,7 +19,7 @@ OPS 역할은 이렇게 이해하면 됩니다.
 - 다음 단계 전달 판단
   - 맞음
 
-즉 OPS는 `중앙 운영 통제실`처럼 동작합니다.
+즉 OPS는 Sales Data OS 안에서 `중앙 운영 통제 레이어`처럼 동작합니다.
 
 현재 운영 범위 한 줄 요약:
 - CRM / Prescription / Sandbox / Territory / Builder는 실행 가능

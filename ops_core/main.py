@@ -1,7 +1,7 @@
 """
-OPS Core FastAPI 앱 진입점
+Validation Layer (OPS) FastAPI 앱 진입점
 
-SFE OPS의 중앙 판단 엔진.
+Sales Data OS에서 OPS는 Validation / Orchestration Layer를 담당한다.
 모든 모듈의 Result Asset 평가, 연결 판단, 상태 조회를 담당한다.
 
 실행:
@@ -22,12 +22,12 @@ from ops_core.api.pipeline_router import router as pipeline_router
 # ────────────────────────────────────────
 
 app = FastAPI(
-    title="SFE OPS Core API",
+    title="Sales Data OS Validation API (OPS)",
     description=(
-        "SFE OPS 중앙 운영 엔진. "
+        "Sales Data OS의 Validation / Orchestration API. "
         "5개 모듈(CRM, Prescription, Sandbox, Territory, Builder)의 "
         "Result Asset을 평가하고 연결을 판단합니다.\n\n"
-        "핵심 원칙: 원천데이터 → Adapter → Module → Result Asset → OPS"
+        "핵심 원칙: 원천데이터 → Adapter → Module → Result Asset → Validation Layer (OPS)"
     ),
     version="0.1.0",
     docs_url="/docs",
@@ -60,13 +60,13 @@ app.include_router(pipeline_router)
 # 기본 엔드포인트
 # ────────────────────────────────────────
 
-@app.get("/", summary="OPS Core 상태 확인")
+@app.get("/", summary="Validation Layer (OPS) 상태 확인")
 async def root():
     return {
-        "service": "SFE OPS Core API",
+        "service": "Sales Data OS Validation API (OPS)",
         "version": "0.1.0",
         "status": "running",
-        "principle": "원천데이터 → Adapter → Module → Result Asset → OPS",
+        "principle": "원천데이터 → Adapter → Module → Result Asset → Validation Layer (OPS)",
         "active_modules": ["crm", "prescription", "sandbox", "territory", "pipeline"],
         "ui_modules": [
             "streamlit_console (ui/ops_console.py)",
@@ -83,7 +83,7 @@ async def root():
 
 @app.get("/ops/diagram")
 async def get_pipeline_diagram():
-    """OPS 파이프라인 흐름 다이어그램 반환."""
+    """Validation Layer (OPS) 파이프라인 흐름 다이어그램 반환."""
     return {
         "pipeline": [
             {"step": 1, "module": "crm",          "asset": "crm_result_asset",          "eval": "POST /ops/crm/evaluate"},
@@ -93,7 +93,7 @@ async def get_pipeline_diagram():
             {"step": 5, "module": "builder",       "asset": "html_builder_result_asset",  "eval": "UI: templates/total_valid_templates.html"},
         ],
         "orchestrator": "POST /ops/pipeline/run",
-        "principle": "원천데이터 → Adapter → Module → Result Asset → OPS 평가 → Handoff",
+        "principle": "원천데이터 → Adapter → Module → Result Asset → OPS Validation 평가 → Handoff",
     }
 
 @app.get("/ops/status", summary="전체 모듈 상태 조회")
