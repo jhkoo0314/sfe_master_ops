@@ -16,6 +16,7 @@ import shutil
 from common.asset_versions import build_source_version_snapshot, extract_source_version_snapshot
 from modules.crm.builder_payload import build_chunked_crm_payload
 from modules.prescription.builder_payload import build_chunked_prescription_payload
+from modules.radar.builder_payload import build_radar_builder_payload
 from modules.sandbox.builder_payload import build_chunked_sandbox_payload
 from modules.territory.builder_payload import build_chunked_territory_payload
 from modules.builder.schemas import (
@@ -25,6 +26,7 @@ from modules.builder.schemas import (
     HtmlBuilderResultAsset,
 )
 from result_assets.sandbox_result_asset import SandboxResultAsset
+from result_assets.radar_result_asset import RadarResultAsset
 
 
 def build_sandbox_template_input(
@@ -163,6 +165,38 @@ def build_crm_template_input(
     )
 
 
+def build_radar_template_input(
+    asset: RadarResultAsset,
+    template_path: str,
+    source_asset_path: str | None = None,
+) -> BuilderInputStandard:
+    payload_seed = build_radar_builder_payload(asset)
+    source_versions = build_source_version_snapshot(
+        "radar",
+        schema_version=getattr(asset, "schema_version", None),
+        payload_version=str(payload_seed.get("payload_version") or ""),
+        builder_contract_version=str(payload_seed.get("builder_contract_version") or ""),
+    )
+    reference = BuilderInputReference(
+        template_key="radar_report",
+        template_path=template_path,
+        source_module="radar",
+        asset_type=asset.asset_type,
+        source_asset_path=source_asset_path,
+        description="RADAR result asset -> radar report template 주입",
+    )
+    return BuilderInputStandard(
+        template_key="radar_report",
+        template_path=template_path,
+        report_title=str(payload_seed.get("report_title") or "RADAR Decision Brief"),
+        executive_summary=[str(asset.summary.top_issue or "No critical issue detected")],
+        source_references=[reference],
+        source_versions=source_versions,
+        payload_seed=payload_seed,
+        source_modules=["radar"],
+    )
+
+
 def build_template_payload(builder_input: BuilderInputStandard) -> BuilderPayloadStandard:
     if builder_input.template_key == "report_template":
         return BuilderPayloadStandard(
@@ -212,6 +246,18 @@ def build_template_payload(builder_input: BuilderInputStandard) -> BuilderPayloa
             render_mode="crm_window_vars",
         )
 
+    if builder_input.template_key == "radar_report":
+        return BuilderPayloadStandard(
+            template_key="radar_report",
+            template_path=builder_input.template_path,
+            report_title=builder_input.report_title,
+            payload=builder_input.payload_seed,
+            source_versions=builder_input.source_versions,
+            source_modules=builder_input.source_modules,
+            output_name="radar_report_preview.html",
+            render_mode="radar_window_vars",
+        )
+
     raise ValueError(f"지원하지 않는 template_key: {builder_input.template_key}")
 
 
@@ -251,6 +297,24 @@ def render_builder_html(builder_payload: BuilderPayloadStandard) -> str:
             count=1,
         )
         return rendered
+
+    if builder_payload.render_mode == "radar_window_vars":
+        radar_script = (
+            "<script>"
+            f"window.__RADAR_DATA__ = {json.dumps(builder_payload.payload, ensure_ascii=False)};"
+            "</script>"
+        )
+        if "window.__RADAR_DATA__" in template_text:
+            rendered = re.sub(
+                r"window\.__RADAR_DATA__ = [\s\S]*?;",
+                f"window.__RADAR_DATA__ = {json.dumps(builder_payload.payload, ensure_ascii=False)};",
+                template_text,
+                count=1,
+            )
+            return rendered
+        if "</head>" in template_text:
+            return template_text.replace("</head>", f"  {radar_script}\n</head>", 1)
+        return f"{radar_script}\n{template_text}"
 
     raise ValueError(f"지원하지 않는 render_mode: {builder_payload.render_mode}")
 
@@ -314,6 +378,12 @@ def _summarize_payload(builder_payload: BuilderPayloadStandard) -> dict:
             "team_option_count": len(payload.get("filters", {}).get("team_options", [])),
             "rep_scope_count": int(scope_counts.get("rep_scope_count", 0) or 0),
             "matrix_row_count": len(default_scope.get("matrix_rows", [])),
+        }
+    if builder_payload.template_key == "radar_report":
+        return {
+            "signal_count": int(payload.get("signal_count", len(payload.get("signals", []))) or 0),
+            "overall_status": str(payload.get("overall_status") or "normal"),
+            "decision_readiness": int(payload.get("decision_readiness", 0) or 0),
         }
     return {}
 

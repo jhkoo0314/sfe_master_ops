@@ -1,0 +1,550 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>SFE RADAR - Decision Brief</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <style>
+    :root {
+      --primary: #0f172a;
+      --accent: #2563eb;
+      --success: #059669;
+      --warning: #d97706;
+      --danger: #dc2626;
+      --bg-main: #f1f5f9;
+      --card-bg: #ffffff;
+      --border-color: #e2e8f0;
+      --text-main: #1e293b;
+      --text-muted: #64748b;
+      --radius: 10px;
+      --shadow: 0 14px 28px rgba(15, 23, 42, 0.08);
+      --font: "Segoe UI", system-ui, sans-serif;
+    }
+
+    body {
+      background: var(--bg-main);
+      color: var(--text-main);
+      font-family: var(--font);
+      padding: 1.25rem;
+      letter-spacing: -0.01em;
+    }
+
+    .max-w-custom { max-width: 1560px; margin: 0 auto; }
+
+    .card {
+      background: var(--card-bg);
+      border-radius: var(--radius);
+      box-shadow: var(--shadow);
+      border: 1px solid var(--border-color);
+      padding: 1rem;
+      margin-bottom: 1rem;
+    }
+
+    .metric-label {
+      font-size: 0.7rem;
+      font-weight: 700;
+      color: var(--text-muted);
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      margin-bottom: 0.35rem;
+      display: block;
+    }
+
+    .metric-value {
+      font-size: 1.5rem;
+      font-weight: 700;
+      line-height: 1;
+      letter-spacing: -0.02em;
+      font-variant-numeric: tabular-nums;
+    }
+
+    .section-header {
+      display: flex;
+      align-items: center;
+      gap: 0.75rem;
+      margin-bottom: 1rem;
+      padding-bottom: 0.5rem;
+      border-bottom: 1px solid var(--border-color);
+    }
+
+    .section-header h3 {
+      font-size: 1rem;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.03em;
+    }
+
+    .status-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.35rem;
+      padding: 0.35rem 0.6rem;
+      border-radius: 999px;
+      font-size: 0.72rem;
+      font-weight: 800;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      border: 1px solid;
+    }
+
+    .status-normal {
+      color: var(--success);
+      border-color: rgba(5,150,105,.25);
+      background: rgba(5,150,105,.08);
+    }
+
+    .status-warning {
+      color: var(--warning);
+      border-color: rgba(217,119,6,.25);
+      background: rgba(217,119,6,.08);
+    }
+
+    .status-critical {
+      color: var(--danger);
+      border-color: rgba(220,38,38,.25);
+      background: rgba(220,38,38,.08);
+    }
+
+    .signal-card {
+      border-left: 4px solid var(--warning);
+    }
+
+    .signal-card.critical {
+      border-left-color: var(--danger);
+    }
+
+    .signal-card.normal {
+      border-left-color: var(--success);
+    }
+
+    .mini-label {
+      font-size: 0.68rem;
+      font-weight: 800;
+      text-transform: uppercase;
+      letter-spacing: 0.04em;
+      color: var(--text-muted);
+    }
+
+    .decision-option {
+      border: 1px solid var(--border-color);
+      border-radius: 10px;
+      padding: 1rem;
+      background: #fff;
+    }
+
+    .decision-option.recommended {
+      border-color: #2563eb;
+      box-shadow: 0 0 0 2px rgba(37,99,235,.08);
+    }
+
+    table.radar-table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 0.76rem;
+    }
+
+    table.radar-table th,
+    table.radar-table td {
+      border: 1px solid #e2e8f0;
+      padding: 0.6rem;
+      text-align: center;
+    }
+
+    table.radar-table th {
+      background: #f8fafc;
+      color: #64748b;
+      font-weight: 800;
+      text-transform: uppercase;
+      letter-spacing: 0.04em;
+      font-size: 0.68rem;
+    }
+
+    .chart-container {
+      position: relative;
+      height: 260px;
+      width: 100%;
+    }
+  </style>
+</head>
+<body>
+  <div class="max-w-custom">
+
+    <!-- HEADER -->
+    <header class="flex justify-between items-end pb-5 mb-5 border-b-2 border-slate-900">
+      <div>
+        <p class="text-blue-600 font-bold text-xs uppercase tracking-[0.24em] mb-1">
+          Strategic Early Warning System
+        </p>
+        <h1 class="text-3xl font-bold text-slate-900 tracking-tight leading-none">
+          RADAR <span class="text-slate-400 font-normal">DECISION BRIEF</span>
+          <span class="ml-1 text-[0.72rem] font-semibold text-slate-400 uppercase tracking-[0.18em] align-middle">v0.1</span>
+        </h1>
+          <p id="reportTitle" class="text-slate-500 font-bold text-xs mt-2 uppercase">
+            Monthly Executive Decision Support Report
+          </p>
+      </div>
+
+      <div class="flex flex-col items-end gap-3">
+        <div class="status-badge status-warning" id="overallStatusBadge">
+          ● Warning
+        </div>
+        <div class="text-right">
+          <p class="text-[10px] font-bold text-slate-400 uppercase tracking-widest">기준월</p>
+          <p id="periodLabel" class="text-sm font-black text-slate-900">2026.03</p>
+        </div>
+      </div>
+    </header>
+
+    <!-- EXECUTIVE STRIP -->
+    <div class="grid grid-cols-12 gap-3 mb-6">
+      <div class="col-span-12 md:col-span-8 card border-l-4 border-l-amber-500 !mb-0">
+        <div class="flex items-center justify-between gap-4">
+          <div>
+            <p class="mini-label">Top Issue</p>
+            <h2 id="topIssue" class="text-xl font-bold text-slate-900 mt-1">
+              RTR 저하와 목표 달성 미흡이 동시에 발생
+            </h2>
+            <p id="topIssueDesc" class="text-sm text-slate-600 mt-2">
+              관계 유지 지표 약화가 성과 저하와 함께 관찰되며 관리 개입 우선순위가 높은 상태입니다.
+            </p>
+          </div>
+          <div class="text-right min-w-[180px]">
+            <p class="mini-label">Decision Readiness</p>
+          <div id="decisionReadiness" class="text-3xl font-black text-amber-600 mt-1">82</div>
+            <p class="text-[11px] text-slate-500 font-bold uppercase">priority readiness score</p>
+          </div>
+        </div>
+      </div>
+
+      <div class="col-span-12 md:col-span-4 card !mb-0 bg-slate-900 text-white">
+        <p class="mini-label text-slate-400">Validation Status</p>
+        <div class="mt-3">
+          <div id="validationStatusText" class="text-2xl font-black">APPROVED</div>
+          <p class="text-xs text-slate-300 mt-2">
+            validation-approved result asset 기반
+          </p>
+        </div>
+      </div>
+    </div>
+
+    <!-- KPI CARDS -->
+    <div class="grid grid-cols-6 gap-3 mb-8">
+      <div class="card border-l-4 border-l-blue-600 !mb-0">
+        <span class="metric-label">목표 달성률</span>
+        <div id="kpiGoalAttainment" class="metric-value text-blue-700">93.2%</div>
+      </div>
+      <div class="card border-l-4 border-l-rose-600 !mb-0">
+        <span class="metric-label">PV 변화율</span>
+        <div id="kpiPvChange" class="metric-value text-rose-600">-18.4%</div>
+      </div>
+      <div class="card border-l-4 border-l-amber-600 !mb-0">
+        <span class="metric-label">HIR</span>
+        <div id="kpiHir" class="metric-value text-amber-600">58.3</div>
+      </div>
+      <div class="card border-l-4 border-l-amber-600 !mb-0">
+        <span class="metric-label">RTR</span>
+        <div id="kpiRtr" class="metric-value text-amber-600">67.1</div>
+      </div>
+      <div class="card border-l-4 border-l-slate-800 !mb-0">
+        <span class="metric-label">Signal Count</span>
+        <div id="kpiSignalCount" class="metric-value text-slate-900">3</div>
+      </div>
+      <div class="card border-l-4 border-l-slate-300 !mb-0">
+        <span class="metric-label">Confidence</span>
+        <div id="kpiConfidence" class="metric-value text-slate-500">0.94</div>
+      </div>
+    </div>
+
+    <!-- TOP SIGNALS -->
+    <div class="section-header">
+      <h3>Layer 01 : Top Signals</h3>
+    </div>
+
+    <div class="grid grid-cols-12 gap-4 mb-8">
+      <div class="col-span-12 md:col-span-4 card signal-card critical">
+        <div class="flex items-center justify-between">
+          <span class="status-badge status-critical">Critical</span>
+          <span class="mini-label">Priority 91</span>
+        </div>
+        <h4 class="mt-4 text-lg font-bold text-slate-900">Goal Underperformance</h4>
+        <p class="text-sm text-slate-600 mt-2">
+          목표 달성률이 기준 미만이며, 최근 1개월 성과 하락이 동반됨.
+        </p>
+        <div class="mt-4 text-xs text-slate-500">
+          Scope: Company / Branch 2개
+        </div>
+      </div>
+
+      <div class="col-span-12 md:col-span-4 card signal-card">
+        <div class="flex items-center justify-between">
+          <span class="status-badge status-warning">Warning</span>
+          <span class="mini-label">Priority 82</span>
+        </div>
+        <h4 class="mt-4 text-lg font-bold text-slate-900">RTR Weakness</h4>
+        <p class="text-sm text-slate-600 mt-2">
+          관계 유지 지표가 기대 범위 아래로 하락하며 성과 미달과 동시에 나타남.
+        </p>
+        <div class="mt-4 text-xs text-slate-500">
+          Scope: Branch / Daegu
+        </div>
+      </div>
+
+      <div class="col-span-12 md:col-span-4 card signal-card normal">
+        <div class="flex items-center justify-between">
+          <span class="status-badge status-normal">Monitor</span>
+          <span class="mini-label">Priority 61</span>
+        </div>
+        <h4 class="mt-4 text-lg font-bold text-slate-900">HIR Weakness</h4>
+        <p class="text-sm text-slate-600 mt-2">
+          핵심 타겟 접촉 강도가 약화되고 있으나 아직 치명 수준은 아님.
+        </p>
+        <div class="mt-4 text-xs text-slate-500">
+          Scope: Company
+        </div>
+      </div>
+    </div>
+
+    <!-- ISSUE SUMMARY -->
+    <div class="section-header">
+      <h3>Layer 02 : Issue Summary & Evidence</h3>
+    </div>
+
+    <div class="grid grid-cols-12 gap-4 mb-8">
+      <div class="col-span-12 md:col-span-7 card">
+        <div class="flex justify-between items-center mb-4">
+          <h4 class="text-[11px] font-black text-slate-500 uppercase">Signal Evidence Trend</h4>
+          <span class="text-[10px] font-bold text-slate-400 uppercase">최근 3개월</span>
+        </div>
+        <div class="chart-container">
+          <canvas id="radarTrendChart"></canvas>
+        </div>
+      </div>
+
+      <div class="col-span-12 md:col-span-5 card">
+        <h4 class="text-[11px] font-black text-slate-500 uppercase mb-4">Possible Explanations</h4>
+        <div class="space-y-3 text-sm">
+          <div class="p-3 bg-slate-50 border border-slate-200 rounded-lg">
+            관계 유지 활동의 일관성 저하 가능성
+          </div>
+          <div class="p-3 bg-slate-50 border border-slate-200 rounded-lg">
+            핵심 타겟 접촉 우선순위 분산 가능성
+          </div>
+          <div class="p-3 bg-slate-50 border border-slate-200 rounded-lg">
+            최근 field execution slowdown 가능성
+          </div>
+        </div>
+        <p class="mt-4 text-[11px] text-slate-400 font-bold uppercase">
+          * 확정 원인이 아닌 관리 해석용 힌트
+        </p>
+      </div>
+    </div>
+
+    <!-- DECISION OPTIONS -->
+    <div class="section-header">
+      <h3>Layer 03 : Decision Options</h3>
+    </div>
+
+    <div class="grid grid-cols-12 gap-4 mb-8">
+      <div class="col-span-12 md:col-span-4 decision-option recommended">
+        <div class="flex items-center justify-between">
+          <h4 class="text-lg font-bold text-slate-900">Option A</h4>
+          <span class="status-badge status-warning">Recommended</span>
+        </div>
+        <p class="mt-3 text-sm text-slate-700 font-semibold">Manager Coaching Focus</p>
+        <p class="mt-2 text-sm text-slate-600">
+          branch-level 관계 유지 약화 구간을 점검하고, 팀장 코칭 우선순위를 높인다.
+        </p>
+        <div class="mt-4 text-xs text-slate-500 space-y-1">
+          <div>Expected effect: 중간</div>
+          <div>Risk: 낮음</div>
+          <div>Speed: 빠름</div>
+        </div>
+      </div>
+
+      <div class="col-span-12 md:col-span-4 decision-option">
+        <h4 class="text-lg font-bold text-slate-900">Option B</h4>
+        <p class="mt-3 text-sm text-slate-700 font-semibold">Selective Intervention</p>
+        <p class="mt-2 text-sm text-slate-600">
+          우선순위가 높은 지점만 제한적으로 리뷰하고 다음 월 cycle까지 집중 모니터링한다.
+        </p>
+        <div class="mt-4 text-xs text-slate-500 space-y-1">
+          <div>Expected effect: 중간</div>
+          <div>Risk: 중간</div>
+          <div>Speed: 보통</div>
+        </div>
+      </div>
+
+      <div class="col-span-12 md:col-span-4 decision-option">
+        <h4 class="text-lg font-bold text-slate-900">Option C</h4>
+        <p class="mt-3 text-sm text-slate-700 font-semibold">Monitoring Hold</p>
+        <p class="mt-2 text-sm text-slate-600">
+          추가 조치 없이 다음 cycle 데이터를 확인한 뒤 개입 여부를 재판단한다.
+        </p>
+        <div class="mt-4 text-xs text-slate-500 space-y-1">
+          <div>Expected effect: 낮음</div>
+          <div>Risk: 높음</div>
+          <div>Speed: 빠름</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- SIGNAL TABLE -->
+    <div class="section-header">
+      <h3>Layer 04 : Signal Matrix</h3>
+    </div>
+
+    <div class="card">
+      <table class="radar-table">
+        <thead>
+          <tr>
+            <th>Signal</th>
+            <th>Severity</th>
+            <th>Priority</th>
+            <th>Scope</th>
+            <th>Main Evidence</th>
+            <th>Decision Options</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td>Goal Underperformance</td>
+            <td>Critical</td>
+            <td>91</td>
+            <td>Company</td>
+            <td>93.2%</td>
+            <td>3</td>
+          </tr>
+          <tr>
+            <td>RTR Weakness</td>
+            <td>Warning</td>
+            <td>82</td>
+            <td>Daegu</td>
+            <td>67.1</td>
+            <td>2</td>
+          </tr>
+          <tr>
+            <td>HIR Weakness</td>
+            <td>Monitor</td>
+            <td>61</td>
+            <td>Company</td>
+            <td>58.3</td>
+            <td>2</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+
+    <!-- FOOTNOTE -->
+    <div class="mt-6 text-[11px] text-slate-400 font-bold uppercase tracking-wide">
+      RADAR is an intelligence-layer decision support module.  
+      It does not recalculate KPI, does not assign field schedules, and does not assert root causes with certainty.
+    </div>
+  </div>
+
+  <script>
+    const defaultRadarData = {
+      report_title: "RADAR Decision Brief",
+      period_label: "2026.03",
+      overall_status: "warning",
+      top_issue: "RTR 저하와 목표 달성 미흡이 동시에 발생",
+      top_issue_desc: "관계 유지 지표 약화가 성과 저하와 함께 관찰되며 관리 개입 우선순위가 높은 상태입니다.",
+      decision_readiness: 82,
+      validation_status: "APPROVED",
+      signal_count: 3,
+      confidence: 0.94,
+      kpi_snapshot: {
+        goal_attainment_pct: 93.2,
+        pv_change_pct: -18.4,
+        hir: 58.3,
+        rtr: 67.1
+      },
+      trend_chart: {
+        labels: ['2026.01', '2026.02', '2026.03'],
+        goal_attainment: [101, 97, 93.2],
+        rtr: [73, 70, 67.1],
+        hir: [64, 61, 58.3]
+      }
+    };
+    const radarData = (window.__RADAR_DATA__ && typeof window.__RADAR_DATA__ === "object")
+      ? window.__RADAR_DATA__
+      : defaultRadarData;
+
+    const setText = (id, value) => {
+      const el = document.getElementById(id);
+      if (el && value !== undefined && value !== null) el.textContent = String(value);
+    };
+
+    setText("reportTitle", radarData.report_title || defaultRadarData.report_title);
+    setText("periodLabel", radarData.period_label || defaultRadarData.period_label);
+    setText("topIssue", radarData.top_issue || defaultRadarData.top_issue);
+    setText("topIssueDesc", radarData.top_issue_desc || defaultRadarData.top_issue_desc);
+    setText("decisionReadiness", radarData.decision_readiness ?? defaultRadarData.decision_readiness);
+    setText("validationStatusText", radarData.validation_status || defaultRadarData.validation_status);
+
+    const kpi = radarData.kpi_snapshot || defaultRadarData.kpi_snapshot;
+    setText("kpiGoalAttainment", `${Number(kpi.goal_attainment_pct || 0).toFixed(1)}%`);
+    setText("kpiPvChange", `${Number(kpi.pv_change_pct || 0).toFixed(1)}%`);
+    setText("kpiHir", Number(kpi.hir || 0).toFixed(1));
+    setText("kpiRtr", Number(kpi.rtr || 0).toFixed(1));
+    setText("kpiSignalCount", String(radarData.signal_count ?? 0));
+    setText("kpiConfidence", Number(radarData.confidence || 0).toFixed(2));
+
+    const badge = document.getElementById("overallStatusBadge");
+    if (badge) {
+      const status = String(radarData.overall_status || "warning").toLowerCase();
+      badge.classList.remove("status-normal", "status-warning", "status-critical");
+      if (status === "critical") {
+        badge.classList.add("status-critical");
+        badge.textContent = "● Critical";
+      } else if (status === "normal") {
+        badge.classList.add("status-normal");
+        badge.textContent = "● Normal";
+      } else {
+        badge.classList.add("status-warning");
+        badge.textContent = "● Warning";
+      }
+    }
+
+    const trend = radarData.trend_chart || defaultRadarData.trend_chart;
+    const trendCtx = document.getElementById('radarTrendChart');
+    if (trendCtx) {
+      new Chart(trendCtx, {
+        type: 'line',
+        data: {
+          labels: trend.labels || defaultRadarData.trend_chart.labels,
+          datasets: [
+            {
+              label: 'Goal Attainment',
+              data: trend.goal_attainment || defaultRadarData.trend_chart.goal_attainment,
+              borderColor: '#2563eb',
+              backgroundColor: 'rgba(37,99,235,0.08)',
+              tension: 0.3
+            },
+            {
+              label: 'RTR',
+              data: trend.rtr || defaultRadarData.trend_chart.rtr,
+              borderColor: '#d97706',
+              backgroundColor: 'rgba(217,119,6,0.08)',
+              tension: 0.3
+            },
+            {
+              label: 'HIR',
+              data: trend.hir || defaultRadarData.trend_chart.hir,
+              borderColor: '#dc2626',
+              backgroundColor: 'rgba(220,38,38,0.08)',
+              tension: 0.3
+            }
+          ]
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          plugins: { legend: { position: 'bottom' } }
+        }
+      });
+    }
+  </script>
+</body>
+</html>

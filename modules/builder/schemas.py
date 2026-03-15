@@ -23,8 +23,8 @@ from common.asset_versions import (
 # Layer 1: Presentation Builder 스키마
 # ────────────────────────────────────────
 
-ReportSourceModule = Literal["crm", "sandbox", "territory", "prescription"]
-BuilderTemplateKey = Literal["report_template", "territory_map", "prescription_flow", "crm_analysis"]
+ReportSourceModule = Literal["crm", "sandbox", "territory", "prescription", "radar"]
+BuilderTemplateKey = Literal["report_template", "territory_map", "prescription_flow", "crm_analysis", "radar_report"]
 
 class ReportSection(BaseModel):
     """보고서 섹션 하나 (슬롯에 주입될 단위)."""
@@ -90,7 +90,7 @@ class BuilderPayloadStandard(BaseModel):
     source_versions: dict[str, dict[str, str]] = Field(default_factory=dict)
     source_modules: list[str] = Field(default_factory=list)
     output_name: str = "builder_output.html"
-    render_mode: Literal["report_data_json", "territory_window_vars", "prescription_window_vars", "crm_window_vars"] = "report_data_json"
+    render_mode: Literal["report_data_json", "territory_window_vars", "prescription_window_vars", "crm_window_vars", "radar_window_vars"] = "report_data_json"
 
 # ────────────────────────────────────────
 # Builder Result Asset

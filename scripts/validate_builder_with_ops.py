@@ -13,6 +13,7 @@ from modules.builder.service import (
     build_crm_template_input,
     build_html_builder_asset,
     build_prescription_template_input,
+    build_radar_template_input,
     prepare_sandbox_chunk_assets,
     prepare_crm_chunk_assets,
     prepare_prescription_chunk_assets,
@@ -24,6 +25,7 @@ from modules.builder.service import (
 )
 from common.company_runtime import get_active_company_key, get_active_company_name, get_company_root
 from result_assets.sandbox_result_asset import SandboxResultAsset
+from result_assets.radar_result_asset import RadarResultAsset
 
 
 COMPANY_KEY = get_active_company_key()
@@ -32,6 +34,7 @@ CRM_TEMPLATE_PATH = ROOT / "templates" / "crm_analysis_template.html"
 SANDBOX_TEMPLATE_PATH = ROOT / "templates" / "report_template.html"
 TERRITORY_TEMPLATE_PATH = ROOT / "templates" / "territory_optimizer_template.html"
 PRESCRIPTION_TEMPLATE_PATH = ROOT / "templates" / "prescription_flow_template.html"
+RADAR_TEMPLATE_PATH = ROOT / "templates" / "radar_report_template.html"
 CRM_ASSET_PATH = get_company_root(ROOT, "ops_validation", COMPANY_KEY) / "crm" / "crm_result_asset.json"
 CRM_BUILDER_PAYLOAD_PATH = get_company_root(ROOT, "ops_validation", COMPANY_KEY) / "crm" / "crm_builder_payload.json"
 SANDBOX_ASSET_PATH = get_company_root(ROOT, "ops_validation", COMPANY_KEY) / "sandbox" / "sandbox_result_asset.json"
@@ -39,6 +42,7 @@ TERRITORY_ASSET_PATH = get_company_root(ROOT, "ops_validation", COMPANY_KEY) / "
 TERRITORY_BUILDER_PAYLOAD_PATH = get_company_root(ROOT, "ops_validation", COMPANY_KEY) / "territory" / "territory_builder_payload.json"
 PRESCRIPTION_ASSET_PATH = get_company_root(ROOT, "ops_validation", COMPANY_KEY) / "prescription" / "prescription_result_asset.json"
 PRESCRIPTION_BUILDER_PAYLOAD_PATH = get_company_root(ROOT, "ops_validation", COMPANY_KEY) / "prescription" / "prescription_builder_payload.json"
+RADAR_ASSET_PATH = get_company_root(ROOT, "ops_validation", COMPANY_KEY) / "radar" / "radar_result_asset.json"
 OUTPUT_ROOT = get_company_root(ROOT, "ops_validation", COMPANY_KEY) / "builder"
 TOTAL_VALID_TEMPLATE_PATH = ROOT / "templates" / "total_valid_templates.html"
 
@@ -77,6 +81,7 @@ def write_total_valid_output(summary: dict) -> dict | None:
         "crm": ("crm_analysis", "CRM 행동 분석 보고서", "CRM 행동 분석 HTML"),
         "territory": ("territory_map", "Territory 권역 지도 보고서", "Territory 지도 HTML"),
         "prescription": ("prescription_flow", "PDF 처방흐름 보고서", "Prescription 흐름 HTML"),
+        "radar": ("radar_report", "RADAR Decision Brief", "RADAR 신호/우선순위 HTML"),
     }
     reports_payload: dict[str, dict] = {}
     for module_key, (summary_key, title, subtitle) in report_map.items():
@@ -234,6 +239,27 @@ def main() -> None:
     else:
         summary["skipped_reports"].append("prescription_flow")
 
+    if RADAR_ASSET_PATH.exists() and RADAR_TEMPLATE_PATH.exists():
+        radar_asset = RadarResultAsset.model_validate(load_json(RADAR_ASSET_PATH))
+        radar_input = build_radar_template_input(
+            radar_asset,
+            str(RADAR_TEMPLATE_PATH),
+            source_asset_path=str(RADAR_ASSET_PATH),
+        )
+        radar_payload = build_template_payload(radar_input)
+        radar_html = render_builder_html(radar_payload)
+        radar_result_asset = build_html_builder_asset(radar_input, radar_html)
+        summary["radar_report"] = write_builder_output(
+            "radar_report_preview",
+            radar_input,
+            radar_payload,
+            radar_html,
+            radar_result_asset,
+        )
+        summary["templates_validated"].append(str(RADAR_TEMPLATE_PATH))
+    else:
+        summary["skipped_reports"].append("radar_report")
+
     total_valid_output = write_total_valid_output(summary)
     if total_valid_output is not None:
         summary["total_valid"] = total_valid_output
@@ -242,7 +268,9 @@ def main() -> None:
         summary["skipped_reports"].append("total_valid")
 
     summary["built_report_count"] = sum(
-        1 for key in ["crm_analysis", "sandbox_report", "territory_map", "prescription_flow", "total_valid"] if key in summary
+        1
+        for key in ["crm_analysis", "sandbox_report", "territory_map", "prescription_flow", "radar_report", "total_valid"]
+        if key in summary
     )
     (OUTPUT_ROOT / "builder_validation_summary.json").write_text(
         json.dumps(summary, ensure_ascii=False, indent=2),

@@ -106,6 +106,7 @@ def get_report_type_options() -> list[str]:
         "Sandbox 성과 보고서",
         "Territory 권역 지도 보고서",
         "PDF 처방흐름 보고서",
+        "RADAR Decision Brief",
         "통합 검증 보고서",
     ]
 
@@ -116,6 +117,7 @@ def get_report_type_description(report_type: str) -> str:
         "Sandbox 성과 보고서": "실적, 목표, CRM을 묶어 성과 분석 결과를 보여주는 HTML 보고서입니다.",
         "Territory 권역 지도 보고서": "권역별 커버리지와 이동 흐름을 지도 중심으로 보는 HTML 보고서입니다.",
         "PDF 처방흐름 보고서": "Prescription Data Flow 비교표와 추적 보조표를 중심으로 보는 HTML 보고서입니다.",
+        "RADAR Decision Brief": "Validation 승인 KPI/요약 입력으로 생성된 신호, 우선순위, 의사결정 옵션 템플릿 보고서입니다.",
         "통합 검증 보고서": "HTML Builder 화면을 열어 Sandbox, CRM, Territory, Prescription 결과를 한 곳에서 미리보는 통합 진입 보고서입니다.",
     }
     return descriptions.get(report_type, "")
@@ -127,6 +129,7 @@ def get_report_type_artifacts(report_type: str) -> str:
         "Sandbox 성과 보고서": "연결 파일: sandbox_report_preview.html / sandbox_result_asset.json",
         "Territory 권역 지도 보고서": "연결 파일: territory_map_preview.html / territory_result_asset.json",
         "PDF 처방흐름 보고서": "연결 파일: prescription_flow_preview.html / prescription_claim_validation.xlsx",
+        "RADAR Decision Brief": "연결 파일: radar_report_preview.html / radar_result_asset.json",
         "통합 검증 보고서": "연결 파일: data/ops_validation/{company}/builder/total_valid_preview.html",
     }
     return artifacts.get(report_type, "")
@@ -140,6 +143,7 @@ def get_report_output_path(report_type: str) -> str | None:
         "Sandbox 성과 보고서": os.path.join(builder_root, "sandbox_report_preview.html"),
         "Territory 권역 지도 보고서": os.path.join(builder_root, "territory_map_preview.html"),
         "PDF 처방흐름 보고서": os.path.join(builder_root, "prescription_flow_preview.html"),
+        "RADAR Decision Brief": os.path.join(builder_root, "radar_report_preview.html"),
         "통합 검증 보고서": os.path.join(builder_root, "total_valid_preview.html"),
     }
     return mapping.get(report_type)
