@@ -869,6 +869,7 @@ def _build_branch_summary_block(template_payload: dict) -> dict:
         "mode": "chunked" if bool(branch_manifest) else "inline",
         "branch_keys": [key for key in branch_keys if key],
         "branch_count": int((template_payload.get("branch_asset_counts", {}) or {}).get("branch_count", len(branches)) or 0),
+        "branches": branches if not bool(branch_manifest) else {},
         "source_ref": "template_payload.branches",
     }
 
@@ -876,16 +877,34 @@ def _build_branch_summary_block(template_payload: dict) -> dict:
 def _build_branch_member_summary_block(template_payload: dict) -> dict:
     branch_manifest = dict(template_payload.get("branch_asset_manifest", {}) or {})
     branch_index = list(template_payload.get("branch_index", []) or [])
+    branches = dict(template_payload.get("branches", {}) or {})
+    members_by_branch: dict[str, list[dict]] = {}
+    if not branch_manifest:
+        for branch_name, branch_payload in branches.items():
+            if isinstance(branch_payload, dict):
+                members = list(branch_payload.get("members", []) or [])
+                members_by_branch[str(branch_name)] = members
     return {
         "mode": "chunked" if bool(branch_manifest) else "inline",
         "branch_index": branch_index,
+        "members_by_branch": members_by_branch,
         "source_ref": "template_payload.branches.*.members",
     }
 
 
 def _build_member_performance_block(template_payload: dict) -> dict:
+    branches = dict(template_payload.get("branches", {}) or {})
+    sample_member: dict = {}
+    for branch_payload in branches.values():
+        if isinstance(branch_payload, dict):
+            members = list(branch_payload.get("members", []) or [])
+            if members:
+                sample_member = dict(members[0])
+                break
     return {
         "kpi_keys": ["HIR", "RTR", "BCR", "PHR", "PI", "FGR", "efficiency", "sustainability", "gini"],
+        "total_avg": dict((template_payload.get("total", {}) or {}).get("avg", {}) or {}),
+        "sample_member": sample_member,
         "source_ref": "template_payload.branches.*.members",
     }
 

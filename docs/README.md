@@ -37,6 +37,7 @@
 - `docs/architecture/`: Sales Data OS 아키텍처 감사/목표/리팩토링 계획
   - `docs/architecture/sandbox_block_contract.md`
   - `docs/architecture/sandbox_template_slots.md`
+  - `docs/architecture/sandbox_refactor_summary.md`
 - `docs/runbook/`: Sales Data OS 기준 운영 런북
 
 ## 문서 동기화 기준
@@ -51,6 +52,15 @@
 - 아카이브 성격 문서(이력 보존 우선)
   - `docs/part1/*`
   - `docs/part2/*`
+
+## 2026-03-16 Sandbox 동기화 요약
+
+- Stage 4 기준으로 Sandbox는 block renderer 안정화 상태
+- `template_payload` 유지 + `block_payload` 병행 구조
+- resolver 기반 슬롯 렌더, branch cache, fallback 관측값(counter) 반영
+- 회귀 테스트:
+  - `tests/test_sandbox/test_sandbox_block_resolver_regression.py`
+  - `tests/test_sandbox/test_sandbox_renderer_snapshot.py`
 
 ## 권장 읽기 순서
 

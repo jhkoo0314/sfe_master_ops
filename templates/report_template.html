@@ -3,7 +3,7 @@
 <head>
     <meta charset='UTF-8'>
     <meta name='viewport' content='width=device-width, initial-scale=1.0'>
-    <title>SFE Strategic Intel - Clinical Precision</title>
+    <title>Sales Strategic Intel - Clinical Precision</title>
     <script src='https://cdn.tailwindcss.com'></script>
     <script src='https://cdn.jsdelivr.net/npm/chart.js'></script>
     <script src='https://cdn.jsdelivr.net/npm/chartjs-plugin-annotation'></script>
@@ -201,6 +201,16 @@
                     <option value='3'>4분기</option>
                 </select>
             </div>
+        </div>
+
+        <div id='insightSlot' class='card mb-6 border-l-4 border-l-slate-700 bg-slate-50/60'>
+            <div class='flex items-center justify-between mb-3'>
+                <h4 class='text-[11px] font-black text-slate-700 uppercase'>Insight Slot</h4>
+                <span id='insightStatus' class='text-[10px] font-bold text-slate-500 uppercase'>resolver ready</span>
+            </div>
+            <ul id='insightList' class='list-disc pl-5 text-xs text-slate-700 space-y-1'>
+                <li>인사이트 데이터 대기 중...</li>
+            </ul>
         </div>
 
         <!-- 6 CORE KEY PERFORMANCE INDICATORS -->
@@ -432,7 +442,16 @@
             main_trend_slot: ['total_trend', 'total_summary', 'branch_summary'],
             group_summary_slot: ['total_summary'],
             data_health_slot: ['data_health', 'missing_data'],
+            insight_slot: ['executive_insight', 'member_performance'],
         };
+        const RESOLVER_METRICS = {
+            blocks_resolved: 0,
+            block_missing: 0,
+            slot_missing: 0,
+            chunk_pending: 0,
+            fallback_used: 0,
+        };
+        const branchCache = {};
 
         if (typeof window.ChartDataLabels !== 'undefined') Chart.register(ChartDataLabels);
         Chart.defaults.font.family = '"Segoe UI", system-ui, sans-serif';
@@ -455,20 +474,40 @@
             return (db && typeof db.block_payload === 'object' && db.block_payload) ? db.block_payload : {};
         }
 
+        function trackResolver(metricKey) {
+            if (!Object.prototype.hasOwnProperty.call(RESOLVER_METRICS, metricKey)) return;
+            RESOLVER_METRICS[metricKey] += 1;
+        }
+
+        function printResolverReport() {
+            console.info(
+                '[Sandbox Block Resolver Report]',
+                `blocks resolved: ${RESOLVER_METRICS.blocks_resolved}`,
+                `fallback used: ${RESOLVER_METRICS.fallback_used}`,
+                `pending chunk: ${RESOLVER_METRICS.chunk_pending}`,
+                `block missing: ${RESOLVER_METRICS.block_missing}`,
+                `slot missing: ${RESOLVER_METRICS.slot_missing}`
+            );
+        }
+
         function resolveBlock(blockId, context = {}) {
             const blocks = getBlockPayload();
             if (blocks[blockId]) {
+                trackResolver('blocks_resolved');
                 return { status: 'ok', blockId, data: blocks[blockId] };
             }
 
             if (blockId === 'official_kpi_6') {
+                trackResolver('fallback_used');
                 return { status: 'fallback', blockId, data: db.official_kpi_6 || {} };
             }
             if (blockId === 'total_summary') {
+                trackResolver('fallback_used');
                 return { status: 'fallback', blockId, data: db.total || {} };
             }
             if (blockId === 'total_trend') {
                 const scopeData = context.scopeData || db.total || {};
+                trackResolver('fallback_used');
                 return {
                     status: 'fallback',
                     blockId,
@@ -480,9 +519,11 @@
                 };
             }
             if (blockId === 'data_health') {
+                trackResolver('fallback_used');
                 return { status: 'fallback', blockId, data: db.data_health || {} };
             }
             if (blockId === 'missing_data') {
+                trackResolver('fallback_used');
                 return {
                     status: 'fallback',
                     blockId,
@@ -490,6 +531,7 @@
                 };
             }
             if (blockId === 'template_runtime_manifest') {
+                trackResolver('fallback_used');
                 return {
                     status: 'fallback',
                     blockId,
@@ -504,10 +546,17 @@
             }
             if (blockId === 'branch_summary') {
                 const branchKey = context.branchKey;
+                if (branchKey && branchKey !== 'TOTAL' && branchCache[branchKey]) {
+                    trackResolver('fallback_used');
+                    return { status: 'fallback', blockId, data: branchCache[branchKey] };
+                }
                 if (branchKey && branchKey !== 'TOTAL' && db.branches && db.branches[branchKey]) {
+                    branchCache[branchKey] = db.branches[branchKey];
+                    trackResolver('fallback_used');
                     return { status: 'fallback', blockId, data: db.branches[branchKey] };
                 }
                 if (branchKey && branchKey !== 'TOTAL' && db.branch_asset_manifest && db.branch_asset_manifest[branchKey]) {
+                    trackResolver('chunk_pending');
                     return {
                         status: 'pending_chunk',
                         blockId,
@@ -518,6 +567,7 @@
                         },
                     };
                 }
+                trackResolver('fallback_used');
                 return {
                     status: 'fallback',
                     blockId,
@@ -530,6 +580,7 @@
             }
 
             console.warn(`[block-resolver] block not found: ${blockId}`);
+            trackResolver('block_missing');
             return { status: 'missing', blockId, data: {} };
         }
 
@@ -542,7 +593,37 @@
                 }
             }
             console.warn(`[slot-resolver] slot unresolved: ${slotId}`);
+            trackResolver('slot_missing');
             return { status: 'missing', blockId: null, data: {} };
+        }
+
+        function resolveBranchBlock(branchKey, blockId, loadedBranchPayload = null) {
+            if (!branchKey || branchKey === 'TOTAL') {
+                return { status: 'ok', blockId, data: db.total || {} };
+            }
+            if (loadedBranchPayload && typeof loadedBranchPayload === 'object') {
+                branchCache[branchKey] = loadedBranchPayload;
+                if (!db.branches) db.branches = {};
+                db.branches[branchKey] = loadedBranchPayload;
+            }
+            if (branchCache[branchKey]) {
+                return { status: 'ok', blockId, data: branchCache[branchKey] };
+            }
+            const resolved = resolveBlock(blockId, { branchKey, branchPayload: loadedBranchPayload });
+            if (resolved.status === 'pending_chunk') {
+                return resolved;
+            }
+            if (resolved.status === 'ok' || resolved.status === 'fallback') {
+                if (resolved.data && typeof resolved.data === 'object') {
+                    branchCache[branchKey] = resolved.data;
+                }
+                return resolved;
+            }
+            if (db.branches && db.branches[branchKey]) {
+                branchCache[branchKey] = db.branches[branchKey];
+                return { status: 'ok', blockId, data: db.branches[branchKey] };
+            }
+            return { status: 'missing', blockId, data: {} };
         }
 
         function normalizeMonthly(series) {
@@ -557,14 +638,25 @@
 
         function getScopedGroupData(branchKey) {
             const productKey = getSelectedProduct();
+            const productBlock = resolveBlock('product_analysis');
+            const totalProdAnalysis = (productBlock.data && productBlock.data.total_prod_analysis)
+                ? productBlock.data.total_prod_analysis
+                : {};
             if (branchKey === 'TOTAL') {
-                if (productKey !== 'ALL' && db.total_prod_analysis && db.total_prod_analysis[productKey]) {
-                    return db.total_prod_analysis[productKey];
+                const totalSummary = resolveBlock('total_summary');
+                const totalTrend = resolveBlock('total_trend');
+                if (productKey !== 'ALL' && totalProdAnalysis && totalProdAnalysis[productKey]) {
+                    return {
+                        ...totalProdAnalysis[productKey],
+                        avg: ((totalSummary.data || {}).avg) || {},
+                        layer1: ((totalProdAnalysis[productKey] || {}).layer1) || ((totalTrend.data || {}).layer1) || {},
+                    };
                 }
-                return db.total;
+                return (totalSummary.data && Object.keys(totalSummary.data).length) ? totalSummary.data : {};
             }
-            const branchData = db.branches[branchKey];
-            if (!branchData) return db.total;
+            const branchResolved = resolveBranchBlock(branchKey, 'branch_summary');
+            const branchData = branchResolved.data || {};
+            if (!Object.keys(branchData).length) return {};
             if (productKey !== 'ALL' && branchData.prod_analysis && branchData.prod_analysis[productKey]) {
                 return branchData.prod_analysis[productKey];
             }
@@ -572,6 +664,7 @@
         }
 
         function getScopedMemberData(memberData) {
+            if (!memberData) return null;
             const productKey = getSelectedProduct();
             if (productKey !== 'ALL' && memberData.prod_analysis && memberData.prod_analysis[productKey]) {
                 return {
@@ -623,18 +716,24 @@
         }
 
         function isChunkedBranchMode() {
-            return String(db.data_mode || '').startsWith('chunked_');
+            const manifestBlock = resolveBlock('template_runtime_manifest');
+            return String((manifestBlock.data || {}).data_mode || '').startsWith('chunked_');
         }
 
         function getBranchOptions() {
-            if (isChunkedBranchMode() && Array.isArray(db.branch_index) && db.branch_index.length > 0) {
-                return db.branch_index.map(item => String(item.key || item.label || '')).filter(Boolean);
+            const manifestBlock = resolveBlock('template_runtime_manifest');
+            const branchIndex = Array.isArray((manifestBlock.data || {}).branch_index)
+                ? (manifestBlock.data || {}).branch_index
+                : [];
+            if (isChunkedBranchMode() && branchIndex.length > 0) {
+                return branchIndex.map(item => String(item.key || item.label || '')).filter(Boolean);
             }
             return Object.keys(db.branches || {});
         }
 
         function getBranchAssetPath(fileName) {
-            const assetBase = String(db.asset_base || '').trim();
+            const manifestBlock = resolveBlock('template_runtime_manifest');
+            const assetBase = String((manifestBlock.data || {}).asset_base || '').trim();
             if (!assetBase) return fileName;
             return `${assetBase}/${fileName}`;
         }
@@ -645,11 +744,19 @@
                     resolve(true);
                     return;
                 }
-                if (db.branches && db.branches[branchKey]) {
+                if (branchCache[branchKey]) {
+                    if (!db.branches) db.branches = {};
+                    db.branches[branchKey] = branchCache[branchKey];
                     resolve(true);
                     return;
                 }
-                const branchManifest = db.branch_asset_manifest || {};
+                if (db.branches && db.branches[branchKey]) {
+                    branchCache[branchKey] = db.branches[branchKey];
+                    resolve(true);
+                    return;
+                }
+                const manifestBlock = resolveBlock('template_runtime_manifest');
+                const branchManifest = (manifestBlock.data || {}).branch_asset_manifest || {};
                 const chunkFile = branchManifest[branchKey];
                 if (!chunkFile) {
                     resolve(false);
@@ -658,6 +765,7 @@
 
                 const cached = (window.__SANDBOX_BRANCH_DATA__ || {})[branchKey];
                 if (cached) {
+                    branchCache[branchKey] = cached;
                     db.branches[branchKey] = cached;
                     resolve(true);
                     return;
@@ -668,8 +776,14 @@
                 script.async = true;
                 script.onload = () => {
                     const loaded = (window.__SANDBOX_BRANCH_DATA__ || {})[branchKey];
-                    if (loaded) db.branches[branchKey] = loaded;
-                    resolve(Boolean(loaded));
+                    if (loaded) {
+                        branchCache[branchKey] = loaded;
+                        db.branches[branchKey] = loaded;
+                        const resolved = resolveBranchBlock(branchKey, 'branch_summary', loaded);
+                        resolve(resolved.status === 'ok' || resolved.status === 'fallback');
+                        return;
+                    }
+                    resolve(false);
                 };
                 script.onerror = () => resolve(false);
                 document.head.appendChild(script);
@@ -679,8 +793,11 @@
         function refillRepOptions(branchKey) {
             rSel.innerHTML = '<option value="NONE">담당자 선택</option>';
             if (branchKey === 'TOTAL') return;
-            const branch = (db.branches || {})[branchKey];
-            const members = (branch && Array.isArray(branch.members)) ? branch.members : [];
+            const memberBlock = resolveBranchBlock(branchKey, 'branch_member_summary');
+            let members = [];
+            if (memberBlock.status === 'ok' && memberBlock.data && Array.isArray(memberBlock.data.members)) {
+                members = memberBlock.data.members;
+            }
             members.forEach(m => { rSel.add(new Option(m.성명, m.성명)); });
         }
 
@@ -690,7 +807,9 @@
         }
 
         function update() {
-            const fallbackAct = db.total.monthly_actual;
+            const totalSummary = resolveBlock('total_summary').data || {};
+            const initialTrend = resolveSlot('main_trend_slot', { scopeData: totalSummary, branchKey: 'TOTAL' });
+            const fallbackAct = (initialTrend.data && initialTrend.data.monthly_actual) ? initialTrend.data.monthly_actual : [];
             let rawMonth = 0;
             for(let i=11; i>=0; i--) { if(fallbackAct[i] > 0) { rawMonth = i; break; } }
 
@@ -718,15 +837,52 @@
                 const pSeries = buildPeriodSeries(trendData.monthly_actual, trendData.monthly_target);
                 renderGroup(data, pSeries, dataIdx);
                 updateMetrics('group', data, pSeries, dataIdx);
+                renderInsightSlot({ scopeData: data, memberData: null });
             } else {
                 document.getElementById('groupView').classList.add('hidden');
                 document.getElementById('indivView').classList.remove('hidden');
-                const brData = db.branches[br];
-                const mData = getScopedMemberData(brData.members.find(x => x.성명 === rep));
+                const branchResolved = resolveBranchBlock(br, 'branch_summary');
+                const brData = branchResolved.data || {};
+                const memberResolved = resolveBranchBlock(br, 'branch_member_summary');
+                const memberRows = (memberResolved.data && Array.isArray(memberResolved.data.members))
+                    ? memberResolved.data.members
+                    : ((brData && Array.isArray(brData.members)) ? brData.members : []);
+                const mData = getScopedMemberData(memberRows.find(x => x.성명 === rep));
+                if (!mData) {
+                    renderInsightSlot({ scopeData: null, memberData: null });
+                    return;
+                }
                 const pSeries = buildPeriodSeries(mData.monthly_actual, mData.monthly_target);
-                renderIndividual(mData, brData.avg, pSeries, dataIdx);
-                updateMetrics('individual', { member: mData, branchAvg: brData.avg }, pSeries, dataIdx);
+                const branchAvg = (brData && brData.avg) ? brData.avg : {};
+                renderIndividual(mData, branchAvg, pSeries, dataIdx);
+                updateMetrics('individual', { member: mData, branchAvg }, pSeries, dataIdx);
+                renderInsightSlot({ scopeData: brData, memberData: mData });
             }
+            printResolverReport();
+        }
+
+        function renderInsightSlot({ scopeData, memberData }) {
+            const slot = resolveSlot('insight_slot', { scopeData, memberData });
+            const statusEl = document.getElementById('insightStatus');
+            const listEl = document.getElementById('insightList');
+            if (!statusEl || !listEl) return;
+            const slotWrap = document.getElementById('insightSlot');
+
+            let messages = [];
+            if (slot.blockId === 'executive_insight') {
+                messages = Array.isArray((slot.data || {}).messages) ? (slot.data || {}).messages : [];
+            }
+            if (!messages.length && memberData) {
+                if (memberData.coach_scenario) messages.push(String(memberData.coach_scenario));
+                if (memberData.coach_action) messages.push(String(memberData.coach_action));
+            }
+            if (!messages.length) {
+                if (slotWrap) slotWrap.classList.add('hidden');
+                return;
+            }
+            if (slotWrap) slotWrap.classList.remove('hidden');
+            statusEl.innerText = slot.status || "ok";
+            listEl.innerHTML = messages.map(msg => `<li>${msg}</li>`).join('');
         }
 
         function updateMetrics(mode, payload, pSeries, idx) {
@@ -779,18 +935,25 @@
             document.getElementById('v_fgr_layer1').innerText = "선택 기간 목표 달성 현황";
             document.getElementById('v_gap_layer1').innerText = `편차: ${(gap >= 0 ? '+' : '')}${gap.toFixed(1)}M KRW`;
 
+            const summaryBlock = resolveBlock('total_summary');
+            const activityBlock = resolveBlock('activity_analysis');
+            const summaryAvg = (summaryBlock.data && summaryBlock.data.avg) ? summaryBlock.data.avg : (data.avg || {});
+            const analysisData = (activityBlock.data && Object.keys(activityBlock.data).length)
+                ? activityBlock.data
+                : (data.analysis || {});
+
             const rL_Short = ['HIR', 'RTR', 'BCR', 'PHR', 'PI', 'FGR'];
             const rL_Full = ['유효활동(HIR)','관계온도(RTR)','규칙성(BCR)','계획(PHR)','성과지수(PI)','성장률(FGR)'];
             safeNewChart('gRadar', 'chart_g_radar', {
                 type: 'radar',
                 data: {
                     labels: rL_Full,
-                    datasets: [{ label: '현재 지점', data: rL_Short.map(k=>Math.round(data.avg[k])), borderColor: '#2563eb', backgroundColor: 'rgba(37,99,235,0.1)', borderWidth: 2, pointRadius: 2 }]
+                    datasets: [{ label: '현재 지점', data: rL_Short.map(k=>Math.round(summaryAvg[k] || 0)), borderColor: '#2563eb', backgroundColor: 'rgba(37,99,235,0.1)', borderWidth: 2, pointRadius: 2 }]
                 },
                 options: { responsive: true, maintainAspectRatio: false, scales: { r: { min: 0, max: 100, ticks: { display: false } } }, plugins: { legend: { display: false }, datalabels: { display: true, align: 'top', font: { weight: 'bold', size: 9 }, formatter: Math.round } } }
             });
 
-            const imp = (data.analysis && data.analysis.importance) ? data.analysis.importance : {};
+            const imp = analysisData.importance || {};
             const sorted = Object.entries(imp).sort((a,b)=>a[1]-b[1]);
             const behaviorMap = { 'PT':'제품설명','Demo':'시연','Closing':'클로징','Needs':'니즈파악','FaceToFace':'대면활동','Contact':'연락','Access':'접근성','Feedback':'피드백' };
             safeNewChart('gTornado', 'chart_g_tornado', {
@@ -805,11 +968,15 @@
                 document.getElementById(id).innerHTML = '<tr><th>Metric</th>' + keys.map(k=>`<th>${k}</th>`).join('') + '</tr>' +
                 keys.map(k=>`<tr><td class='font-bold bg-slate-50'>${k}</td>`+keys.map(k2=>`<td>${(c[k][k2]||0).toFixed(2)}</td>`).join('')+'</tr>').join('');
             };
-            fillT('table_old', (data.analysis && data.analysis.correlation) ? data.analysis.correlation : {});
-            fillT('table_new', (data.analysis && data.analysis.adj_correlation) ? data.analysis.adj_correlation : {});
+            fillT('table_old', analysisData.correlation || {});
+            fillT('table_new', analysisData.adj_correlation || {});
         }
 
         function renderIndividual(m, brAvg, pSeries, idx) {
+            const memberBlock = resolveBlock('member_performance');
+            const branchAvgSafe = (memberBlock.data && memberBlock.data.total_avg && Object.keys(memberBlock.data.total_avg).length)
+                ? memberBlock.data.total_avg
+                : brAvg;
             const layer1 = resolveLayer1Metric(m, periodMode, idx);
             const ach = Number(layer1.attainment_rate || 0);
             document.getElementById('v_indiv_ach').innerText = ach.toFixed(1) + "%";
@@ -830,7 +997,7 @@
                     labels: rL_Full,
                     datasets: [
                         { label: m.성명, data: rL_Short.map(k=>Math.round(m[k] * Number(layer1.scale || 1.0))), borderColor: '#2563eb', backgroundColor: 'rgba(37,99,235,0.2)', borderWidth: 3 },
-                        { label: '지점 평균', data: rL_Short.map(k=>Math.round(brAvg[k])), borderColor: '#94a3b8', borderDash: [4, 4], fill: false }
+                        { label: '지점 평균', data: rL_Short.map(k=>Math.round((branchAvgSafe || {})[k] || 0)), borderColor: '#94a3b8', borderDash: [4, 4], fill: false }
                     ]
                 },
                 options: { responsive: true, maintainAspectRatio: false, scales: { r: { min: 0, max: 100, ticks: { display: false } } }, plugins: { datalabels: { display: true, align: 'top', font: { weight: 'bold', size: 10 }, formatter: Math.round } } }
@@ -874,7 +1041,11 @@
         }
 
         refillBranchOptions();
-        pSel.innerHTML = '<option value="ALL">모든 품목</option>' + (db.products || []).map(product => `<option value="${product}">${product}</option>`).join('');
+        const productSlot = resolveBlock('product_analysis');
+        const productOptions = (productSlot.data && Array.isArray(productSlot.data.products))
+            ? productSlot.data.products
+            : [];
+        pSel.innerHTML = '<option value="ALL">모든 품목</option>' + productOptions.map(product => `<option value="${product}">${product}</option>`).join('');
 
         if (isChunkedBranchMode()) {
             setBranchLoadStatus('지점 상세는 선택 시 로드됩니다.');

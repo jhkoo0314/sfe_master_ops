@@ -10,7 +10,24 @@ SLOT_BLOCK_PRIORITY: dict[str, tuple[str, ...]] = {
     "main_trend_slot": ("total_trend", "total_summary", "branch_summary"),
     "group_summary_slot": ("total_summary",),
     "data_health_slot": ("data_health", "missing_data"),
+    "insight_slot": ("executive_insight", "member_performance"),
 }
+
+FALLBACK_COUNTER: dict[str, int] = {
+    "block_missing": 0,
+    "slot_missing": 0,
+    "chunk_pending": 0,
+    "fallback_used": 0,
+}
+
+
+def reset_fallback_counter() -> None:
+    for key in FALLBACK_COUNTER:
+        FALLBACK_COUNTER[key] = 0
+
+
+def get_fallback_counter() -> dict[str, int]:
+    return dict(FALLBACK_COUNTER)
 
 
 def resolve_block(
@@ -32,6 +49,7 @@ def resolve_block(
 
     if block_id in block_payload:
         data = block_payload.get(block_id)
+        _validate_block_schema(block_id, data)
         if isinstance(data, Mapping):
             return {"status": "ok", "block_id": block_id, "data": dict(data)}
         return {"status": "ok", "block_id": block_id, "data": data}
@@ -43,8 +61,11 @@ def resolve_block(
         branch_payload=branch_payload,
     )
     if fallback is not None:
+        _increment_counter("fallback_used")
+        _validate_block_schema(block_id, fallback)
         return {"status": "fallback", "block_id": block_id, "data": fallback}
 
+    _increment_counter("block_missing")
     return {
         "status": "missing",
         "block_id": block_id,
@@ -62,6 +83,7 @@ def resolve_slot(
 ) -> dict[str, Any]:
     priorities = SLOT_BLOCK_PRIORITY.get(slot_id, ())
     if not priorities:
+        _increment_counter("slot_missing")
         return {
             "status": "missing",
             "slot_id": slot_id,
@@ -85,6 +107,7 @@ def resolve_slot(
                 "data": resolved.get("data", {}),
             }
 
+    _increment_counter("slot_missing")
     return {
         "status": "missing",
         "slot_id": slot_id,
@@ -116,6 +139,7 @@ def resolve_branch_block_detail(
 
     branch_manifest = template_payload.get("branch_asset_manifest", {})
     if isinstance(branch_manifest, Mapping) and branch_key in branch_manifest:
+        _increment_counter("chunk_pending")
         return {
             "status": "pending_chunk",
             "branch_key": branch_key,
@@ -129,6 +153,58 @@ def resolve_branch_block_detail(
         "data": {},
         "message": "branch detail not found",
     }
+
+
+def resolve_branch_block(
+    payload: Mapping[str, Any],
+    branch_key: str,
+    block_id: str,
+    *,
+    branch_payload: Mapping[str, Any] | None = None,
+) -> dict[str, Any]:
+    """
+    Resolve branch-scoped block with chunk-aware state.
+    Returns:
+      - ok: branch payload available
+      - pending_chunk: manifest exists but detail is not loaded
+      - missing: no branch data/manifest
+    """
+    resolved = resolve_block(
+        payload,
+        block_id,
+        branch_key=branch_key,
+        branch_payload=branch_payload,
+    )
+    status = str(resolved.get("status") or "")
+    if status in {"ok", "pending_chunk", "missing", "fallback"}:
+        # branch-specific API normalizes fallback -> ok for loaded branch data,
+        # and keeps pending_chunk/missing as-is.
+        if status == "fallback":
+            data = resolved.get("data")
+            if isinstance(data, Mapping) and (
+                "members" in data or "branch_key" in data or "mode" in data
+            ):
+                return {"status": "ok", "block_id": block_id, "branch_key": branch_key, "data": dict(data)}
+        return {
+            "status": status,
+            "block_id": block_id,
+            "branch_key": branch_key,
+            "data": resolved.get("data", {}),
+            "message": resolved.get("message", ""),
+        }
+    return {
+        "status": "missing",
+        "block_id": block_id,
+        "branch_key": branch_key,
+        "data": {},
+        "message": "unexpected resolver state",
+    }
+
+
+# Optional camelCase aliases for cross-layer naming consistency
+resolveBlock = resolve_block
+resolveSlot = resolve_slot
+resolveBranchBlock = resolve_branch_block
 
 
 def _to_template_payload(payload: Mapping[str, Any]) -> dict[str, Any]:
@@ -210,3 +286,30 @@ def _resolve_block_fallback(
         total = dict(template_payload.get("total", {}) or {})
         return dict(total.get("analysis", {}) or {})
     return None
+
+
+def _increment_counter(key: str) -> None:
+    if key in FALLBACK_COUNTER:
+        FALLBACK_COUNTER[key] += 1
+
+
+def _validate_block_schema(block_id: str, data: Any) -> None:
+    spec = get_block_spec(block_id)
+    if spec is None or not isinstance(data, Mapping):
+        return
+    missing_fields = [field for field in spec.required_fields if not _has_required_field(data, field)]
+    if missing_fields:
+        print(
+            f"[block-resolver] warning: block '{block_id}' missing required fields: {', '.join(missing_fields)}"
+        )
+
+
+def _has_required_field(data: Mapping[str, Any], field: str) -> bool:
+    if "." not in field:
+        return field in data
+    cursor: Any = data
+    for token in field.split("."):
+        if not isinstance(cursor, Mapping) or token not in cursor:
+            return False
+        cursor = cursor[token]
+    return True

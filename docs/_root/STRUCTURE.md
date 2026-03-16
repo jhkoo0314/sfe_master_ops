@@ -69,8 +69,11 @@ sfe_master_ops/
   - Sandbox Result Asset 생성
   - CRM KPI는 입력값을 사용하고 Sandbox에서 재계산하지 않음
   - KPI 계산 1차 분리는 `modules/kpi/sandbox_engine.py` 호출로 수행
+  - block architecture 적용
+    - `block_registry.py`: block 계약/메타 정의
+    - `block_resolver.py`: block/slot/branch 조회 + fallback + 카운터
   - `builder_payload.py`에서 지점 상세 분리용 manifest 생성
-  - `dashboard_payload.template_payload`를 Builder 입력으로 사용
+  - `dashboard_payload.template_payload` + `dashboard_payload.block_payload` 병행 유지
   - 현재는 `manifest + 지점 asset` 구조로 Sandbox Builder 데이터를 분리 생성
 - `modules/territory/`
   - Territory Result Asset 생성
@@ -160,6 +163,7 @@ OPS 판단과 파이프라인 실행을 담당합니다.
 참고:
 - 현재 운영 기준 템플릿은 위 6개입니다.
 - 예전 문서에 남아 있던 `hh.html`, `hh_builder_template.js`, `hhb.js`는 현재 저장소에 없습니다.
+- `report_template.html`은 resolver 기반 렌더 + fallback 유지 구조를 사용합니다.
 
 ### `scripts/`
 
@@ -345,6 +349,16 @@ Builder는 직접 raw를 읽지 않습니다.
 주의:
 - 위 목록은 코드 기준 생성 가능 목록입니다.
 - 실제 폴더에 저장된 결과는 회사별 마지막 실행 상태를 기준으로 달라질 수 있습니다.
+
+## Sandbox Block 문서/테스트 위치
+
+- 설계 문서
+  - [sandbox_block_contract.md](/C:/sfe_master_ops/docs/architecture/sandbox_block_contract.md)
+  - [sandbox_template_slots.md](/C:/sfe_master_ops/docs/architecture/sandbox_template_slots.md)
+  - [sandbox_refactor_summary.md](/C:/sfe_master_ops/docs/architecture/sandbox_refactor_summary.md)
+- 회귀 테스트
+  - [test_sandbox_block_resolver_regression.py](/C:/sfe_master_ops/tests/test_sandbox/test_sandbox_block_resolver_regression.py)
+  - [test_sandbox_renderer_snapshot.py](/C:/sfe_master_ops/tests/test_sandbox/test_sandbox_renderer_snapshot.py)
 
 ## 현재 빠진 것
 

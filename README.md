@@ -66,6 +66,27 @@
 - `hangyeol_pharma`, `daon_pharma` 기준 CRM->Builder->Sandbox KPI 전달 불일치 0건 확인
 - Sandbox + Builder 최종 HTML 6종 검증도 2개 회사 모두 통과
 
+## 2026-03-16 동기화 상태 (Sandbox Block Renderer Stage 4)
+
+이번 동기화에서 Sandbox 보고서 구조 안정화가 반영되었습니다.
+
+- `template_payload`는 유지하고 `block_payload`를 병행 사용
+- Sandbox 템플릿은 `resolveBlock / resolveSlot / resolveBranchBlock` 중심으로 점진 전환
+- branch lazy-load는 `branchCache`를 둬서 재선택 시 안정적으로 재사용
+- resolver fallback 관측값을 콘솔에서 확인 가능
+  - `block_missing`
+  - `slot_missing`
+  - `chunk_pending`
+  - `fallback_used`
+- 인사이트 슬롯(`executive_insight`)은 데이터가 없으면 숨김 처리
+- 회귀 테스트 강화
+  - `tests/test_sandbox/test_sandbox_block_resolver_regression.py`
+  - `tests/test_sandbox/test_sandbox_renderer_snapshot.py`
+
+검증 결과:
+- `scripts/validate_sandbox_with_ops.py` 통과
+- `scripts/validate_builder_with_ops.py` 통과
+
 ## 핵심 원칙
 
 ```text
@@ -134,7 +155,7 @@
   - `territory_builder_payload_assets/*.js`
   - `territory_map_preview.html`
 - Sandbox
-  - `sandbox_result_asset.json` 안의 `dashboard_payload.template_payload`
+  - `sandbox_result_asset.json` 안의 `dashboard_payload.template_payload` + `dashboard_payload.block_payload`
   - `sandbox/sandbox_template_payload_assets/*.js`
   - `builder/sandbox_report_preview_assets/*.js`
   - `sandbox_report_preview.html`
@@ -296,3 +317,4 @@ uv run streamlit run ui/ops_console.py --server.port 8501
 - 문서 허브: [docs/README.md](/C:/sfe_master_ops/docs/README.md)
 - 실행 방법: [RUNBOOK.md](/C:/sfe_master_ops/docs/_root/RUNBOOK.md)
 - 구조 설명: [STRUCTURE.md](/C:/sfe_master_ops/docs/_root/STRUCTURE.md)
+- Sandbox 리팩토링 요약: [sandbox_refactor_summary.md](/C:/sfe_master_ops/docs/architecture/sandbox_refactor_summary.md)

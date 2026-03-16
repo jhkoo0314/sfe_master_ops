@@ -187,7 +187,7 @@ data/ops_validation/daon_pharma/
 - `crm/crm_builder_payload_assets/*.js`
 - `prescription/prescription_builder_payload.json`
 - `territory/territory_builder_payload.json`
-- Sandbox는 `sandbox_result_asset.json` 안의 `dashboard_payload.template_payload` 사용
+- Sandbox는 `sandbox_result_asset.json` 안의 `dashboard_payload.template_payload` + `dashboard_payload.block_payload` 병행 사용
 - `sandbox/sandbox_template_payload_assets/*.js`
 
 Territory 정규화 결과:
@@ -240,6 +240,26 @@ Builder 결과:
 - 회귀 기준:
   - `hangyeol_pharma`, `daon_pharma` Sandbox 검증 `pass`
   - Builder HTML 6종 생성 검증 `pass`
+
+### 8-2. 2026-03-16 Sandbox Block Renderer 안정화
+
+- Sandbox 템플릿은 `resolveBlock / resolveSlot / resolveBranchBlock` 중심으로 동작
+- 기존 `template_payload`는 fallback 용도로 유지
+- branch 상세는 `branchCache` + chunk lazy-load로 안정화
+- fallback 관측값을 콘솔에 출력
+  - `block_missing`
+  - `slot_missing`
+  - `chunk_pending`
+  - `fallback_used`
+- 인사이트 슬롯(`executive_insight`)은 데이터 없으면 숨김 처리
+- 회귀 테스트 추가
+  - `tests/test_sandbox/test_sandbox_block_resolver_regression.py`
+  - `tests/test_sandbox/test_sandbox_renderer_snapshot.py`
+
+관련 설계/요약 문서:
+- [sandbox_block_contract.md](/C:/sfe_master_ops/docs/architecture/sandbox_block_contract.md)
+- [sandbox_template_slots.md](/C:/sfe_master_ops/docs/architecture/sandbox_template_slots.md)
+- [sandbox_refactor_summary.md](/C:/sfe_master_ops/docs/architecture/sandbox_refactor_summary.md)
 
 ## 9. 처방 보고서 운영 메모
 
