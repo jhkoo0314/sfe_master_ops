@@ -175,6 +175,15 @@ def main() -> None:
             )
             (chunk_root / chunk_name).write_text(chunk_script, encoding="utf-8")
         manifest["asset_base"] = chunk_root.name
+        block_payload = manifest.get("block_payload")
+        if isinstance(block_payload, dict):
+            runtime_block = block_payload.get("template_runtime_manifest")
+            if isinstance(runtime_block, dict):
+                runtime_block["data_mode"] = manifest.get("data_mode", "")
+                runtime_block["asset_base"] = manifest.get("asset_base", "")
+                runtime_block["branch_asset_manifest"] = manifest.get("branch_asset_manifest", {})
+                runtime_block["branch_index"] = manifest.get("branch_index", [])
+                runtime_block["branch_asset_counts"] = manifest.get("branch_asset_counts", {})
         result_asset.dashboard_payload.template_payload = manifest
     evaluation = evaluate_sandbox_asset(result_asset)
 

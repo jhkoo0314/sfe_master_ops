@@ -35,6 +35,8 @@
   - `STRUCTURE.md`
 - `docs/ai/`: Codex 작업용 축약 문서 세트
 - `docs/architecture/`: Sales Data OS 아키텍처 감사/목표/리팩토링 계획
+  - `docs/architecture/sandbox_block_contract.md`
+  - `docs/architecture/sandbox_template_slots.md`
 - `docs/runbook/`: Sales Data OS 기준 운영 런북
 
 ## 문서 동기화 기준

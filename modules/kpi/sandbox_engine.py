@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from typing import Mapping
+from typing import Mapping, Sequence
 
 
 SANDBOX_KPI_ENGINE_VERSION = "sandbox_kpi_engine_v1"
@@ -11,6 +11,17 @@ OFFICIAL_SANDBOX_KPI6_KEYS = (
     "quarterly_sales",
     "quarterly_target",
     "annual_attainment_rate",
+)
+OFFICIAL_SANDBOX_LAYER1_PERIOD_KEYS = ("monthly", "quarterly", "yearly")
+OFFICIAL_SANDBOX_LAYER1_POINT_KEYS = (
+    "actual",
+    "target",
+    "attainment_rate",
+    "gap_amount",
+    "gap_million",
+    "pi",
+    "fgr",
+    "scale",
 )
 
 
@@ -92,6 +103,100 @@ def compute_sandbox_official_kpi_6(
         "reference_year": year,
         "metric_version": SANDBOX_KPI_ENGINE_VERSION,
     }
+
+
+def compute_sandbox_layer1_period_metrics(
+    monthly_actual: Sequence[float],
+    monthly_target: Sequence[float],
+) -> dict[str, object]:
+    """
+    Sandbox Layer 01 기간별 지표를 공식 KPI 엔진에서 계산한다.
+    Builder/Template는 이 결과를 표시만 해야 한다.
+    """
+
+    def as_float_list(values: Sequence[float], size: int = 12) -> list[float]:
+        result = [0.0] * size
+        for idx in range(min(len(values), size)):
+            result[idx] = float(values[idx] or 0.0)
+        return result
+
+    def summarize_series(actual_series: Sequence[float], target_series: Sequence[float]) -> list[dict[str, float]]:
+        actual = [float(v or 0.0) for v in actual_series]
+        target = [float(v or 0.0) for v in target_series]
+        rows: list[dict[str, float]] = []
+        non_zero_actual = [v for v in actual if v > 0]
+        avg_actual = (sum(non_zero_actual) / len(non_zero_actual)) if non_zero_actual else 0.0
+        for idx, (cur_actual, cur_target) in enumerate(zip(actual, target)):
+            prev_actual = actual[idx - 1] if idx > 0 else 0.0
+            attainment_rate = _rate(cur_actual, cur_target)
+            gap_amount = cur_actual - cur_target
+            fgr = ((cur_actual - prev_actual) / prev_actual) * 100.0 if prev_actual > 0 else 0.0
+            scale = ((cur_actual / max(avg_actual, 1.0)) * 0.6) + ((attainment_rate / 100.0) * 0.4)
+            scale = max(0.7, min(1.3, scale))
+            rows.append(
+                {
+                    "actual": round(cur_actual, 0),
+                    "target": round(cur_target, 0),
+                    "attainment_rate": round(attainment_rate, 1),
+                    "gap_amount": round(gap_amount, 0),
+                    "gap_million": round(gap_amount / 1_000_000.0, 1),
+                    "pi": round(attainment_rate, 1),
+                    "fgr": round(fgr, 1),
+                    "scale": round(scale, 4),
+                }
+            )
+        return rows
+
+    monthly_actual_values = as_float_list(monthly_actual, size=12)
+    monthly_target_values = as_float_list(monthly_target, size=12)
+
+    quarterly_actual = [
+        sum(monthly_actual_values[0:3]),
+        sum(monthly_actual_values[3:6]),
+        sum(monthly_actual_values[6:9]),
+        sum(monthly_actual_values[9:12]),
+    ]
+    quarterly_target = [
+        sum(monthly_target_values[0:3]),
+        sum(monthly_target_values[3:6]),
+        sum(monthly_target_values[6:9]),
+        sum(monthly_target_values[9:12]),
+    ]
+
+    yearly_actual = [sum(monthly_actual_values)]
+    yearly_target = [sum(monthly_target_values)]
+
+    return {
+        "monthly": summarize_series(monthly_actual_values, monthly_target_values),
+        "quarterly": summarize_series(quarterly_actual, quarterly_target),
+        "yearly": summarize_series(yearly_actual, yearly_target),
+        "metric_version": SANDBOX_KPI_ENGINE_VERSION,
+    }
+
+
+def validate_layer1_period_metrics_payload(payload: Mapping[str, object]) -> dict[str, object]:
+    """
+    Layer 01 기간별 KPI 계약 검증.
+    서비스 계층은 이 검증을 통과한 값만 template payload에 저장해야 한다.
+    """
+    missing_periods = [key for key in OFFICIAL_SANDBOX_LAYER1_PERIOD_KEYS if key not in payload]
+    if missing_periods:
+        raise ValueError(f"layer1 missing period keys: {missing_periods}")
+    if payload.get("metric_version") != SANDBOX_KPI_ENGINE_VERSION:
+        raise ValueError(
+            f"layer1 metric_version mismatch: {payload.get('metric_version')} != {SANDBOX_KPI_ENGINE_VERSION}"
+        )
+    for period in OFFICIAL_SANDBOX_LAYER1_PERIOD_KEYS:
+        series = payload.get(period)
+        if not isinstance(series, list):
+            raise ValueError(f"layer1[{period}] must be list")
+        for idx, point in enumerate(series):
+            if not isinstance(point, Mapping):
+                raise ValueError(f"layer1[{period}][{idx}] must be object")
+            missing_fields = [field for field in OFFICIAL_SANDBOX_LAYER1_POINT_KEYS if field not in point]
+            if missing_fields:
+                raise ValueError(f"layer1[{period}][{idx}] missing fields: {missing_fields}")
+    return dict(payload)
 
 
 def validate_official_kpi_6_payload(payload: Mapping[str, float | str]) -> dict[str, float | str]:

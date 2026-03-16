@@ -458,10 +458,24 @@ def prepare_sandbox_chunk_assets(
         source_asset_dir = Path(asset_source_path).with_name("sandbox_template_payload_assets")
         if not source_asset_dir.exists():
             payload["asset_base"] = target_asset_dir.name
+            block_payload = payload.get("block_payload")
+            if isinstance(block_payload, dict):
+                runtime_block = block_payload.get("template_runtime_manifest")
+                if isinstance(runtime_block, dict):
+                    runtime_block["asset_base"] = payload.get("asset_base", "")
             return
         for chunk_file in source_asset_dir.glob("*.js"):
             shutil.copy2(chunk_file, target_asset_dir / chunk_file.name)
         payload["asset_base"] = target_asset_dir.name
+        block_payload = payload.get("block_payload")
+        if isinstance(block_payload, dict):
+            runtime_block = block_payload.get("template_runtime_manifest")
+            if isinstance(runtime_block, dict):
+                runtime_block["data_mode"] = payload.get("data_mode", "")
+                runtime_block["asset_base"] = payload.get("asset_base", "")
+                runtime_block["branch_asset_manifest"] = payload.get("branch_asset_manifest", {})
+                runtime_block["branch_index"] = payload.get("branch_index", [])
+                runtime_block["branch_asset_counts"] = payload.get("branch_asset_counts", {})
         return
 
     manifest, asset_chunks = build_chunked_sandbox_payload(payload)
@@ -475,6 +489,15 @@ def prepare_sandbox_chunk_assets(
         (target_asset_dir / chunk_name).write_text(chunk_script, encoding="utf-8")
 
     manifest["asset_base"] = target_asset_dir.name
+    block_payload = manifest.get("block_payload")
+    if isinstance(block_payload, dict):
+        runtime_block = block_payload.get("template_runtime_manifest")
+        if isinstance(runtime_block, dict):
+            runtime_block["data_mode"] = manifest.get("data_mode", "")
+            runtime_block["asset_base"] = manifest.get("asset_base", "")
+            runtime_block["branch_asset_manifest"] = manifest.get("branch_asset_manifest", {})
+            runtime_block["branch_index"] = manifest.get("branch_index", [])
+            runtime_block["branch_asset_counts"] = manifest.get("branch_asset_counts", {})
     builder_payload.payload = manifest
 
 

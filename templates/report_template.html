@@ -427,6 +427,12 @@
         const monthSel = document.getElementById('monthSel');
         const quarterSel = document.getElementById('quarterSel');
         let periodMode = 'monthly';
+        const SLOT_BLOCK_PRIORITY = {
+            header_kpi_slot: ['official_kpi_6', 'total_summary', 'data_health'],
+            main_trend_slot: ['total_trend', 'total_summary', 'branch_summary'],
+            group_summary_slot: ['total_summary'],
+            data_health_slot: ['data_health', 'missing_data'],
+        };
 
         if (typeof window.ChartDataLabels !== 'undefined') Chart.register(ChartDataLabels);
         Chart.defaults.font.family = '"Segoe UI", system-ui, sans-serif';
@@ -443,6 +449,100 @@
 
         function clamp(value, min, max) {
             return Math.max(min, Math.min(max, value));
+        }
+
+        function getBlockPayload() {
+            return (db && typeof db.block_payload === 'object' && db.block_payload) ? db.block_payload : {};
+        }
+
+        function resolveBlock(blockId, context = {}) {
+            const blocks = getBlockPayload();
+            if (blocks[blockId]) {
+                return { status: 'ok', blockId, data: blocks[blockId] };
+            }
+
+            if (blockId === 'official_kpi_6') {
+                return { status: 'fallback', blockId, data: db.official_kpi_6 || {} };
+            }
+            if (blockId === 'total_summary') {
+                return { status: 'fallback', blockId, data: db.total || {} };
+            }
+            if (blockId === 'total_trend') {
+                const scopeData = context.scopeData || db.total || {};
+                return {
+                    status: 'fallback',
+                    blockId,
+                    data: {
+                        monthly_actual: scopeData.monthly_actual || [],
+                        monthly_target: scopeData.monthly_target || [],
+                        layer1: scopeData.layer1 || {},
+                    }
+                };
+            }
+            if (blockId === 'data_health') {
+                return { status: 'fallback', blockId, data: db.data_health || {} };
+            }
+            if (blockId === 'missing_data') {
+                return {
+                    status: 'fallback',
+                    blockId,
+                    data: { rows: db.missing_data || [], count: (db.missing_data || []).length },
+                };
+            }
+            if (blockId === 'template_runtime_manifest') {
+                return {
+                    status: 'fallback',
+                    blockId,
+                    data: {
+                        data_mode: db.data_mode || '',
+                        asset_base: db.asset_base || '',
+                        branch_asset_manifest: db.branch_asset_manifest || {},
+                        branch_index: db.branch_index || [],
+                        branch_asset_counts: db.branch_asset_counts || {},
+                    }
+                };
+            }
+            if (blockId === 'branch_summary') {
+                const branchKey = context.branchKey;
+                if (branchKey && branchKey !== 'TOTAL' && db.branches && db.branches[branchKey]) {
+                    return { status: 'fallback', blockId, data: db.branches[branchKey] };
+                }
+                if (branchKey && branchKey !== 'TOTAL' && db.branch_asset_manifest && db.branch_asset_manifest[branchKey]) {
+                    return {
+                        status: 'pending_chunk',
+                        blockId,
+                        data: {
+                            branch_key: branchKey,
+                            chunk_file: db.branch_asset_manifest[branchKey],
+                            asset_base: db.asset_base || '',
+                        },
+                    };
+                }
+                return {
+                    status: 'fallback',
+                    blockId,
+                    data: {
+                        mode: isChunkedBranchMode() ? 'chunked' : 'inline',
+                        branch_index: db.branch_index || [],
+                        source_ref: 'db.branches',
+                    }
+                };
+            }
+
+            console.warn(`[block-resolver] block not found: ${blockId}`);
+            return { status: 'missing', blockId, data: {} };
+        }
+
+        function resolveSlot(slotId, context = {}) {
+            const priorities = SLOT_BLOCK_PRIORITY[slotId] || [];
+            for (const blockId of priorities) {
+                const resolved = resolveBlock(blockId, context);
+                if (resolved.status !== 'missing') {
+                    return resolved;
+                }
+            }
+            console.warn(`[slot-resolver] slot unresolved: ${slotId}`);
+            return { status: 'missing', blockId: null, data: {} };
         }
 
         function normalizeMonthly(series) {
@@ -478,6 +578,7 @@
                     ...memberData,
                     monthly_actual: memberData.prod_analysis[productKey].monthly_actual || memberData.monthly_actual,
                     monthly_target: memberData.prod_analysis[productKey].monthly_target || memberData.monthly_target,
+                    layer1: memberData.prod_analysis[productKey].layer1 || memberData.layer1,
                     prod_matrix: (memberData.prod_matrix || []).filter(p => p.name === productKey),
                 };
             }
@@ -497,20 +598,21 @@
             return { labels:['1월','2월','3월','4월','5월','6월','7월','8월','9월','10월','11월','12월'], actual, target };
         }
 
-        function periodPerf(series, idx) {
-            const clamp = (v, lo, hi) => Math.max(lo, Math.min(hi, v));
-            const arrA = series.actual;
-            const arrT = series.target;
-            const i = Math.max(0, Math.min(arrA.length - 1, Number(idx || 0)));
-            const curA = Number(arrA[i] || 0);
-            const curT = Number(arrT[i] || 0);
-            const prevA = i > 0 ? Number(arrA[i-1] || 0) : 0;
-            const pi = curT > 0 ? (curA / curT) * 100 : 0;
-            const fgr = prevA > 0 ? ((curA - prevA) / prevA) * 100 : 0;
-            const nonZero = arrA.filter(v => v > 0);
-            const avgA = nonZero.length ? (nonZero.reduce((a,b)=>a+b,0) / nonZero.length) : 0;
-            const scale = clamp(( (curA/(avgA||1)) * 0.6 ) + ( (pi/100) * 0.4 ), 0.7, 1.3);
-            return { pi, fgr, scale };
+        function resolveLayer1Metric(scopeData, mode, idx) {
+            const layer1 = scopeData && scopeData.layer1 ? scopeData.layer1 : null;
+            const modeSeries = layer1 && Array.isArray(layer1[mode]) ? layer1[mode] : null;
+            const safeIndex = Math.max(0, Math.min((modeSeries ? modeSeries.length : 1) - 1, Number(idx || 0)));
+            if (modeSeries && modeSeries[safeIndex]) {
+                return modeSeries[safeIndex];
+            }
+            return {
+                attainment_rate: 0,
+                gap_amount: 0,
+                gap_million: 0,
+                pi: 0,
+                fgr: 0,
+                scale: 1.0,
+            };
         }
 
         function setBranchLoadStatus(message, isError = false) {
@@ -611,7 +713,9 @@
                 document.getElementById('groupView').classList.remove('hidden');
                 document.getElementById('indivView').classList.add('hidden');
                 const data = getScopedGroupData(br);
-                const pSeries = buildPeriodSeries(data.monthly_actual, data.monthly_target);
+                const trendResolved = resolveSlot('main_trend_slot', { scopeData: data, branchKey: br });
+                const trendData = (trendResolved.data && trendResolved.data.monthly_actual) ? trendResolved.data : data;
+                const pSeries = buildPeriodSeries(trendData.monthly_actual, trendData.monthly_target);
                 renderGroup(data, pSeries, dataIdx);
                 updateMetrics('group', data, pSeries, dataIdx);
             } else {
@@ -633,32 +737,43 @@
                 vEl.className = `metric-value ${c}`;
                 document.getElementById(`card_metric_${i}`).style.borderLeftColor = b;
             };
-            const curA = pSeries.actual[idx], curT = pSeries.target[idx];
-            const ach = curT > 0 ? (curA / curT * 100).toFixed(1) + '%' : '0.0%';
-            const perf = periodPerf(pSeries, idx);
-            const gap = (curA - curT) / 1000000;
 
             if(mode === 'group') {
-                setMetric(1, '목표 달성률', ach, 'text-blue-700', '#2563eb');
+                const layer1 = resolveLayer1Metric(payload, periodMode, idx);
+                const ach = Number(layer1.attainment_rate || 0).toFixed(1) + '%';
+                const gap = Number(layer1.gap_million || 0);
+                const headerSlot = resolveSlot('header_kpi_slot', { scopeData: payload, periodMode, idx });
+                const official = (headerSlot.blockId === 'official_kpi_6') ? (headerSlot.data || {}) : {};
+                const officialAch = Number(official.monthly_attainment_rate || 0);
+                const achValue = officialAch > 0 ? `${officialAch.toFixed(1)}%` : ach;
+                const healthSlot = resolveSlot('data_health_slot', {});
+                const health = (healthSlot.data || {});
+                const integrity = Number(health.integrity_score || 0);
+                setMetric(1, '목표 달성률', achValue, 'text-blue-700', '#2563eb');
                 setMetric(2, '목표 대비 편차 (백만)', (gap >= 0 ? '+' : '') + gap.toFixed(1), gap >= 0 ? 'text-emerald-600' : 'text-rose-600', gap >= 0 ? '#10b981' : '#ef4444');
-                setMetric(3, '성과 지수 (PI)', Math.round(perf.pi), 'text-amber-600', '#d97706');
-                setMetric(4, '성장률 (FGR)', Math.round(perf.fgr), 'text-emerald-600', '#059669');
+                setMetric(3, '성과 지수 (PI)', Math.round(Number(layer1.pi || 0)), 'text-amber-600', '#d97706');
+                setMetric(4, '성장률 (FGR)', Math.round(Number(layer1.fgr || 0)), 'text-emerald-600', '#059669');
                 setMetric(5, '지점 평균 효율', 'CLUSTER', 'text-slate-800 text-xl font-bold mt-2', '#1e293b');
-                setMetric(6, '데이터 정합성', 'STABLE', 'text-slate-400 text-xl font-bold mt-2', '#cbd5e1');
+                const healthText = integrity > 0 ? `${integrity.toFixed(1)}점` : 'STABLE';
+                setMetric(6, '데이터 정합성', healthText, 'text-slate-400 text-xl font-bold mt-2', '#cbd5e1');
             } else {
                 const m = payload.member;
-                setMetric(1, '성과 지수 (PI)', Math.round(perf.pi), 'text-blue-700', '#2563eb');
-                setMetric(2, '성장률 (FGR)', Math.round(perf.fgr), perf.fgr >=0 ? 'text-emerald-600' : 'text-rose-600', perf.fgr >=0 ? '#10b981' : '#ef4444');
-                setMetric(3, '유효활동 (HIR)', Math.round(m.HIR * perf.scale), 'text-amber-600', '#d97706');
-                setMetric(4, '관계온도 (RTR)', Math.round(m.RTR * perf.scale), 'text-emerald-600', '#059669');
-                setMetric(5, '행동규칙성 (BCR)', Math.round(m.BCR * perf.scale), 'text-slate-800', '#1e293b');
-                setMetric(6, '계획이행률 (PHR)', Math.round(m.PHR * perf.scale), 'text-slate-500', '#cbd5e1');
+                const layer1 = resolveLayer1Metric(m, periodMode, idx);
+                const scale = Number(layer1.scale || 1.0);
+                const fgr = Number(layer1.fgr || 0);
+                setMetric(1, '성과 지수 (PI)', Math.round(Number(layer1.pi || 0)), 'text-blue-700', '#2563eb');
+                setMetric(2, '성장률 (FGR)', Math.round(fgr), fgr >=0 ? 'text-emerald-600' : 'text-rose-600', fgr >=0 ? '#10b981' : '#ef4444');
+                setMetric(3, '유효활동 (HIR)', Math.round(m.HIR * scale), 'text-amber-600', '#d97706');
+                setMetric(4, '관계온도 (RTR)', Math.round(m.RTR * scale), 'text-emerald-600', '#059669');
+                setMetric(5, '행동규칙성 (BCR)', Math.round(m.BCR * scale), 'text-slate-800', '#1e293b');
+                setMetric(6, '계획이행률 (PHR)', Math.round(m.PHR * scale), 'text-slate-500', '#cbd5e1');
             }
         }
 
         function renderGroup(data, pSeries, idx) {
-            const ach = (pSeries.actual[idx] / pSeries.target[idx] * 100) || 0;
-            const gap = (pSeries.actual[idx] - pSeries.target[idx]) / 1000000;
+            const layer1 = resolveLayer1Metric(data, periodMode, idx);
+            const ach = Number(layer1.attainment_rate || 0);
+            const gap = Number(layer1.gap_million || 0);
             document.getElementById('v_achieve_layer1').innerText = ach.toFixed(1) + "%";
             document.getElementById('v_achieve_bar').style.width = Math.min(ach, 100) + "%";
             document.getElementById('v_fgr_layer1').innerText = "선택 기간 목표 달성 현황";
@@ -695,10 +810,10 @@
         }
 
         function renderIndividual(m, brAvg, pSeries, idx) {
-            const perf = periodPerf(pSeries, idx);
-            const ach = (pSeries.actual[idx] / pSeries.target[idx] * 100) || 0;
+            const layer1 = resolveLayer1Metric(m, periodMode, idx);
+            const ach = Number(layer1.attainment_rate || 0);
             document.getElementById('v_indiv_ach').innerText = ach.toFixed(1) + "%";
-            document.getElementById('v_indiv_gap').innerText = `목표 대비 편차: ${(pSeries.actual[idx] - pSeries.target[idx]).toLocaleString()}원`;
+            document.getElementById('v_indiv_gap').innerText = `목표 대비 편차: ${Number(layer1.gap_amount || 0).toLocaleString()}원`;
             document.getElementById('v_rank').innerText = m.지점순위 + "위";
             document.getElementById('v_indiv_branch').innerText = bSel.value;
             document.getElementById('v_indiv_sustainability').innerText = m.sustainability.toFixed(1);
@@ -714,7 +829,7 @@
                 data: {
                     labels: rL_Full,
                     datasets: [
-                        { label: m.성명, data: rL_Short.map(k=>Math.round(m[k] * perf.scale)), borderColor: '#2563eb', backgroundColor: 'rgba(37,99,235,0.2)', borderWidth: 3 },
+                        { label: m.성명, data: rL_Short.map(k=>Math.round(m[k] * Number(layer1.scale || 1.0))), borderColor: '#2563eb', backgroundColor: 'rgba(37,99,235,0.2)', borderWidth: 3 },
                         { label: '지점 평균', data: rL_Short.map(k=>Math.round(brAvg[k])), borderColor: '#94a3b8', borderDash: [4, 4], fill: false }
                     ]
                 },

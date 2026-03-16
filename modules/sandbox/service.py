@@ -14,8 +14,10 @@ from typing import Optional
 
 from modules.kpi.sandbox_engine import (
     OFFICIAL_SANDBOX_KPI6_KEYS,
+    compute_sandbox_layer1_period_metrics,
     compute_sandbox_official_kpi_6,
     compute_sandbox_rep_kpis,
+    validate_layer1_period_metrics_payload,
     validate_official_kpi_6_payload,
 )
 from modules.sandbox.schemas import (
@@ -229,6 +231,11 @@ def build_sandbox_result_asset(
         join_quality=join_quality,
         official_kpi_6=official_kpi_6,
     )
+    block_payload = _build_dashboard_block_payload(
+        template_payload=template_payload,
+        insight_messages=report_contract.executive_summary,
+    )
+    template_payload["block_payload"] = block_payload
 
     return SandboxResultAsset(
         scenario=input_std.scenario,
@@ -244,6 +251,7 @@ def build_sandbox_result_asset(
             top_performers=[{"name": row[0], "val": row[1]} for row in (report_contract.top_efficiency_hospitals.rows if report_contract.top_efficiency_hospitals else [])],
             insight_messages=report_contract.executive_summary,
             template_payload=template_payload,
+            block_payload=block_payload,
         ),
         source_crm_asset_id=input_std.source_crm_asset_id,
         source_rx_asset_id=input_std.source_rx_asset_id,
@@ -485,6 +493,56 @@ def _build_report_template_payload(
                 values[idx] = round(float(value), 0)
         return values
 
+    def latest_month_slot() -> int:
+        if not months:
+            return 0
+        return max(0, min(len(months) - 1, 11))
+
+    def layer1_point(layer1_payload: dict, period: str, idx: int) -> dict[str, float]:
+        series = layer1_payload.get(period, [])
+        if not isinstance(series, list) or not series:
+            return {
+                "actual": 0.0,
+                "target": 0.0,
+                "attainment_rate": 0.0,
+                "gap_amount": 0.0,
+                "gap_million": 0.0,
+                "pi": 0.0,
+                "fgr": 0.0,
+                "scale": 1.0,
+            }
+        safe_idx = max(0, min(idx, len(series) - 1))
+        point = series[safe_idx]
+        if isinstance(point, dict):
+            return {
+                "actual": float(point.get("actual", 0.0) or 0.0),
+                "target": float(point.get("target", 0.0) or 0.0),
+                "attainment_rate": float(point.get("attainment_rate", 0.0) or 0.0),
+                "gap_amount": float(point.get("gap_amount", 0.0) or 0.0),
+                "gap_million": float(point.get("gap_million", 0.0) or 0.0),
+                "pi": float(point.get("pi", 0.0) or 0.0),
+                "fgr": float(point.get("fgr", 0.0) or 0.0),
+                "scale": float(point.get("scale", 1.0) or 1.0),
+            }
+        return {
+            "actual": 0.0,
+            "target": 0.0,
+            "attainment_rate": 0.0,
+            "gap_amount": 0.0,
+            "gap_million": 0.0,
+            "pi": 0.0,
+            "fgr": 0.0,
+            "scale": 1.0,
+        }
+
+    def build_layer1_payload(monthly_actual: list[float], monthly_target: list[float]) -> dict:
+        return validate_layer1_period_metrics_payload(
+            compute_sandbox_layer1_period_metrics(
+                monthly_actual=monthly_actual,
+                monthly_target=monthly_target,
+            )
+        )
+
     def calc_gini(values: list[float]) -> float:
         points = sorted(float(v) for v in values if float(v) > 0)
         if not points:
@@ -546,23 +604,26 @@ def _build_report_template_payload(
             prod_monthly_target = month_series(prod["monthly_target"])
             prod_total_actual = sum(prod_monthly_actual)
             prod_total_target = sum(prod_monthly_target)
-            prev_prod = prod_monthly_actual[max(len(months) - 2, 0)] if len(months) >= 2 else 0.0
-            cur_prod = prod_monthly_actual[max(len(months) - 1, 0)] if months else 0.0
-            growth = round(((cur_prod - prev_prod) / prev_prod) * 100.0, 1) if prev_prod > 0 else 0.0
-            prod_pi = round((prod_total_actual / prod_total_target) * 100.0, 1) if prod_total_target > 0 else 0.0
+            prod_layer1 = build_layer1_payload(prod_monthly_actual, prod_monthly_target)
+            latest_prod_month = layer1_point(prod_layer1, "monthly", latest_month_slot())
+            prod_yearly = layer1_point(prod_layer1, "yearly", 0)
+            prod_growth = round(float(latest_prod_month["fgr"]), 1)
+            prod_pi = round(float(prod_yearly["attainment_rate"]), 1)
+            prod_ms = round((prod_total_actual / max(total_actual, 1)) * 100.0, 1) if total_actual > 0 else 0.0
             product_rows.append({
                 "name": product_name,
-                "ms": round((prod_total_actual / max(total_actual, 1)) * 100.0, 1) if total_actual > 0 else 0.0,
-                "growth": growth,
+                "ms": prod_ms,
+                "growth": prod_growth,
             })
             member_prod_analysis[product_name] = {
                 "monthly_actual": prod_monthly_actual,
                 "monthly_target": prod_monthly_target,
+                "layer1": prod_layer1,
                 "처방금액": round(prod_total_actual, 0),
                 "목표금액": round(prod_total_target, 0),
                 "PI": prod_pi,
-                "FGR": growth,
-                "avg_ms": round((prod_total_actual / max(total_actual, 1)) * 100.0, 1) if total_actual > 0 else 0.0,
+                "FGR": prod_growth,
+                "avg_ms": prod_ms,
                 "analysis": {"importance": {}, "correlation": {}, "adj_correlation": {}, "ccf": []},
             }
             total_row = total_prod_analysis.setdefault(product_name, {
@@ -609,6 +670,7 @@ def _build_report_template_payload(
             "prod_analysis": member_prod_analysis,
             "monthly_actual": monthly_actual,
             "monthly_target": monthly_target,
+            "layer1": build_layer1_payload(monthly_actual, monthly_target),
         }
         branches[str(meta["branch_name"])]["members"].append(member)
 
@@ -629,9 +691,11 @@ def _build_report_template_payload(
             "PI": round(sum(member["PI"] for member in members) / len(members), 1) if members else 0.0,
             "FGR": round(sum(member["FGR"] for member in members) / len(members), 1) if members else 0.0,
         }
-        branch["achieve"] = round((sum(branch_actual) / sum(branch_target)) * 100.0, 1) if sum(branch_target) > 0 else 0.0
+        branch_layer1 = build_layer1_payload(branch_actual, branch_target)
+        branch["achieve"] = round(float(layer1_point(branch_layer1, "yearly", 0)["attainment_rate"]), 1)
         branch["monthly_actual"] = branch_actual
         branch["monthly_target"] = branch_target
+        branch["layer1"] = branch_layer1
         branch_importance = {
             "PT": round(sum(float(member["shap"].get("PT", 0.0)) for member in members) / max(len(members), 1), 2),
             "Demo": round(sum(float(member["shap"].get("Demo", 0.0)) for member in members) / max(len(members), 1), 2),
@@ -653,19 +717,19 @@ def _build_report_template_payload(
         for product_name, prod_acc in branch_prod_analysis_acc.get(branch_name, {}).items():
             prod_actual = [round(v, 0) for v in prod_acc["monthly_actual"]]
             prod_target = [round(v, 0) for v in prod_acc["monthly_target"]]
-            prod_actual_sum = sum(prod_actual)
-            prod_target_sum = sum(prod_target)
-            prev_prod = prod_actual[max(len(months) - 2, 0)] if len(months) >= 2 else 0.0
-            cur_prod = prod_actual[max(len(months) - 1, 0)] if months else 0.0
+            prod_layer1 = build_layer1_payload(prod_actual, prod_target)
+            prod_yearly = layer1_point(prod_layer1, "yearly", 0)
+            prod_month_latest = layer1_point(prod_layer1, "monthly", latest_month_slot())
             branch["prod_analysis"][product_name] = {
-                "achieve": round((prod_actual_sum / prod_target_sum) * 100.0, 1) if prod_target_sum > 0 else 0.0,
+                "achieve": round(float(prod_yearly["attainment_rate"]), 1),
                 "avg": {
                     **branch["avg"],
-                    "PI": round((prod_actual_sum / prod_target_sum) * 100.0, 1) if prod_target_sum > 0 else 0.0,
-                    "FGR": round(((cur_prod - prev_prod) / prev_prod) * 100.0, 1) if prev_prod > 0 else 0.0,
+                    "PI": round(float(prod_yearly["attainment_rate"]), 1),
+                    "FGR": round(float(prod_month_latest["fgr"]), 1),
                 },
                 "monthly_actual": prod_actual,
                 "monthly_target": prod_target,
+                "layer1": prod_layer1,
                 "analysis": branch["analysis"],
             }
 
@@ -692,12 +756,12 @@ def _build_report_template_payload(
     total_correlation = build_matrix(all_members)
 
     for product_id, total_row in total_prod_analysis.items():
-        actual_sum = sum(total_row["monthly_actual"])
-        target_sum = sum(total_row["monthly_target"])
-        total_row["achieve"] = round((actual_sum / target_sum) * 100.0, 1) if target_sum > 0 else 0.0
+        total_layer1 = build_layer1_payload(total_row["monthly_actual"], total_row["monthly_target"])
+        total_row["achieve"] = round(float(layer1_point(total_layer1, "yearly", 0)["attainment_rate"]), 1)
         total_row["avg"] = total_avg
         total_row["monthly_actual"] = [round(v, 0) for v in total_row["monthly_actual"]]
         total_row["monthly_target"] = [round(v, 0) for v in total_row["monthly_target"]]
+        total_row["layer1"] = total_layer1
         total_row["analysis"] = {
             "importance": total_importance,
             "correlation": total_correlation,
@@ -714,16 +778,19 @@ def _build_report_template_payload(
         1,
     )
 
+    total_layer1 = build_layer1_payload(total_monthly_actual, total_monthly_target)
+
     return {
         "official_kpi_6": official_kpi_6,
         "branches": dict(branches),
         "products": sorted(products),
         "total_prod_analysis": total_prod_analysis,
         "total": {
-            "achieve": round((sum(total_monthly_actual) / sum(total_monthly_target)) * 100.0, 1) if sum(total_monthly_target) > 0 else 0.0,
+            "achieve": round(float(layer1_point(total_layer1, "yearly", 0)["attainment_rate"]), 1),
             "avg": total_avg,
             "monthly_actual": total_monthly_actual,
             "monthly_target": total_monthly_target,
+            "layer1": total_layer1,
             "analysis": {
                 "importance": total_importance,
                 "correlation": total_correlation,
@@ -758,6 +825,131 @@ def _build_report_template_payload(
             ],
         },
         "missing_data": missing_data,
+    }
+
+
+def _build_official_kpi_6_block(template_payload: dict) -> dict:
+    return {
+        "metrics": dict(template_payload.get("official_kpi_6", {}) or {}),
+    }
+
+
+def _build_total_summary_block(template_payload: dict) -> dict:
+    total = dict(template_payload.get("total", {}) or {})
+    return {
+        "achieve": float(total.get("achieve", 0.0) or 0.0),
+        "avg": dict(total.get("avg", {}) or {}),
+        "analysis": dict(total.get("analysis", {}) or {}),
+        "layer1": dict(total.get("layer1", {}) or {}),
+    }
+
+
+def _build_total_trend_block(template_payload: dict) -> dict:
+    total = dict(template_payload.get("total", {}) or {})
+    return {
+        "monthly_actual": list(total.get("monthly_actual", []) or []),
+        "monthly_target": list(total.get("monthly_target", []) or []),
+        "layer1": dict(total.get("layer1", {}) or {}),
+    }
+
+
+def _build_data_health_block(template_payload: dict) -> dict:
+    return dict(template_payload.get("data_health", {}) or {})
+
+
+def _build_branch_summary_block(template_payload: dict) -> dict:
+    branch_index = list(template_payload.get("branch_index", []) or [])
+    branch_manifest = dict(template_payload.get("branch_asset_manifest", {}) or {})
+    branches = dict(template_payload.get("branches", {}) or {})
+    if branch_index:
+        branch_keys = [str(item.get("key") or item.get("label") or "") for item in branch_index if isinstance(item, dict)]
+    else:
+        branch_keys = list(branches.keys())
+    return {
+        "mode": "chunked" if bool(branch_manifest) else "inline",
+        "branch_keys": [key for key in branch_keys if key],
+        "branch_count": int((template_payload.get("branch_asset_counts", {}) or {}).get("branch_count", len(branches)) or 0),
+        "source_ref": "template_payload.branches",
+    }
+
+
+def _build_branch_member_summary_block(template_payload: dict) -> dict:
+    branch_manifest = dict(template_payload.get("branch_asset_manifest", {}) or {})
+    branch_index = list(template_payload.get("branch_index", []) or [])
+    return {
+        "mode": "chunked" if bool(branch_manifest) else "inline",
+        "branch_index": branch_index,
+        "source_ref": "template_payload.branches.*.members",
+    }
+
+
+def _build_member_performance_block(template_payload: dict) -> dict:
+    return {
+        "kpi_keys": ["HIR", "RTR", "BCR", "PHR", "PI", "FGR", "efficiency", "sustainability", "gini"],
+        "source_ref": "template_payload.branches.*.members",
+    }
+
+
+def _build_product_analysis_block(template_payload: dict) -> dict:
+    products = list(template_payload.get("products", []) or [])
+    total_prod = dict(template_payload.get("total_prod_analysis", {}) or {})
+    return {
+        "products": products,
+        "product_count": len(products),
+        "total_product_keys": sorted(total_prod.keys()),
+        "source_ref": "template_payload.total_prod_analysis",
+    }
+
+
+def _build_activity_analysis_block(template_payload: dict) -> dict:
+    total = dict(template_payload.get("total", {}) or {})
+    analysis = dict(total.get("analysis", {}) or {})
+    return {
+        "importance_keys": sorted((analysis.get("importance", {}) or {}).keys()),
+        "matrix_keys": sorted((analysis.get("correlation", {}) or {}).keys()),
+        "source_ref": "template_payload.total.analysis",
+    }
+
+
+def _build_missing_data_block(template_payload: dict) -> dict:
+    rows = list(template_payload.get("missing_data", []) or [])
+    return {
+        "rows": rows,
+        "count": len(rows),
+    }
+
+
+def _build_executive_insight_block(insight_messages: list[str]) -> dict:
+    return {
+        "messages": list(insight_messages or []),
+        "count": len(insight_messages or []),
+    }
+
+
+def _build_template_runtime_manifest_block(template_payload: dict) -> dict:
+    return {
+        "data_mode": str(template_payload.get("data_mode", "") or ""),
+        "asset_base": str(template_payload.get("asset_base", "") or ""),
+        "branch_asset_manifest": dict(template_payload.get("branch_asset_manifest", {}) or {}),
+        "branch_index": list(template_payload.get("branch_index", []) or []),
+        "branch_asset_counts": dict(template_payload.get("branch_asset_counts", {}) or {}),
+    }
+
+
+def _build_dashboard_block_payload(template_payload: dict, insight_messages: list[str]) -> dict:
+    return {
+        "official_kpi_6": _build_official_kpi_6_block(template_payload),
+        "total_summary": _build_total_summary_block(template_payload),
+        "total_trend": _build_total_trend_block(template_payload),
+        "branch_summary": _build_branch_summary_block(template_payload),
+        "branch_member_summary": _build_branch_member_summary_block(template_payload),
+        "member_performance": _build_member_performance_block(template_payload),
+        "product_analysis": _build_product_analysis_block(template_payload),
+        "activity_analysis": _build_activity_analysis_block(template_payload),
+        "data_health": _build_data_health_block(template_payload),
+        "missing_data": _build_missing_data_block(template_payload),
+        "executive_insight": _build_executive_insight_block(insight_messages),
+        "template_runtime_manifest": _build_template_runtime_manifest_block(template_payload),
     }
 
 

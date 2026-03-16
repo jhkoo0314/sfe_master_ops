@@ -2,7 +2,7 @@
 
 ## 목적
 
-이 폴더는 SFE OPS의 공식 세계관, 실행 순서, 현재 범위를 Codex가 바로 작업에 사용할 수 있게 압축한 작업 레이어다.
+이 폴더는 Sales Data OS의 공식 세계관, 실행 순서, 현재 범위를 Codex가 바로 작업에 사용할 수 있게 압축한 작업 레이어다.
 
 이 폴더는 마스터 문서를 대체하지 않는다.
 충돌 시 우선순위는 다음과 같다.
@@ -25,11 +25,12 @@
 
 ## 가장 중요한 기준
 
-SFE OPS의 중심은 Sandbox가 아니라 OPS Engine이다.
+시스템 전체 이름은 `Sales Data OS`다.
+`OPS`는 시스템 전체가 아니라 `Validation / Orchestration Layer`다.
 
 공식 흐름:
 
-`raw -> adapter -> module -> Result Asset -> OPS -> Builder`
+`raw -> adapter -> module/core engine -> Result Asset -> Validation Layer(OPS) -> Intelligence(RADAR) -> Builder`
 
 ## 이 폴더에서 하지 않는 일
 
@@ -37,7 +38,7 @@ SFE OPS의 중심은 Sandbox가 아니라 OPS Engine이다.
 - 세계관을 새로 정의하지 않는다.
 - 저장소 실제 구조와 다른 이상적 구조를 만들지 않는다.
 - Builder를 계산 엔진처럼 다루지 않는다.
-- Sandbox를 전체 허브처럼 설명하지 않는다.
+- OPS를 시스템 전체 중심으로 설명하지 않는다.
 
 ## 작성 원칙
 

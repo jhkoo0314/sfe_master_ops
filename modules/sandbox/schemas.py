@@ -277,6 +277,7 @@ class DashboardPayload(BaseModel):
     bottom_performers: list[dict] = Field(default_factory=list)
     insight_messages: list[str] = Field(default_factory=list)
     template_payload: dict[str, Any] = Field(default_factory=dict)
+    block_payload: dict[str, Any] = Field(default_factory=dict)
 
 
 class DomainQualitySummary(BaseModel):
