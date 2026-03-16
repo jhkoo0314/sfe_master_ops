@@ -3,6 +3,7 @@ import os
 import subprocess
 from datetime import datetime
 from pathlib import Path
+from textwrap import dedent
 
 import pandas as pd
 import streamlit as st
@@ -92,63 +93,90 @@ def _materialize_periodized_report(report_output_path: str, report_period: str, 
 def render_dashboard_tab() -> None:
     render_page_hero(
         "Sales Data OS Console",
-        "",
+        "입력부터 KPI 계산, 검증, 인텔리전스, 렌더링까지 이어지는 전체 흐름을 한 화면에서 점검합니다.",
     )
     result = st.session_state.pipeline_result
 
     col1, col2, col3, col4 = st.columns(4)
     with col1:
-        st.markdown(f"""<div class="metric-card"><div class="metric-lbl">전략적 정확성</div><div class="metric-val">{result['overall_score'] if result else '—'}</div><div class="metric-sub">전체 파이프라인 평균 점수</div></div>""", unsafe_allow_html=True)
+        st.markdown(f"""<div class="metric-card"><div class="metric-lbl">전체 품질 점수</div><div class="metric-val">{result['overall_score'] if result else '—'}</div><div class="metric-sub">현재 실행 흐름의 평균 평가</div></div>""", unsafe_allow_html=True)
     with col2:
         status = result["overall_status"] if result else "READY"
         icon = {"PASS": "✅", "WARN": "⚠️", "FAIL": "❌"}.get(status, "⬜")
-        st.markdown(f"""<div class="metric-card"><div class="metric-lbl">엔진 상태</div><div class="metric-val" style="font-size: 28px;">{icon} {status}</div><div class="metric-sub">최신 실행 결과 기준</div></div>""", unsafe_allow_html=True)
+        st.markdown(f"""<div class="metric-card"><div class="metric-lbl">플랫폼 상태</div><div class="metric-val" style="font-size: 28px;">{icon} {status}</div><div class="metric-sub">최근 실행 결과 기준</div></div>""", unsafe_allow_html=True)
     with col3:
-        n_pass = sum(1 for s in (result["steps"] if result else []) if s["status"] == "PASS")
-        st.markdown(f"""<div class="metric-card"><div class="metric-lbl">검증 통과 모듈</div><div class="metric-val">{n_pass}/5</div><div class="metric-sub">핸드오프 가능한 단계 수</div></div>""", unsafe_allow_html=True)
+        steps = result["steps"] if result else []
+        active_steps = [s for s in steps if s.get("status") != "SKIP"]
+        n_pass = sum(1 for s in active_steps if s.get("status") == "PASS")
+        st.markdown(f"""<div class="metric-card"><div class="metric-lbl">통과 단계</div><div class="metric-val">{n_pass}/{len(active_steps) if active_steps else '—'}</div><div class="metric-sub">실행 대상 단계 기준</div></div>""", unsafe_allow_html=True)
     with col4:
         dur = f"{result['total_duration_ms']}ms" if result else "—"
-        st.markdown(f"""<div class="metric-card"><div class="metric-lbl">엔진 응답 속도</div><div class="metric-val">{dur}</div><div class="metric-sub">전체 파이프라인 수행 시간</div></div>""", unsafe_allow_html=True)
+        st.markdown(f"""<div class="metric-card"><div class="metric-lbl">총 실행 시간</div><div class="metric-val">{dur}</div><div class="metric-sub">현재 선택 흐름 전체 시간</div></div>""", unsafe_allow_html=True)
 
-    render_panel_header("Sales Data OS 피드백 루프", "Validation Layer (OPS) 흐름에 맞춰 입력, 정규화, 샌드박스 판단, 산출물 핸드오프 단계로 구성했습니다.")
-    st.markdown(
+    render_panel_header(
+        "Sales Data OS 레이어 흐름",
+        "Data Layer → Adapter Layer → Core Engine Layer → Validation Layer → Intelligence Layer → Presentation Layer 흐름을 한 화면에서 확인합니다.",
+    )
+    flow_html = dedent(
         """
-        <div class="ops-network">
-          <div class="ops-world">
-            <div class="flow-stage">
-              <div class="stage-kicker">Stage 01</div>
-              <div class="stage-title">Data Intake</div>
-              <div class="stage-copy">현장 데이터와 시스템 데이터를 먼저 어댑터가 수집합니다.</div>
-              <div class="flow-list">
-                <div class="flow-chip"><div class="chip-name">CRM 활동</div><div class="chip-meta">방문, 디테일링, 담당자 실행 로그</div></div>
-                <div class="flow-chip"><div class="chip-name">실적 / 목표</div><div class="chip-meta">매출 기준과 목표 기준을 함께 확보</div></div>
-                <div class="flow-chip"><div class="chip-name">Prescription</div><div class="chip-meta">선택 입력, 흐름 연결 검증 강화</div></div>
+        <div class="os-flow-shell">
+          <div class="os-flow-grid">
+            <div class="os-flow-row row-top">
+              <div class="os-layer-card layer-data">
+                <div class="os-layer-step">L1</div>
+                <div class="os-layer-title">Data Layer</div>
+                <div class="os-layer-copy">CRM / Sales / Target / Prescription 원천 데이터 집합</div>
+                <div class="os-layer-tags"><span>Raw</span><span>Source</span></div>
+              </div>
+              <div class="os-layer-link">&rarr;</div>
+              <div class="os-layer-card layer-adapter">
+                <div class="os-layer-step">L2</div>
+                <div class="os-layer-title">Adapter Layer</div>
+                <div class="os-layer-copy">원천 컬럼을 표준 스키마로 정렬하고 의미를 보존</div>
+                <div class="os-layer-tags"><span>Normalize</span><span>Standard</span></div>
+              </div>
+              <div class="os-layer-link">&rarr;</div>
+              <div class="os-layer-card layer-kpi">
+                <div class="os-layer-step">L3</div>
+                <div class="os-layer-title">Core Engine Layer</div>
+                <div class="os-layer-copy">KPI Module이 공식 지표를 단일 소스로 계산</div>
+                <div class="os-layer-tags"><span>KPI</span><span>Single Source</span></div>
               </div>
             </div>
-            <div class="flow-arrow">→</div>
-            <div class="decision-core">
-              <div class="core-icon">🔬</div>
-              <div class="core-title">Validation Layer (OPS)</div>
-              <div class="core-copy">정규화된 데이터를 검증하고, 점수와 이유를 만든 뒤 다음 모듈 핸드오프 여부를 결정합니다.</div>
-              <div class="decision-badges"><span>Normalize</span><span>Scoring</span><span>Handoff</span></div>
-            </div>
-            <div class="flow-arrow">→</div>
-            <div class="flow-stage">
-              <div class="stage-kicker">Stage 03</div>
-              <div class="stage-title">Operational Outputs</div>
-              <div class="stage-copy">판단 결과가 권역 최적화와 최종 결과물 생성으로 이어집니다.</div>
-              <div class="flow-list">
-                <div class="flow-chip"><div class="chip-name">Territory</div><div class="chip-meta">권역 성과, 미커버 병원, 방문 재배치</div></div>
-                <div class="flow-chip"><div class="chip-name">Builder</div><div class="chip-meta">HTML 보고서 결과물 생성</div></div>
-                <div class="flow-chip"><div class="chip-name">Feedback Loop</div><div class="chip-meta">결과 확인 후 다시 입력 품질을 보강</div></div>
+
+            <div class="os-flow-turn">&darr;</div>
+
+            <div class="os-flow-row row-bottom">
+              <div class="os-layer-card layer-builder">
+                <div class="os-layer-step">L6</div>
+                <div class="os-layer-title">Presentation Layer</div>
+                <div class="os-layer-copy">Builder가 승인된 payload를 HTML로 렌더링</div>
+                <div class="os-layer-tags"><span>Render-only</span><span>Preview</span></div>
+              </div>
+              <div class="os-layer-link">&larr;</div>
+              <div class="os-layer-card layer-intel">
+                <div class="os-layer-step">L5</div>
+                <div class="os-layer-title">Intelligence Layer</div>
+                <div class="os-layer-copy">Sandbox / Territory / Prescription / RADAR 분석</div>
+                <div class="os-layer-tags"><span>Insight</span><span>Signal</span></div>
+              </div>
+              <div class="os-layer-link">&larr;</div>
+              <div class="os-layer-card layer-ops">
+                <div class="os-layer-step">L4</div>
+                <div class="os-layer-title">Validation Layer</div>
+                <div class="os-layer-copy">품질 검증, 매핑 검증, 전달 가능 여부 판단</div>
+                <div class="os-layer-tags"><span>Quality Gate</span><span>Handoff</span></div>
               </div>
             </div>
           </div>
-          <div class="helper-note" style="text-align:center; margin-top:18px;">입력 데이터가 Sandbox를 거쳐 Territory와 Builder로 전달되고, 결과가 다시 입력 품질 개선으로 연결되는 Sales Data OS 루프입니다.</div>
+          <div class="os-flow-note">KPI는 Core Engine에서 1회 계산되고, OPS는 검증/오케스트레이션만 수행합니다. 이후 Intelligence와 Builder가 승인 결과를 소비합니다.</div>
         </div>
-        """,
-        unsafe_allow_html=True,
+        """
     )
+    if hasattr(st, "html"):
+        st.html(flow_html)
+    else:
+        st.markdown(flow_html, unsafe_allow_html=True)
 
     if result and result.get("recommended_actions"):
         render_panel_header("AI 기반 운영 최적화 제언")
@@ -159,7 +187,7 @@ def render_dashboard_tab() -> None:
 def render_upload_tab() -> None:
     company_name = get_active_company_name()
     render_page_hero(
-        "원천 데이터 투입",
+        "RAW 데이터 투입",
         f"{company_name} 원천 데이터를 회사별 폴더에 연결합니다. 검증 단계에서는 항목명, 짧은 설명, 업로드창을 한 줄에 두고 필요한 예시만 펼쳐서 봅니다.",
         "DATA ADAPTER",
     )
@@ -232,7 +260,11 @@ def render_upload_tab() -> None:
 
 def render_pipeline_tab() -> None:
     company_name = get_active_company_name()
-    render_page_hero("Validation Layer (OPS) 실행", f"{company_name} 원천 파일을 실제 source 경로에 반영한 뒤, 정규화와 검증 스크립트를 순서대로 실행합니다.", "ENGINE RUN")
+    render_page_hero(
+        "Sales Data OS 실행",
+        f"{company_name} 데이터로 Adapter 정규화, Core Engine 계산, Validation Layer (OPS) 검증을 순서대로 실행합니다.",
+        "ORCHESTRATION",
+    )
     uploaded = st.session_state.uploaded_data
     crm_status = get_crm_package_status(uploaded)
     ready = [k for k, v in uploaded.items() if v is not None]
@@ -254,9 +286,13 @@ def render_pipeline_tab() -> None:
         st.checkbox("FAIL 시 즉시 중단", value=True)
         st.selectbox("시작 STEP", [1, 2, 3, 4, 5], index=0)
     with col_run:
-        render_block_card("실행 준비 상태", f"현재 실행 모드는 {get_execution_mode_label(current_mode)} 입니다. 선택 흐름은 {' -> '.join(get_execution_mode_modules(current_mode)).upper()} 이고, CRM 필수 패키지는 {'준비 완료' if crm_status['required_ready'] else '미완성'} 상태입니다.", "Run Context")
+        render_block_card(
+            "실행 준비 상태",
+            f"현재 실행 모드: {get_execution_mode_label(current_mode)} · 단계: {' -> '.join(get_execution_mode_modules(current_mode)).upper()} · CRM 필수 패키지: {'준비 완료' if crm_status['required_ready'] else '미완성'}",
+            "Run Context",
+        )
 
-    render_panel_header("실행 전 반영 파일 확인", "실행을 누르면 아래 경로에 업로드 파일이 반영됩니다. 업로드하지 않은 항목은 기존 source 파일을 그대로 사용합니다.")
+    render_panel_header("실행 전 반영 파일 확인", "업로드한 파일은 source 경로에 반영되고, 없는 항목은 기존 파일을 사용합니다.")
     target_rows = get_source_target_rows(current_mode, uploaded)
     if target_rows:
         st.dataframe(pd.DataFrame(target_rows), use_container_width=True, hide_index=True)
@@ -279,7 +315,7 @@ def render_pipeline_tab() -> None:
 
     if run_btn:
         try:
-            with st.spinner("Validation Layer (OPS) 파이프라인 실행 중..."):
+            with st.spinner("Sales Data OS 실행 중... (Adapter → Core Engine → Validation Layer)"):
                 add_log(f"파이프라인 시작 — 실행 모드: {get_execution_mode_label(current_mode)}")
                 result = run_actual_pipeline(execution_mode=current_mode, uploaded=uploaded)
                 st.session_state.pipeline_result = result
@@ -319,7 +355,7 @@ def render_pipeline_tab() -> None:
 
 
 def render_artifacts_tab() -> None:
-    render_page_hero("분석 산출물 미리보기", "이 탭은 차트보다 산출물 확인에 집중합니다. 정규화 파일, 검증 결과 파일, Builder 결과를 10행 미리보기와 다운로드로 확인합니다.", "ANALYTICS")
+    render_page_hero("분석 산출물 미리보기", "정규화 파일, 검증 결과 파일, validation 승인 result asset을 10행 미리보기와 다운로드로 확인합니다.", "INTELLIGENCE")
     result = st.session_state.pipeline_result
     if not result:
         st.info("먼저 파이프라인을 실행하세요.")
@@ -327,7 +363,7 @@ def render_artifacts_tab() -> None:
 
     execution_mode = st.session_state.get("execution_mode", "crm_to_sandbox")
     artifacts = collect_artifact_files(execution_mode)
-    render_panel_header("산출물 브라우저", f"선택한 흐름은 {get_execution_mode_label(execution_mode)} 입니다. 아래 파일은 해당 흐름과 관련된 정규화 파일 및 검증 산출물입니다.")
+    render_panel_header("산출물 브라우저", f"선택한 흐름은 {get_execution_mode_label(execution_mode)} 입니다. 아래 파일은 해당 흐름에서 생성된 정규화 파일, 검증 산출물, Builder 결과입니다.")
     st.markdown(f"""<div class="action-note"><b>현재 선택 흐름</b>: {' -> '.join(get_execution_mode_modules(execution_mode)).upper()}<br>표로 읽을 수 있는 파일은 최대 10행까지 미리보기 합니다. HTML 파일은 다운로드 중심으로 확인합니다.</div>""", unsafe_allow_html=True)
 
     if not artifacts:
@@ -358,7 +394,7 @@ def render_artifacts_tab() -> None:
 
 
 def render_builder_tab() -> None:
-    render_page_hero("HTML 보고서 생성", "이 탭은 검증이 끝난 결과물을 HTML 보고서로 확인하는 마지막 단계입니다. 슬라이드 자동화는 현재 범위에서 제외했습니다.", "BUILDER HANDOFF")
+    render_page_hero("HTML 보고서 생성", "Builder는 render-only 레이어입니다. 검증 승인된 payload를 받아 HTML 결과물만 생성/확인합니다.", "PRESENTATION")
     result = st.session_state.pipeline_result
     builder_eligible = result and "builder" in result.get("final_eligible_modules", [])
     if not builder_eligible:
@@ -375,7 +411,7 @@ def render_builder_tab() -> None:
             unsafe_allow_html=True,
         )
 
-    render_block_card("📊 OPS Validation Result", "현재 검증이 끝난 결과물 중 어떤 HTML 보고서를 열고 확인할지 선택하는 블록입니다.", "Output Block 01")
+    render_block_card("📊 Validation Approved Result Asset", "검증이 끝난 결과물 중 어떤 HTML 보고서를 열고 확인할지 선택하는 블록입니다.", "Output Block 01")
     report_type = st.selectbox("보고서 유형", get_report_type_options())
     period_col1, period_col2, period_col3 = st.columns(3)
     current_year = datetime.now().year

@@ -2,6 +2,13 @@
 
 이 폴더는 Sales Data OS 문서 허브다.
 
+## 용어 기준
+
+- 시스템 전체 명칭: `Sales Data OS`
+- `OPS`는 `Validation / Orchestration Layer` 의미로만 사용
+- KPI 계산 단일 소스: `modules/kpi/*`
+- Builder는 render-only 레이어이며 KPI를 재계산하지 않음
+
 ## 문서 위치
 
 - `docs/_root/`: 루트 운영 문서 원본 세트

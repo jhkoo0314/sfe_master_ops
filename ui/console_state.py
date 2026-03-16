@@ -7,9 +7,6 @@ from datetime import datetime
 import pandas as pd
 import streamlit as st
 
-from common.company_runtime import get_active_company_key as env_company_key, get_active_company_name as env_company_name
-
-
 UPLOADED_DATA_KEYS = (
     "crm_activity",
     "crm_rep_master",
@@ -42,9 +39,9 @@ def init_console_state() -> None:
     if "execution_mode" not in st.session_state:
         st.session_state.execution_mode = "crm_to_sandbox"
     if "company_key" not in st.session_state:
-        st.session_state.company_key = env_company_key()
+        st.session_state.company_key = ""
     if "company_name" not in st.session_state:
-        st.session_state.company_name = env_company_name(st.session_state.company_key)
+        st.session_state.company_name = ""
 
 
 def add_log(msg: str) -> None:

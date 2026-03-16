@@ -25,7 +25,7 @@
 - Sandbox: 분석/탐색
 - Territory: 권역/커버리지 분석
 - Prescription: 처방 흐름 검증
-- RADAR(예정): signal detection, issue prioritization, decision option templating
+- RADAR: signal detection, issue prioritization, decision option templating
 
 ## 운영 원칙
 
