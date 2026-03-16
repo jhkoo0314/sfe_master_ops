@@ -1,5 +1,8 @@
 # Part 2 실행계획서
 
+상태: `legacy`
+현재 기준 문서: `docs/architecture/12_part2_status_source_of_truth.md`
+
 작성일: 2026-03-11
 
 연계 문서:

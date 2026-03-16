@@ -1,5 +1,5 @@
 아래는 **Codex가 바로 구현 작업으로 들어갈 수 있는 수준**으로 정리한 **RADAR 모듈 설계 문서 초안**이다.
-문서명은 예를 들어 `docs/architecture/radar_module_design.md` 로 두면 좋다.
+문서명은 예를 들어 `docs/architecture/03_radar_module_design.md` 로 두면 좋다.
 
 ---
 
@@ -605,4 +605,5 @@ v0.1 구현 범위는 아래로 제한한다.
 **RADAR는 Sales Data OS의 Intelligence Layer에서 동작하는 조기 경보 및 의사결정 지원 모듈이며, KPI 계산 엔진이 아니라 validation 승인된 KPI 결과를 해석 가능한 signal과 선택지로 변환하는 모듈이다.**
 
 ---
+
 

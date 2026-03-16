@@ -1,7 +1,8 @@
 # Part2 모듈 역할 정의 고정본
 
 작성일: 2026-03-16  
-상태: `고정(Freeze)`
+상태: `legacy` / 원문 상태: `고정(Freeze)`
+현재 기준 문서: `docs/architecture/12_part2_status_source_of_truth.md`
 
 ---
 

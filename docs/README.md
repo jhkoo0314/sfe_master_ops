@@ -35,9 +35,15 @@
   - `STRUCTURE.md`
 - `docs/ai/`: Codex 작업용 축약 문서 세트
 - `docs/architecture/`: Sales Data OS 아키텍처 감사/목표/리팩토링 계획
-  - `docs/architecture/sandbox_block_contract.md`
-  - `docs/architecture/sandbox_template_slots.md`
-  - `docs/architecture/sandbox_refactor_summary.md`
+  - `docs/architecture/12_part2_status_source_of_truth.md` (Part2 상태 단일 기준)
+  - `docs/architecture/09_sales_data_os_agent_run_architecture.md`
+  - `docs/architecture/10_agent_tab_mvp.md`
+  - `docs/architecture/11_run_based_storage.md`
+  - `docs/architecture/04_sandbox_block_contract.md`
+  - `docs/architecture/05_sandbox_template_slots.md`
+  - `docs/architecture/06_sandbox_refactor_summary.md`
+- `docs/part2/`: 레거시/이력 허브 (활성 기준 문서는 `docs/architecture` 사용)
+  - `docs/part2/README.md`
 - `docs/runbook/`: Sales Data OS 기준 운영 런북
 
 ## 문서 동기화 기준
@@ -76,3 +82,4 @@
 10. `docs/_root/README.md`
 11. `docs/_root/RUNBOOK.md`
 12. `docs/_root/STRUCTURE.md`
+

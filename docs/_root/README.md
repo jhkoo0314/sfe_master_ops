@@ -46,6 +46,10 @@
 4. `Action Queue`
 5. `규칙 / 임계치 외부화`
 
+Part2 문서 운영 기준:
+- 활성 상태/실행 문서: `docs/architecture/12_part2_status_source_of_truth.md`
+- Part2 레거시 허브: `docs/part2/README.md`
+
 ## 2026-03-15 동기화 상태 (CRM KPI 거버넌스)
 
 이번 동기화에서 반영된 핵심:
@@ -321,4 +325,5 @@ uv run streamlit run ui/ops_console.py --server.port 8501
 - 문서 허브: [docs/README.md](/C:/sfe_master_ops/docs/README.md)
 - 실행 방법: [RUNBOOK.md](/C:/sfe_master_ops/docs/_root/RUNBOOK.md)
 - 구조 설명: [STRUCTURE.md](/C:/sfe_master_ops/docs/_root/STRUCTURE.md)
-- Sandbox 리팩토링 요약: [sandbox_refactor_summary.md](/C:/sfe_master_ops/docs/architecture/sandbox_refactor_summary.md)
+- Sandbox 리팩토링 요약: [06_sandbox_refactor_summary.md](/C:/sfe_master_ops/docs/architecture/06_sandbox_refactor_summary.md)
+

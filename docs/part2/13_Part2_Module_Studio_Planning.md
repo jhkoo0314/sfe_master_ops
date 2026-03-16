@@ -1,5 +1,8 @@
 # Part 2 모듈 스튜디오 기획안
 
+상태: `legacy`
+현재 기준 문서: `docs/architecture/12_part2_status_source_of_truth.md`
+
 작성일: 2026-03-12
 
 ## 0. 문서 목적

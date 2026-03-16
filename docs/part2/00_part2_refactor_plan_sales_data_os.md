@@ -1,3 +1,6 @@
+상태: `legacy`
+현재 기준 문서: `docs/architecture/12_part2_status_source_of_truth.md`
+
 아래는 **Codex CLI 전용 마스터 프롬프트**다.
 목표는 현재 `SFE OPS` 저장소를 **“OPS 중심 구조”에서 “Sales Data OS 중심 구조”로 재정의**하고, 실제 코드/문서/폴더/네이밍까지 일관되게 정리하도록 지시하는 것이다.
 
@@ -123,7 +126,7 @@
 
 ### 생성할 분석 문서
 
-`docs/architecture/current_state_audit.md`
+`docs/architecture/01_current_state_audit.md`
 
 문서에는 반드시 포함:
 
@@ -142,7 +145,7 @@
 
 ### 생성 문서
 
-`docs/architecture/sales_data_os_architecture.md`
+`docs/architecture/07_sales_data_os_architecture.md`
 
 반드시 포함할 내용:
 
@@ -168,7 +171,7 @@
 
 ### 생성 문서
 
-`docs/architecture/refactor_plan_sales_data_os.md`
+`docs/architecture/02_refactor_plan_sales_data_os.md`
 
 반드시 아래 형식으로 작성:
 
@@ -327,9 +330,9 @@ RADAR는 아래로 정의하라.
 
 ### 새로 만들 문서
 
-* `docs/architecture/current_state_audit.md`
-* `docs/architecture/sales_data_os_architecture.md`
-* `docs/architecture/refactor_plan_sales_data_os.md`
+* `docs/architecture/01_current_state_audit.md`
+* `docs/architecture/07_sales_data_os_architecture.md`
+* `docs/architecture/02_refactor_plan_sales_data_os.md`
 * `docs/runbook/sales_data_os_runbook.md`
 
 ### 수정 대상
@@ -408,3 +411,4 @@ RADAR는 아래로 정의하라.
 
 불필요한 대규모 rename은 하지 말고,
 **“개념 정렬 → 문서 정렬 → UI 정렬 → 코드 정렬”** 순서로 진행하라.
+

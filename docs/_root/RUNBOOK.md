@@ -257,9 +257,9 @@ Builder 결과:
   - `tests/test_sandbox/test_sandbox_renderer_snapshot.py`
 
 관련 설계/요약 문서:
-- [sandbox_block_contract.md](/C:/sfe_master_ops/docs/architecture/sandbox_block_contract.md)
-- [sandbox_template_slots.md](/C:/sfe_master_ops/docs/architecture/sandbox_template_slots.md)
-- [sandbox_refactor_summary.md](/C:/sfe_master_ops/docs/architecture/sandbox_refactor_summary.md)
+- [04_sandbox_block_contract.md](/C:/sfe_master_ops/docs/architecture/04_sandbox_block_contract.md)
+- [05_sandbox_template_slots.md](/C:/sfe_master_ops/docs/architecture/05_sandbox_template_slots.md)
+- [06_sandbox_refactor_summary.md](/C:/sfe_master_ops/docs/architecture/06_sandbox_refactor_summary.md)
 
 ## 9. 처방 보고서 운영 메모
 
@@ -317,3 +317,4 @@ Builder에서 Territory만 빠질 때:
 - 먼저 `data/ops_standard/{company_key}/territory/ops_territory_activity.xlsx`가 생겼는지 확인합니다.
 - 먼저 Territory 검증이 돌아서 `territory_builder_payload.json`이 생겼는지 확인합니다.
 - 그 다음 Builder를 다시 실행합니다.
+

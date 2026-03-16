@@ -353,9 +353,9 @@ Builder는 직접 raw를 읽지 않습니다.
 ## Sandbox Block 문서/테스트 위치
 
 - 설계 문서
-  - [sandbox_block_contract.md](/C:/sfe_master_ops/docs/architecture/sandbox_block_contract.md)
-  - [sandbox_template_slots.md](/C:/sfe_master_ops/docs/architecture/sandbox_template_slots.md)
-  - [sandbox_refactor_summary.md](/C:/sfe_master_ops/docs/architecture/sandbox_refactor_summary.md)
+  - [04_sandbox_block_contract.md](/C:/sfe_master_ops/docs/architecture/04_sandbox_block_contract.md)
+  - [05_sandbox_template_slots.md](/C:/sfe_master_ops/docs/architecture/05_sandbox_template_slots.md)
+  - [06_sandbox_refactor_summary.md](/C:/sfe_master_ops/docs/architecture/06_sandbox_refactor_summary.md)
 - 회귀 테스트
   - [test_sandbox_block_resolver_regression.py](/C:/sfe_master_ops/tests/test_sandbox/test_sandbox_block_resolver_regression.py)
   - [test_sandbox_renderer_snapshot.py](/C:/sfe_master_ops/tests/test_sandbox/test_sandbox_renderer_snapshot.py)
@@ -365,3 +365,4 @@ Builder는 직접 raw를 읽지 않습니다.
 - WebSlide 기능은 제거됨
 - 통합 보고서는 슬라이드 생성기가 아니라 HTML 허브 역할만 함
 - LLM 자동 인사이트 생성은 아직 연결 안 됨
+

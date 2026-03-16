@@ -1,5 +1,8 @@
 # Part2 모듈별 KPI 엔진 분리 설계 계획
 
+상태: `legacy`
+현재 기준 문서: `docs/architecture/12_part2_status_source_of_truth.md`
+
 작성일: 2026-03-15
 최종 업데이트: 2026-03-16
 
