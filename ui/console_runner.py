@@ -123,7 +123,7 @@ def run_actual_pipeline(execution_mode: str, uploaded: dict) -> dict:
 
 def run_mock_pipeline(execution_mode: str, uploaded: dict) -> dict:
     steps = []
-    modules = ["crm", "prescription", "sandbox", "territory", "builder"]
+    modules = ["crm", "prescription", "sandbox", "territory", "radar", "builder"]
     mode_label = get_execution_mode_label(execution_mode)
     crm_status = get_crm_package_status(uploaded)
     active_modules = get_execution_mode_modules(execution_mode)
@@ -155,6 +155,8 @@ def run_mock_pipeline(execution_mode: str, uploaded: dict) -> dict:
             if uploaded.get("crm_activity") is None:
                 status = "WARN"
                 note = "⚠️ Territory는 CRM 활동 데이터가 있어야 이동 흐름을 더 자연스럽게 볼 수 있습니다."
+        elif module == "radar":
+            note = "✅ Validation 승인 KPI 기반 RADAR 신호 생성 준비 완료."
         elif module == "builder":
             note = "✅ 최종 결과물 생성 준비 완료."
 

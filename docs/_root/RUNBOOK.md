@@ -22,7 +22,7 @@ Validation Layer (OPS) 역할은 이렇게 이해하면 됩니다.
 즉 OPS는 Sales Data OS 안에서 `중앙 운영 통제 레이어`처럼 동작합니다.
 
 현재 운영 범위 한 줄 요약:
-- CRM / Prescription / Sandbox / Territory / Builder는 실행 가능
+- CRM / Prescription / Sandbox / Territory / RADAR / Builder는 실행 가능
 - Builder는 코드상 보고서 6종 생성 가능
 - 실제 저장된 보고서 수는 회사별 마지막 실행 상태에 따라 다를 수 있음
 
@@ -64,27 +64,33 @@ uv run streamlit run ui/ops_console.py --server.port 8501
 
 `CRM -> Sandbox`
 - CRM과 실적/목표를 묶어 Sandbox 분석까지 확인
+- Sandbox 이후 RADAR 신호를 자동 생성
 
 `CRM -> Territory`
 - CRM 활동을 Territory 활동 표준으로 바꾸고, 내부 성과 준비 단계를 거쳐 권역 분석까지 바로 확인
+- Sandbox 내부 준비 단계 이후 RADAR 신호를 자동 생성
 
 `Sandbox -> HTML`
 - Sandbox 결과를 기준으로 HTML 보고서 생성 확인
+- RADAR 신호 생성 후 Builder 보고서 생성
 
 `Sandbox -> Territory`
 - Sandbox 결과를 Territory로 넘겨 지도 결과 확인
+- Territory 이후 RADAR 신호를 자동 생성
 
 `CRM -> PDF`
 - CRM과 Prescription 흐름 추적 결과 확인
 
 `CRM -> Sandbox -> Territory`
 - CRM부터 Territory까지 연결 흐름 점검
+- Territory 이후 RADAR 신호를 자동 생성
 
 `통합 실행`
 - CRM
 - Prescription
 - Sandbox
 - Territory
+- RADAR
 - Builder
 
 를 한 번에 실행합니다.
@@ -92,6 +98,7 @@ uv run streamlit run ui/ops_console.py --server.port 8501
 주의:
 - `통합 실행`은 코드상으로 `crm_analysis_preview.html`, `sandbox_report_preview.html`, `territory_map_preview.html`, `prescription_flow_preview.html`, `radar_report_preview.html`, `total_valid_preview.html`까지 연결되는 흐름입니다.
 - 다만 실제 저장은 회사별 입력 상태와 마지막 실행 결과에 따라 일부만 남아 있을 수 있습니다.
+- `CRM -> PDF`는 Sandbox 단계가 없어서 RADAR 자동 생성 대상이 아닙니다.
 
 ## 5. 업로드 파일 기준
 
@@ -153,6 +160,7 @@ data/ops_validation/daon_pharma/
 - `scripts/validate_sandbox_with_ops.py`
 - `scripts/validate_prescription_with_ops.py`
 - `scripts/validate_territory_with_ops.py`
+- `scripts/validate_radar_with_ops.py`
 - `scripts/validate_builder_with_ops.py`
 - `scripts/validate_full_pipeline.py`
 
@@ -172,6 +180,7 @@ data/ops_validation/daon_pharma/
 - `data/ops_validation/{company_key}/prescription/...`
 - `data/ops_validation/{company_key}/sandbox/...`
 - `data/ops_validation/{company_key}/territory/...`
+- `data/ops_validation/{company_key}/radar/...`
 
 모듈별 Builder payload:
 - `crm/crm_builder_payload.json`

@@ -5,7 +5,7 @@
 ## 핵심 흐름
 
 ```text
-원천데이터 -> Adapter -> Module -> Result Asset -> OPS -> Builder
+원천데이터 -> Adapter -> Module/Core Engine -> Result Asset -> Validation Layer(OPS) -> Intelligence(RADAR) -> Builder
 ```
 
 이 프로젝트는 `완전 무설정 범용 제품`보다는  
@@ -180,6 +180,7 @@ OPS 판단과 파이프라인 실행을 담당합니다.
 - `validate_prescription_with_ops.py`
 - `validate_sandbox_with_ops.py`
 - `validate_territory_with_ops.py`
+- `validate_radar_with_ops.py`
 - `validate_builder_with_ops.py`
 - `validate_full_pipeline.py`
 
@@ -201,6 +202,7 @@ OPS 판단과 파이프라인 실행을 담당합니다.
 - Territory Builder 결과에는 `territory_map_preview_assets/*.js`가 같이 복사됨
 - 코드상으로는 CRM / Sandbox / Territory / Prescription / RADAR / Total Valid 6종 생성 가능
 - 실제 저장된 HTML은 회사별 마지막 실행 시점에 따라 일부만 있을 수 있음
+- RADAR 결과 자산은 `data/ops_validation/{company_key}/radar/radar_result_asset.json`에 저장됨
 
 ### `common/`
 

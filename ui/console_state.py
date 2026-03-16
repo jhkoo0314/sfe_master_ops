@@ -21,6 +21,7 @@ MODULE_STATUS_KEYS = (
     "prescription",
     "sandbox",
     "territory",
+    "radar",
     "builder",
 )
 

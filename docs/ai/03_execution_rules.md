@@ -9,17 +9,19 @@
 1. raw 입력 구조 확인
 2. adapter 확인 또는 수정
 3. module 로직 확인 또는 수정
-4. Result Asset 확인
-5. OPS 연결 확인
-6. Builder payload 연결
-7. UI 반영
-8. 문서 갱신
+4. KPI/Core Engine 결과 확인
+5. Result Asset 확인
+6. OPS 연결 확인
+7. Intelligence(RADAR) 연결 확인
+8. Builder payload 연결
+9. UI 반영
+10. 문서 갱신
 
 앞단이 정리되지 않았는데 뒷단부터 만들지 않는다.
 
 ## 시스템 공식 흐름
 
-`원천데이터 -> Adapter -> Module -> Result Asset -> OPS -> Builder`
+`원천데이터 -> Adapter -> Module/Core Engine -> Result Asset -> Validation Layer(OPS) -> Intelligence(RADAR) -> Builder`
 
 ## 운영 콘솔 역할
 

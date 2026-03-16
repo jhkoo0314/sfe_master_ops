@@ -30,6 +30,9 @@ def get_artifact_directories(module: str) -> list[tuple[str, str]]:
             ("정규화 파일", os.path.join(root, "data", "ops_standard", company, "territory")),
             ("검증 산출물", os.path.join(root, "data", "ops_validation", company, "territory")),
         ],
+        "radar": [
+            ("검증 산출물", os.path.join(root, "data", "ops_validation", company, "radar")),
+        ],
         "builder": [("Builder 결과", os.path.join(root, "data", "ops_validation", company, "builder"))],
     }
     return mapping.get(module, [])

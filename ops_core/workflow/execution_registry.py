@@ -33,6 +33,7 @@ def _get_step_registry() -> dict[str, list[ExecutionStepDefinition]]:
     from scripts.validate_builder_with_ops import main as validate_builder_main
     from scripts.validate_crm_with_ops import main as validate_crm_main
     from scripts.validate_prescription_with_ops import main as validate_rx_main
+    from scripts.validate_radar_with_ops import main as validate_radar_main
     from scripts.validate_sandbox_with_ops import main as validate_sandbox_main
     from scripts.validate_territory_with_ops import main as validate_territory_main
 
@@ -47,6 +48,11 @@ def _get_step_registry() -> dict[str, list[ExecutionStepDefinition]]:
                 module="sandbox",
                 label="Sandbox 정규화 및 검증",
                 runner=lambda: (normalize_sandbox_main(), validate_sandbox_main()),
+            ),
+            ExecutionStepDefinition(
+                module="radar",
+                label="RADAR 신호 생성",
+                runner=validate_radar_main,
             ),
         ],
         "crm_to_territory": [
@@ -65,6 +71,11 @@ def _get_step_registry() -> dict[str, list[ExecutionStepDefinition]]:
                     validate_territory_main,
                 ),
             ),
+            ExecutionStepDefinition(
+                module="radar",
+                label="RADAR 신호 생성",
+                runner=validate_radar_main,
+            ),
         ],
         "sandbox_to_html": [
             ExecutionStepDefinition(
@@ -76,6 +87,11 @@ def _get_step_registry() -> dict[str, list[ExecutionStepDefinition]]:
                 module="sandbox",
                 label="Sandbox 정규화 및 검증",
                 runner=lambda: (normalize_sandbox_main(), validate_sandbox_main()),
+            ),
+            ExecutionStepDefinition(
+                module="radar",
+                label="RADAR 신호 생성",
+                runner=validate_radar_main,
             ),
             ExecutionStepDefinition(
                 module="builder",
@@ -98,6 +114,11 @@ def _get_step_registry() -> dict[str, list[ExecutionStepDefinition]]:
                 module="territory",
                 label="Territory 입력 정규화 및 검증",
                 runner=lambda: _run_territory_pipeline(normalize_territory_main, validate_territory_main),
+            ),
+            ExecutionStepDefinition(
+                module="radar",
+                label="RADAR 신호 생성",
+                runner=validate_radar_main,
             ),
         ],
         "crm_to_pdf": [
@@ -128,6 +149,11 @@ def _get_step_registry() -> dict[str, list[ExecutionStepDefinition]]:
                 label="Territory 입력 정규화 및 검증",
                 runner=lambda: _run_territory_pipeline(normalize_territory_main, validate_territory_main),
             ),
+            ExecutionStepDefinition(
+                module="radar",
+                label="RADAR 신호 생성",
+                runner=validate_radar_main,
+            ),
         ],
         "integrated_full": [
             ExecutionStepDefinition(
@@ -151,6 +177,11 @@ def _get_step_registry() -> dict[str, list[ExecutionStepDefinition]]:
                 runner=lambda: _run_territory_pipeline(normalize_territory_main, validate_territory_main),
             ),
             ExecutionStepDefinition(
+                module="radar",
+                label="RADAR 신호 생성",
+                runner=validate_radar_main,
+            ),
+            ExecutionStepDefinition(
                 module="builder",
                 label="Builder HTML 생성",
                 runner=validate_builder_main,
@@ -169,7 +200,7 @@ _MODE_DEFINITIONS = {
         label="CRM -> Sandbox",
         description="CRM 정리 결과를 시작점으로 샌드박스 분석까지 확인하는 흐름입니다.",
         requirements="필수: CRM 활동 원본, 담당자 마스터 / 권장: 실적, 목표",
-        modules=("crm", "sandbox"),
+        modules=("crm", "sandbox", "radar"),
         required_uploads=("crm_activity", "crm_rep_master", "crm_account_assignment", "sales", "target"),
         step_builder=_build_step_builder("crm_to_sandbox"),
     ),
@@ -178,7 +209,7 @@ _MODE_DEFINITIONS = {
         label="CRM -> Territory",
         description="CRM 활동을 Territory용 활동 표준으로 바꾸고, 내부 성과 준비 단계를 거쳐 권역 분석까지 바로 확인하는 흐름입니다.",
         requirements="필수: CRM 활동 원본, 담당자 마스터, 거래처 담당 배정, 실적, 목표",
-        modules=("crm", "territory"),
+        modules=("crm", "territory", "radar"),
         required_uploads=("crm_activity", "crm_rep_master", "crm_account_assignment", "sales", "target"),
         step_builder=_build_step_builder("crm_to_territory"),
     ),
@@ -187,7 +218,7 @@ _MODE_DEFINITIONS = {
         label="Sandbox -> HTML",
         description="샌드박스 결과가 이미 있다고 보고 HTML 보고서 생성 단계만 점검하는 흐름입니다.",
         requirements="필수: Sandbox 결과 또는 실적, 목표",
-        modules=("sandbox", "builder"),
+        modules=("sandbox", "radar", "builder"),
         required_uploads=("crm_activity", "crm_rep_master", "crm_account_assignment", "sales", "target"),
         step_builder=_build_step_builder("sandbox_to_html"),
     ),
@@ -196,7 +227,7 @@ _MODE_DEFINITIONS = {
         label="Sandbox -> Territory",
         description="샌드박스 결과를 권역 분석으로 넘기는 흐름을 점검합니다.",
         requirements="필수: Sandbox 결과 또는 실적, 목표 / 권장: CRM 활동",
-        modules=("sandbox", "territory"),
+        modules=("sandbox", "territory", "radar"),
         required_uploads=("crm_activity", "crm_rep_master", "crm_account_assignment", "sales", "target"),
         step_builder=_build_step_builder("sandbox_to_territory"),
     ),
@@ -214,7 +245,7 @@ _MODE_DEFINITIONS = {
         label="CRM -> Sandbox -> Territory",
         description="CRM에서 시작해 샌드박스와 권역 분석까지 이어지는 대표 검증 흐름입니다.",
         requirements="필수: CRM 활동 원본, 담당자 마스터, 실적, 목표",
-        modules=("crm", "sandbox", "territory"),
+        modules=("crm", "sandbox", "territory", "radar"),
         required_uploads=("crm_activity", "crm_rep_master", "crm_account_assignment", "sales", "target"),
         step_builder=_build_step_builder("crm_to_sandbox_to_territory"),
     ),
@@ -223,7 +254,7 @@ _MODE_DEFINITIONS = {
         label="통합 실행",
         description="CRM, Prescription, Sandbox, Territory, Builder를 모두 거치는 전체 검증 흐름입니다.",
         requirements="필수: CRM 활동 원본, 담당자 마스터, 실적, 목표 / 권장: Prescription, 담당 배정",
-        modules=("crm", "prescription", "sandbox", "territory", "builder"),
+        modules=("crm", "prescription", "sandbox", "territory", "radar", "builder"),
         required_uploads=("crm_activity", "crm_rep_master", "crm_account_assignment", "sales", "target", "prescription"),
         step_builder=_build_step_builder("integrated_full"),
     ),
@@ -235,6 +266,7 @@ _SUMMARY_RELATIVE_PATHS = {
     "prescription": "prescription/prescription_validation_summary.json",
     "sandbox": "sandbox/sandbox_validation_summary.json",
     "territory": "territory/territory_validation_summary.json",
+    "radar": "radar/radar_validation_summary.json",
     "builder": "builder/builder_validation_summary.json",
 }
 

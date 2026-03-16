@@ -1,11 +1,11 @@
 # Sales Data OS
 
-원천데이터를 넣으면 `정규화 -> 모듈 분석 -> OPS 검증 게이트 -> Builder HTML 생성`까지 이어지는 Sales Data OS 운영 검증 프로젝트입니다.
+원천데이터를 넣으면 `정규화 -> 모듈 분석/KPI 계산 -> OPS 검증 게이트 -> Intelligence(RADAR) -> Builder HTML 생성`까지 이어지는 Sales Data OS 운영 검증 프로젝트입니다.
 
 지금 상태의 핵심은 이것입니다.
 
 - 회사별 raw를 같은 틀로 흡수하고 어디까지 연결되는지 검증
-- CRM, Prescription, Sandbox, Territory, Builder를 실제로 실행 가능
+- CRM, Prescription, Sandbox, Territory, RADAR, Builder를 실제로 실행 가능
 - 회사 코드별로 결과 폴더를 분리
 - 코드 기준으로 HTML 보고서 6종과 통합 허브까지 생성 가능
 - 실제 저장된 보고서 수는 회사별 마지막 실행 상태에 따라 다를 수 있음
@@ -16,7 +16,7 @@
 
 쉽게 말하면:
 
-- CRM / Prescription / Sandbox / Territory / Builder가 한 흐름으로 실제 실행됩니다.
+- CRM / Prescription / Sandbox / Territory / RADAR / Builder가 한 흐름으로 실제 실행됩니다.
 - 운영 콘솔에서 회사 코드 기준으로 실행과 산출물 확인이 가능합니다.
 - 핵심 JSON에는 버전이 붙어 있어 파일 규격 추적이 가능합니다.
 - CRM / Prescription / Sandbox / Territory는 무거운 상세를 필요할 때만 읽는 구조로 정리됐습니다.
@@ -113,6 +113,9 @@
   - `CRM -> PDF`
   - `CRM -> Sandbox -> Territory`
   - `통합 실행`
+- RADAR는 Sandbox 기반 실행모드에서 자동 생성됩니다.
+  - 포함: `CRM -> Sandbox`, `CRM -> Territory`, `Sandbox -> HTML`, `Sandbox -> Territory`, `CRM -> Sandbox -> Territory`, `통합 실행`
+  - 제외: `CRM -> PDF` (Sandbox 단계가 없어서 RADAR 입력이 없음)
 
 ## Builder 입력 방식
 
@@ -192,6 +195,7 @@ data/
 - `scripts/validate_sandbox_with_ops.py`
 - `scripts/validate_prescription_with_ops.py`
 - `scripts/validate_territory_with_ops.py`
+- `scripts/validate_radar_with_ops.py`
 - `scripts/validate_builder_with_ops.py`
 - `scripts/validate_full_pipeline.py`
 

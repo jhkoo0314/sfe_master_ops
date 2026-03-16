@@ -105,7 +105,7 @@ def _build_step_result(
         if summary_payload is not None:
             built_count = sum(
                 1
-                for key in ["crm_analysis", "sandbox_report", "territory_map", "prescription_flow", "total_valid"]
+                for key in ["crm_analysis", "sandbox_report", "territory_map", "prescription_flow", "radar_report", "total_valid"]
                 if key in summary_payload
             )
             return ExecutionStepResult(

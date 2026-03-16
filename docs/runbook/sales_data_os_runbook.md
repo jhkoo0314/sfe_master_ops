@@ -26,6 +26,13 @@
 - Territory: 권역/커버리지 분석
 - Prescription: 처방 흐름 검증
 - RADAR: signal detection, issue prioritization, decision option templating
+- Builder: render-only HTML 생성
+
+## 현재 실행 동작 메모
+
+- KPI 계산은 `modules/kpi/*`에서 수행
+- Sandbox 기반 실행모드에서는 RADAR 단계가 파이프라인에 자동 포함
+- `CRM -> PDF` 모드는 Sandbox 단계가 없어 RADAR 자동 실행 대상 아님
 
 ## 운영 원칙
 
