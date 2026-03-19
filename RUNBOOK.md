@@ -228,10 +228,12 @@ DB 동기화:
 - Builder는 raw를 읽지 않습니다.
 - Builder는 모듈이 먼저 만든 payload만 읽습니다.
 - 그래서 템플릿이 바뀌면 Builder보다 먼저 `모듈 payload`를 같이 맞춰야 합니다.
+- CRM preview 생성 시에는 Builder가 `crm_result_asset.json`과 `crm_validation_summary.json`을 기준으로 `crm_builder_payload.json`을 먼저 다시 써서, 예전 payload가 남아 있어도 최신 필터/범위가 반영되게 합니다.
 - Territory 보고서도 이제 Builder 안에서 계산하지 않고 `territory_builder_payload.json`을 읽습니다.
 - Sandbox 보고서는 `sandbox_result_asset.json` 안의 payload를 그대로 쓰되, 무거운 지점 상세는 `manifest + branch asset` 구조로 분리됩니다.
 - Sandbox 보고서는 첫 화면에 요약만 먼저 열고, 지점을 고를 때만 해당 지점 asset을 읽습니다.
 - Sandbox 필터는 `branch_index`를 기준으로 지점 목록을 먼저 보여주고, 지점 선택 시 `branch asset`을 로딩해 담당자 목록을 채웁니다.
+- RADAR 보고서의 `Layer 03 : Decision Options`는 현재 지표/판단 규칙이 확정 전이므로, 임시 고정 문구 3개를 표시합니다. 추후 signal rule 확정 후 payload 기반으로 다시 전환합니다.
 
 ## 9. Agent 운영 메모
 

@@ -87,6 +87,7 @@ sfe_master_ops/
 - `modules/builder/`
   - 모듈이 만든 payload를 읽어 HTML로 주입
   - Territory, Prescription, CRM, Sandbox처럼 큰 payload는 Builder 단계에서도 분리 asset 구조를 유지하도록 보정
+  - CRM preview 생성 전에는 최신 `crm_builder_payload.json`을 다시 생성해 예전 필터/범위 payload가 남지 않게 함
   - 직접 계산 엔진 역할은 하지 않음
 
 - `modules/kpi/`
@@ -181,6 +182,7 @@ OPS 판단과 파이프라인 실행을 담당합니다.
 - 현재 운영 기준 템플릿은 위 6개입니다.
 - 예전 문서에 남아 있던 `hh.html`, `hh_builder_template.js`, `hhb.js`는 현재 저장소에 없습니다.
 - `report_template.html`은 resolver 기반 렌더 + fallback 유지 구조를 사용합니다.
+- `radar_report_template.html`의 `Layer 03 : Decision Options`는 현재 임시 고정 문구를 사용합니다. RADAR signal/decision rule이 확정되면 payload 기반 렌더로 다시 전환합니다.
 
 ### `scripts/`
 
@@ -213,6 +215,7 @@ OPS 판단과 파이프라인 실행을 담당합니다.
 현재 중요한 점:
 - CRM 검증 스크립트가 `crm_builder_payload.json` 생성
 - CRM 검증 스크립트는 필요 시 `crm_builder_payload_assets/*.js`도 같이 생성
+- Builder 검증 스크립트도 CRM preview를 만들기 전에 `crm_builder_payload.json`을 최신 결과자산 기준으로 다시 생성
 - Prescription 검증 스크립트가 `prescription_builder_payload.json` 생성
 - Prescription 검증 스크립트는 필요 시 `prescription_builder_payload_assets/*.js`도 같이 생성
 - Territory 정규화 스크립트가 `ops_territory_activity.xlsx` 생성

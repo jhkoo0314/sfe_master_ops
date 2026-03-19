@@ -8,6 +8,8 @@
 - `run_steps`
 - `run_artifacts`
 - `run_report_context`
+- CRM Builder preview는 생성 전에 `crm_builder_payload.json`을 최신 결과자산 기준으로 다시 써서 필터/범위가 stale 되지 않게 동작
+- RADAR `Layer 03 : Decision Options`는 현재 판단 규칙 확정 전이라 임시 고정 문구로 운영 중
 
 지금 상태의 핵심은 이것입니다.
 

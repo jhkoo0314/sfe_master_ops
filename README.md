@@ -9,6 +9,8 @@
 - 회사 코드별로 결과 폴더를 분리
 - run 기준 저장(`runs`, `run_steps`, `run_artifacts`, `run_report_context`)이 로컬/DB에 연결됨
 - Agent 탭은 `run_report_context`와 `run_artifacts`를 실제로 읽는 구조로 동작
+- CRM Builder preview는 생성 전에 `crm_builder_payload.json`을 최신 결과자산 기준으로 다시 써서 필터/범위가 stale 되지 않게 동작
+- RADAR `Layer 03 : Decision Options`는 현재 판단 규칙 확정 전이라 임시 고정 문구로 운영 중
 - 코드 기준으로 HTML 보고서 6종과 통합 허브까지 생성 가능
 - 실제 저장된 보고서 수는 회사별 마지막 실행 상태에 따라 다를 수 있음
 
