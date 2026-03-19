@@ -61,6 +61,138 @@ def _debug_log_run_registry(event: str, payload: dict[str, Any]) -> None:
         pass
 
 
+def _load_json_if_exists(path: Path) -> dict[str, Any] | None:
+    try:
+        if not path.exists():
+            return None
+        data = json.loads(path.read_text(encoding="utf-8"))
+        return data if isinstance(data, dict) else None
+    except Exception:
+        return None
+
+
+def _validation_root(company_key: str) -> Path:
+    return Path(r"C:\sfe_master_ops\data\ops_validation") / company_key
+
+
+def _build_report_contexts_from_pipeline_summary(
+    company_key: str,
+    run_id: str,
+    pipeline_summary: dict[str, Any],
+) -> tuple[dict[str, Any], dict[str, Any]]:
+    stages = pipeline_summary.get("stages", {})
+    builder_stage = stages.get("builder", {}) if isinstance(stages, dict) else {}
+    radar_stage = stages.get("radar", {}) if isinstance(stages, dict) else {}
+    territory_stage = stages.get("territory", {}) if isinstance(stages, dict) else {}
+    sandbox_stage = stages.get("sandbox", {}) if isinstance(stages, dict) else {}
+
+    linked_artifacts: list[dict[str, str]] = []
+    evidence_index: list[dict[str, str]] = []
+    if isinstance(builder_stage, dict):
+        for key in ["crm_analysis", "sandbox_report", "territory_map", "prescription_flow", "radar_report", "total_valid"]:
+            item = builder_stage.get(key)
+            if not isinstance(item, dict):
+                continue
+            html_path = item.get("html")
+            if html_path:
+                linked_artifacts.append({"type": key, "path": str(html_path)})
+                evidence_index.append({"type": key, "path": str(html_path)})
+
+    overall_status = str(pipeline_summary.get("overall_status", "-"))
+    overall_score = float(pipeline_summary.get("overall_score", 0) or 0)
+    executive_summary = (
+        f"{company_key} run 요약입니다. 전체 상태는 {overall_status}, "
+        f"점수는 {pipeline_summary.get('overall_score', '-')}, "
+        f"주요 RADAR 이슈는 {radar_stage.get('top_issue', '없음')} 입니다."
+    )
+    full_ctx = {
+        "run_id": run_id,
+        "company_key": company_key,
+        "mode": pipeline_summary.get("execution_mode", ""),
+        "generated_at": datetime.now().astimezone().isoformat(timespec="seconds"),
+        "period": radar_stage.get("period_value", "-"),
+        "comparison_period": "-",
+        "validation_summary": {"overall_status": overall_status},
+        "confidence_grade": "A" if overall_score >= 95 else "B" if overall_score >= 85 else "C",
+        "executive_summary": executive_summary,
+        "key_findings": [
+            f"Sandbox metric month count: {sandbox_stage.get('metric_month_count', '-')}",
+            f"Territory quality status: {territory_stage.get('quality_status', '-')}",
+            f"RADAR top issue: {radar_stage.get('top_issue', '-')}",
+        ],
+        "priority_issues": [radar_stage.get("top_issue", "priority issue 없음")],
+        "evidence_index": evidence_index,
+        "linked_artifacts": linked_artifacts,
+    }
+    prompt_ctx = {
+        "run_id": run_id,
+        "mode": pipeline_summary.get("execution_mode", ""),
+        "generated_at": full_ctx["generated_at"],
+        "period": full_ctx["period"],
+        "comparison_period": "-",
+        "executive_summary": executive_summary,
+        "top_findings": full_ctx["key_findings"][:3],
+        "priority_issues": full_ctx["priority_issues"][:3],
+        "answer_scope": "final_report_only",
+        "forbidden_actions": ["recalculate_kpi", "raw_rejoin"],
+    }
+    return full_ctx, prompt_ctx
+
+
+def _resolve_report_contexts(company_key: str, run_id: str) -> tuple[dict[str, Any] | None, dict[str, Any] | None]:
+    run_dir = _validation_root(company_key) / "runs" / run_id
+    full_ctx = _load_json_if_exists(run_dir / "report_context.full.json")
+    prompt_ctx = _load_json_if_exists(run_dir / "report_context.prompt.json")
+    if full_ctx and prompt_ctx:
+        return full_ctx, prompt_ctx
+
+    pipeline_summary = _load_json_if_exists(_validation_root(company_key) / "pipeline" / "pipeline_validation_summary.json")
+    if not pipeline_summary:
+        return None, None
+    return _build_report_contexts_from_pipeline_summary(company_key, run_id, pipeline_summary)
+
+
+def _save_run_report_context_to_supabase(
+    *,
+    client: Any,
+    run_db_id: str,
+    company_key: str,
+    run_id: str,
+    mode: str,
+) -> bool:
+    full_ctx, prompt_ctx = _resolve_report_contexts(company_key, run_id)
+    if not full_ctx or not prompt_ctx:
+        return False
+
+    try:
+        client.table("run_report_context").upsert(
+            {
+                "run_id": run_db_id,
+                "mode": mode,
+                "context_version": "v1",
+                "full_context_json": full_ctx,
+                "prompt_context_json": prompt_ctx,
+                "executive_summary": str(prompt_ctx.get("executive_summary", "")),
+                "key_findings": full_ctx.get("key_findings", []),
+                "evidence_index": full_ctx.get("evidence_index", []),
+            },
+            on_conflict="run_id",
+        ).execute()
+        return True
+    except Exception as exc:
+        _debug_log_run_registry(
+            "save_run_report_context_to_supabase.exception",
+            {
+                "company_key": company_key,
+                "run_id": run_id,
+                "run_db_id": run_db_id,
+                "error_type": type(exc).__name__,
+                "error_message": str(exc),
+            },
+        )
+        return False
+
+
 def _is_supabase_disabled() -> bool:
     return _supabase_disabled_until > time.monotonic()
 
@@ -348,6 +480,13 @@ def save_pipeline_run_to_supabase(
             )
         if step_rows:
             client.table("run_steps").insert(step_rows).execute()
+        _save_run_report_context_to_supabase(
+            client=client,
+            run_db_id=run_id,
+            company_key=company_key,
+            run_id=run_key,
+            mode=str(result.get("execution_mode", "")).strip(),
+        )
         return run_id
     except Exception as exc:
         _disable_supabase_temporarily(
