@@ -1,8 +1,10 @@
 from __future__ import annotations
 
 from datetime import datetime
+import hashlib
 import json
 from pathlib import Path
+import re
 import time
 from typing import Any
 
@@ -71,6 +73,161 @@ def _load_json_if_exists(path: Path) -> dict[str, Any] | None:
         return None
 
 
+def _file_hash_or_blank(path: Path) -> str:
+    try:
+        if not path.exists() or not path.is_file():
+            return ""
+        return hashlib.sha256(path.read_bytes()).hexdigest()
+    except Exception:
+        return ""
+
+
+def _load_json_from_branch_asset(path: Path) -> dict[str, Any] | None:
+    try:
+        text = path.read_text(encoding="utf-8")
+    except Exception:
+        return None
+    match = re.search(r"=\s*(\{.*\})\s*;?\s*$", text, re.S)
+    if not match:
+        return None
+    try:
+        data = json.loads(match.group(1))
+    except Exception:
+        return None
+    return data if isinstance(data, dict) else None
+
+
+def _sum_period(values: Any, start_idx: int, end_idx: int) -> float:
+    if not isinstance(values, list):
+        return 0.0
+    total = 0.0
+    for value in values[start_idx:end_idx]:
+        try:
+            total += float(value or 0)
+        except Exception:
+            continue
+    return total
+
+
+def _compute_sandbox_member_insights(company_key: str) -> dict[str, Any]:
+    builder_dir = _validation_root(company_key) / "builder"
+    payload_path = builder_dir / "sandbox_report_preview_payload_standard.json"
+    payload_root = _load_json_if_exists(payload_path)
+    if not payload_root:
+        return {}
+    payload = payload_root.get("payload", {})
+    manifest = payload.get("branch_asset_manifest", {})
+    if not isinstance(manifest, dict):
+        return {}
+
+    rows: list[dict[str, Any]] = []
+    assets_dir = builder_dir / "sandbox_report_preview_assets"
+    for branch_name, asset_name in manifest.items():
+        asset_path = assets_dir / str(asset_name)
+        branch_data = _load_json_from_branch_asset(asset_path)
+        if not branch_data:
+            continue
+        members = branch_data.get("members", [])
+        if not isinstance(members, list):
+            continue
+        for member in members:
+            if not isinstance(member, dict):
+                continue
+            q1_actual = _sum_period(member.get("monthly_actual"), 0, 3)
+            q1_target = _sum_period(member.get("monthly_target"), 0, 3)
+            attainment = round((q1_actual / q1_target) * 100, 1) if q1_target > 0 else 0.0
+            activity_counts = member.get("activity_counts", {}) if isinstance(member.get("activity_counts"), dict) else {}
+            rows.append(
+                {
+                    "branch": branch_name,
+                    "rep_name": str(member.get("성명", "")).strip(),
+                    "rep_id": str(member.get("rep_id", "")).strip(),
+                    "q1_actual": round(q1_actual),
+                    "q1_target": round(q1_target),
+                    "q1_attainment": attainment,
+                    "gap_amount": round(q1_actual - q1_target),
+                    "HIR": float(member.get("HIR", 0) or 0),
+                    "RTR": float(member.get("RTR", 0) or 0),
+                    "BCR": float(member.get("BCR", 0) or 0),
+                    "PHR": float(member.get("PHR", 0) or 0),
+                    "PI": float(member.get("PI", 0) or 0),
+                    "FGR": float(member.get("FGR", 0) or 0),
+                    "activity_counts": activity_counts,
+                    "coach_action": str(member.get("coach_action", "")).strip(),
+                }
+            )
+
+    if not rows:
+        return {}
+
+    ranked = sorted(rows, key=lambda item: (item["q1_actual"], item["q1_attainment"]), reverse=True)
+    top5 = ranked[:5]
+    bottom5 = sorted(rows, key=lambda item: (item["q1_actual"], item["q1_attainment"]))[:5]
+
+    def _avg(items: list[dict[str, Any]], key: str) -> float:
+        return round(sum(float(item.get(key, 0) or 0) for item in items) / len(items), 1) if items else 0.0
+
+    metric_gaps = []
+    for key in ["HIR", "RTR", "BCR", "PHR", "PI", "FGR"]:
+        metric_gaps.append(
+            {
+                "metric": key,
+                "top5_avg": _avg(top5, key),
+                "bottom5_avg": _avg(bottom5, key),
+                "gap": round(_avg(top5, key) - _avg(bottom5, key), 1),
+            }
+        )
+    metric_gaps.sort(key=lambda item: abs(item["gap"]), reverse=True)
+
+    activity_keys = sorted(
+        {
+            activity_key
+            for item in rows
+            for activity_key in item.get("activity_counts", {}).keys()
+        }
+    )
+    activity_gaps = []
+    for key in activity_keys:
+        top_avg = round(sum(float(item.get("activity_counts", {}).get(key, 0) or 0) for item in top5) / len(top5), 1) if top5 else 0.0
+        bottom_avg = round(sum(float(item.get("activity_counts", {}).get(key, 0) or 0) for item in bottom5) / len(bottom5), 1) if bottom5 else 0.0
+        activity_gaps.append({"activity": key, "top5_avg": top_avg, "bottom5_avg": bottom_avg, "gap": round(top_avg - bottom_avg, 1)})
+    activity_gaps.sort(key=lambda item: abs(item["gap"]), reverse=True)
+
+    return {
+        "period": "Q1",
+        "top5_members": [
+            {
+                "rank": index + 1,
+                "branch": item["branch"],
+                "rep_name": item["rep_name"],
+                "q1_actual": item["q1_actual"],
+                "q1_target": item["q1_target"],
+                "q1_attainment": item["q1_attainment"],
+                "gap_amount": item["gap_amount"],
+            }
+            for index, item in enumerate(top5)
+        ],
+        "bottom5_members": [
+            {
+                "rank": index + 1,
+                "branch": item["branch"],
+                "rep_name": item["rep_name"],
+                "q1_actual": item["q1_actual"],
+                "q1_target": item["q1_target"],
+                "q1_attainment": item["q1_attainment"],
+                "gap_amount": item["gap_amount"],
+            }
+            for index, item in enumerate(bottom5)
+        ],
+        "comparison_insights": {
+            "metric_gaps": metric_gaps[:3],
+            "activity_gaps": activity_gaps[:3],
+            "top5_avg_actual": round(sum(item["q1_actual"] for item in top5) / len(top5), 0) if top5 else 0,
+            "bottom5_avg_actual": round(sum(item["q1_actual"] for item in bottom5) / len(bottom5), 0) if bottom5 else 0,
+        },
+    }
+
+
 def _validation_root(company_key: str) -> Path:
     return Path(r"C:\sfe_master_ops\data\ops_validation") / company_key
 
@@ -100,11 +257,29 @@ def _build_report_contexts_from_pipeline_summary(
 
     overall_status = str(pipeline_summary.get("overall_status", "-"))
     overall_score = float(pipeline_summary.get("overall_score", 0) or 0)
+    sandbox_member_insights = _compute_sandbox_member_insights(company_key)
+    q1_top5 = sandbox_member_insights.get("top5_members", []) if isinstance(sandbox_member_insights, dict) else []
+    q1_bottom5 = sandbox_member_insights.get("bottom5_members", []) if isinstance(sandbox_member_insights, dict) else []
+    comparison_insights = sandbox_member_insights.get("comparison_insights", {}) if isinstance(sandbox_member_insights, dict) else {}
     executive_summary = (
         f"{company_key} run 요약입니다. 전체 상태는 {overall_status}, "
         f"점수는 {pipeline_summary.get('overall_score', '-')}, "
         f"주요 RADAR 이슈는 {radar_stage.get('top_issue', '없음')} 입니다."
     )
+    key_findings = [
+        f"Sandbox metric month count: {sandbox_stage.get('metric_month_count', '-')}",
+        f"Territory quality status: {territory_stage.get('quality_status', '-')}",
+        f"RADAR top issue: {radar_stage.get('top_issue', '-')}",
+    ]
+    if q1_top5:
+        top_names = ", ".join(f"{item['rep_name']}({item['q1_actual']:,}원)" for item in q1_top5[:3])
+        key_findings.append(f"Q1 실적 상위 담당자: {top_names}")
+    if comparison_insights:
+        metric_gap = (comparison_insights.get("metric_gaps") or [{}])[0]
+        if metric_gap.get("metric"):
+            key_findings.append(
+                f"상하위 담당자 차이의 대표 지표는 {metric_gap['metric']}이며 평균 격차는 {metric_gap['gap']}p 입니다."
+            )
     full_ctx = {
         "run_id": run_id,
         "company_key": company_key,
@@ -115,12 +290,13 @@ def _build_report_contexts_from_pipeline_summary(
         "validation_summary": {"overall_status": overall_status},
         "confidence_grade": "A" if overall_score >= 95 else "B" if overall_score >= 85 else "C",
         "executive_summary": executive_summary,
-        "key_findings": [
-            f"Sandbox metric month count: {sandbox_stage.get('metric_month_count', '-')}",
-            f"Territory quality status: {territory_stage.get('quality_status', '-')}",
-            f"RADAR top issue: {radar_stage.get('top_issue', '-')}",
-        ],
+        "key_findings": key_findings,
         "priority_issues": [radar_stage.get("top_issue", "priority issue 없음")],
+        "sales_rankings": {
+            "q1_top5_members": q1_top5,
+            "q1_bottom5_members": q1_bottom5,
+        },
+        "comparison_insights": comparison_insights,
         "evidence_index": evidence_index,
         "linked_artifacts": linked_artifacts,
     }
@@ -133,6 +309,8 @@ def _build_report_contexts_from_pipeline_summary(
         "executive_summary": executive_summary,
         "top_findings": full_ctx["key_findings"][:3],
         "priority_issues": full_ctx["priority_issues"][:3],
+        "sales_rankings": {"q1_top5_members": q1_top5[:5]},
+        "comparison_insights": comparison_insights,
         "answer_scope": "final_report_only",
         "forbidden_actions": ["recalculate_kpi", "raw_rejoin"],
     }
@@ -150,6 +328,172 @@ def _resolve_report_contexts(company_key: str, run_id: str) -> tuple[dict[str, A
     if not pipeline_summary:
         return None, None
     return _build_report_contexts_from_pipeline_summary(company_key, run_id, pipeline_summary)
+
+
+def _append_artifact_row(
+    rows: list[dict[str, Any]],
+    *,
+    run_db_id: str,
+    artifact_type: str,
+    artifact_role: str,
+    artifact_name: str,
+    artifact_class: str,
+    storage_path: str,
+    mime_type: str,
+    payload: dict[str, Any] | None = None,
+    quality_status: str | None = None,
+    quality_score: float | None = None,
+) -> None:
+    path_obj = Path(storage_path)
+    rows.append(
+        {
+            "run_id": run_db_id,
+            "step_id": None,
+            "artifact_type": artifact_type,
+            "artifact_role": artifact_role,
+            "artifact_name": artifact_name,
+            "artifact_class": artifact_class,
+            "storage_path": storage_path,
+            "mime_type": mime_type,
+            "content_hash": _file_hash_or_blank(path_obj),
+            "payload": payload or {},
+            "quality_status": quality_status,
+            "quality_score": quality_score,
+        }
+    )
+
+
+def _build_run_artifact_rows(run_db_id: str, result: dict[str, Any], company_key: str, run_key: str) -> list[dict[str, Any]]:
+    rows: list[dict[str, Any]] = []
+
+    for step in result.get("steps", []):
+        summary_path = str(step.get("summary_path", "") or "").strip()
+        if summary_path:
+            status = str(step.get("status", "")).strip().lower() or None
+            score_raw = step.get("score")
+            score = float(score_raw) if score_raw is not None else None
+            _append_artifact_row(
+                rows,
+                run_db_id=run_db_id,
+                artifact_type=f"{step.get('module', 'module')}_validation_summary",
+                artifact_role="validation_summary",
+                artifact_name=Path(summary_path).name,
+                artifact_class="intermediate",
+                storage_path=summary_path,
+                mime_type="application/json",
+                payload={
+                    "module": step.get("module"),
+                    "reasoning_note": step.get("reasoning_note"),
+                },
+                quality_status=status if status in {"pass", "warn", "fail"} else None,
+                quality_score=score,
+            )
+
+    builder_stage = (result.get("summary_by_module") or {}).get("builder", {})
+    if isinstance(builder_stage, dict):
+        for report_key, artifact_group in builder_stage.items():
+            if not isinstance(artifact_group, dict):
+                continue
+            for file_role, file_path in artifact_group.items():
+                if not isinstance(file_path, str) or not file_path.strip():
+                    continue
+                artifact_type = {
+                    "html": "report_html",
+                    "input_standard": "report_input_standard",
+                    "payload_standard": "report_payload_standard",
+                    "result_asset": "report_result_asset",
+                }.get(file_role, f"report_{file_role}")
+                mime_type = "text/html" if file_role == "html" else "application/json"
+                artifact_class = "final" if file_role == "html" else "evidence"
+                _append_artifact_row(
+                    rows,
+                    run_db_id=run_db_id,
+                    artifact_type=artifact_type,
+                    artifact_role=report_key,
+                    artifact_name=Path(file_path).name,
+                    artifact_class=artifact_class,
+                    storage_path=file_path,
+                    mime_type=mime_type,
+                    payload={"report_key": report_key, "file_role": file_role},
+                )
+
+    full_ctx, prompt_ctx = _resolve_report_contexts(company_key, run_key)
+    validation_root = _validation_root(company_key)
+    run_dir = validation_root / "runs" / run_key
+    for file_name, artifact_type in [
+        ("report_context.full.json", "report_context_full"),
+        ("report_context.prompt.json", "report_context_prompt"),
+    ]:
+        file_path = run_dir / file_name
+        if file_path.exists():
+            _append_artifact_row(
+                rows,
+                run_db_id=run_db_id,
+                artifact_type=artifact_type,
+                artifact_role="agent_context",
+                artifact_name=file_name,
+                artifact_class="agent_context",
+                storage_path=str(file_path),
+                mime_type="application/json",
+            )
+    if full_ctx:
+        _append_artifact_row(
+            rows,
+            run_db_id=run_db_id,
+            artifact_type="report_context_full_virtual",
+            artifact_role="agent_context",
+            artifact_name=f"{run_key}.full_context",
+            artifact_class="agent_context",
+            storage_path=str(run_dir / "report_context.full.json"),
+            mime_type="application/json",
+            payload={"virtual": True, "source": "pipeline_summary_fallback"},
+        )
+    if prompt_ctx:
+        _append_artifact_row(
+            rows,
+            run_db_id=run_db_id,
+            artifact_type="report_context_prompt_virtual",
+            artifact_role="agent_context",
+            artifact_name=f"{run_key}.prompt_context",
+            artifact_class="agent_context",
+            storage_path=str(run_dir / "report_context.prompt.json"),
+            mime_type="application/json",
+            payload={"virtual": True, "source": "pipeline_summary_fallback"},
+        )
+
+    return rows
+
+
+def _save_run_artifacts_to_supabase(
+    *,
+    client: Any,
+    run_db_id: str,
+    company_key: str,
+    run_key: str,
+    result: dict[str, Any],
+) -> bool:
+    artifact_rows = _build_run_artifact_rows(run_db_id, result, company_key, run_key)
+    if not artifact_rows:
+        return False
+    try:
+        try:
+            client.table("run_artifacts").delete().eq("run_id", run_db_id).execute()
+        except Exception:
+            pass
+        client.table("run_artifacts").insert(artifact_rows).execute()
+        return True
+    except Exception as exc:
+        _debug_log_run_registry(
+            "save_run_artifacts_to_supabase.exception",
+            {
+                "company_key": company_key,
+                "run_key": run_key,
+                "run_db_id": run_db_id,
+                "error_type": type(exc).__name__,
+                "error_message": str(exc),
+            },
+        )
+        return False
 
 
 def _save_run_report_context_to_supabase(
@@ -253,6 +597,50 @@ def list_successful_runs_from_supabase(company_key: str, limit: int = 20) -> lis
             }
         )
     return collected
+
+
+def list_run_artifacts_from_supabase(run_db_id: str, limit: int = 50) -> list[dict[str, Any]]:
+    if _is_supabase_disabled():
+        return []
+    client = get_supabase_client()
+    if client is None or not str(run_db_id).strip():
+        return []
+
+    try:
+        response = (
+            client.table("run_artifacts")
+            .select("artifact_type, artifact_role, artifact_name, artifact_class, storage_path, mime_type, payload, quality_status, quality_score, created_at")
+            .eq("run_id", run_db_id)
+            .order("created_at", desc=False)
+            .limit(limit)
+            .execute()
+        )
+    except Exception as exc:
+        _disable_supabase_temporarily(
+            "list_run_artifacts_failed",
+            {
+                "run_db_id": run_db_id,
+                "error_type": type(exc).__name__,
+                "error_message": str(exc),
+            },
+        )
+        return []
+
+    rows = getattr(response, "data", None) or []
+    return [
+        {
+            "artifact_type": str(row.get("artifact_type", "")).strip(),
+            "artifact_role": str(row.get("artifact_role", "")).strip(),
+            "artifact_name": str(row.get("artifact_name", "")).strip(),
+            "artifact_class": str(row.get("artifact_class", "")).strip(),
+            "storage_path": str(row.get("storage_path", "")).strip(),
+            "mime_type": str(row.get("mime_type", "")).strip(),
+            "payload": row.get("payload") if isinstance(row.get("payload"), dict) else {},
+            "quality_status": str(row.get("quality_status", "")).strip(),
+            "quality_score": row.get("quality_score"),
+        }
+        for row in rows
+    ]
 
 
 def load_run_contexts_from_supabase(run_db_id: str) -> tuple[dict[str, Any] | None, dict[str, Any] | None]:
@@ -480,6 +868,13 @@ def save_pipeline_run_to_supabase(
             )
         if step_rows:
             client.table("run_steps").insert(step_rows).execute()
+        _save_run_artifacts_to_supabase(
+            client=client,
+            run_db_id=run_id,
+            company_key=company_key,
+            run_key=run_key,
+            result=result,
+        )
         _save_run_report_context_to_supabase(
             client=client,
             run_db_id=run_id,

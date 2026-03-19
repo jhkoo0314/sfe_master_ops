@@ -13,6 +13,7 @@ from common.company_registry import resolve_company_reference
 from common.run_registry import (
     append_agent_chat_log_to_supabase,
     list_agent_chat_logs_from_supabase,
+    list_run_artifacts_from_supabase,
     list_successful_runs_from_supabase,
     load_run_contexts_from_supabase,
 )
@@ -29,7 +30,7 @@ from ui.console_artifacts import (
     get_report_type_options,
     load_artifact_preview,
 )
-from ui.console_agent_llm import generate_agent_answer, is_llm_configured
+from ui.console_agent_llm import build_artifact_contexts, generate_agent_answer, is_llm_configured
 from ui.console_display import (
     render_block_card,
     render_page_hero,
@@ -319,6 +320,39 @@ def _load_run_contexts(company_key: str, run_id: str, run_db_id: str = "") -> tu
     return full_ctx, prompt_ctx
 
 
+def _load_run_artifacts(company_key: str, run_id: str, run_db_id: str = "") -> list[dict[str, Any]]:
+    if run_db_id:
+        rows = list_run_artifacts_from_supabase(run_db_id, limit=50)
+        if rows:
+            return rows
+
+    artifacts: list[dict[str, Any]] = []
+    legacy_summary = _load_json_if_exists(_legacy_pipeline_root(company_key) / "pipeline_validation_summary.json")
+    if not legacy_summary:
+        return artifacts
+    builder_stage = (legacy_summary.get("stages", {}) or {}).get("builder", {})
+    if not isinstance(builder_stage, dict):
+        return artifacts
+    for report_key, artifact_group in builder_stage.items():
+        if not isinstance(artifact_group, dict):
+            continue
+        for file_role, file_path in artifact_group.items():
+            if not isinstance(file_path, str) or not file_path.strip():
+                continue
+            artifacts.append(
+                {
+                    "artifact_type": f"report_{file_role}",
+                    "artifact_role": report_key,
+                    "artifact_name": Path(file_path).name,
+                    "artifact_class": "final" if file_role == "html" else "evidence",
+                    "storage_path": file_path,
+                    "mime_type": "text/html" if file_role == "html" else "application/json",
+                    "payload": {"report_key": report_key, "file_role": file_role},
+                }
+            )
+    return artifacts
+
+
 def _pick_evidence_items(full_ctx: dict[str, Any] | None, limit: int = 3) -> list[dict[str, str]]:
     if not full_ctx:
         return []
@@ -366,14 +400,42 @@ def _build_mock_agent_answer(
     else:
         follow_up = "필요하면 answer scope를 evidence_trace로 바꿔 근거 중심으로 다시 질문하세요."
 
+    sales_rankings = full_ctx.get("sales_rankings", {}) if isinstance(full_ctx, dict) else {}
+    comparison_insights = full_ctx.get("comparison_insights", {}) if isinstance(full_ctx, dict) else {}
+    question_lower = question.lower()
+    ranking_lines: list[str] = []
+    comparison_lines: list[str] = []
+    if isinstance(sales_rankings, dict) and any(token in question_lower for token in ["top", "상위", "하위", "1분기", "1-3"]):
+        for item in sales_rankings.get("q1_top5_members", [])[:5]:
+            ranking_lines.append(
+                f"- {item.get('rank')}. {item.get('branch')} {item.get('rep_name')} | Q1 실적 {int(item.get('q1_actual', 0)):,}원 | 달성률 {item.get('q1_attainment', 0)}%"
+            )
+    if isinstance(comparison_insights, dict) and any(token in question_lower for token in ["이유", "차이", "왜"]):
+        metric_gaps = comparison_insights.get("metric_gaps", [])
+        activity_gaps = comparison_insights.get("activity_gaps", [])
+        if metric_gaps:
+            comparison_lines.append("[상하위 차이 지표]")
+            for item in metric_gaps[:3]:
+                comparison_lines.append(
+                    f"- {item.get('metric')}: 상위 평균 {item.get('top5_avg')} / 하위 평균 {item.get('bottom5_avg')} / 격차 {item.get('gap')}p"
+                )
+        if activity_gaps:
+            comparison_lines.append("[상하위 활동 차이]")
+            for item in activity_gaps[:3]:
+                comparison_lines.append(
+                    f"- {item.get('activity')}: 상위 평균 {item.get('top5_avg')} / 하위 평균 {item.get('bottom5_avg')} / 격차 {item.get('gap')}"
+                )
+
     answer_text = (
         "[핵심 답변]\n"
         f"- 질문: {question}\n"
         f"- 요약: {executive_summary}\n\n"
-        "[근거]\n"
+        + ("[Q1 담당자 랭킹]\n" + "\n".join(ranking_lines) + "\n\n" if ranking_lines else "")
+        + ("[차이 해석]\n" + "\n".join(comparison_lines) + "\n\n" if comparison_lines else "")
+        + "[근거]\n"
         + ("\n".join([f"- {ref}" for ref in evidence_refs]) if evidence_refs else "- 근거 인덱스 없음")
         + "\n\n[주의사항]\n"
-        f"- {caution}\n\n[추가로 볼 포인트]\n- {follow_up}"
+        + f"- {caution}\n\n[추가로 볼 포인트]\n- {follow_up}"
     )
     return {"answer_text": answer_text, "evidence_refs": evidence_refs}
 
@@ -931,13 +993,21 @@ def render_agent_tab() -> None:
             st.warning("질문을 먼저 입력해 주세요.")
         else:
             evidence_refs = _pick_evidence_refs(full_ctx, limit=3)
+            artifact_rows = _load_run_artifacts(
+                company_key,
+                str(st.session_state.get("selected_run_id", "")),
+                run_db_id=str(st.session_state.get("selected_run_db_id", "")),
+            )
+            artifact_contexts, artifact_refs = build_artifact_contexts(artifact_rows, max_items=4)
+            combined_evidence_refs = list(dict.fromkeys(evidence_refs + artifact_refs))
             try:
                 answer = generate_agent_answer(
                     question=question.strip(),
                     prompt_ctx=prompt_ctx,
                     full_ctx=full_ctx,
                     answer_scope=scope,
-                    evidence_refs=evidence_refs,
+                    evidence_refs=combined_evidence_refs,
+                    artifact_contexts=artifact_contexts,
                 )
                 used_mock = False
             except Exception as exc:
@@ -955,7 +1025,7 @@ def render_agent_tab() -> None:
                 "question": question.strip(),
                 "answer": answer["answer_text"],
                 "answer_scope": scope,
-                "evidence_refs": answer["evidence_refs"],
+                "evidence_refs": answer.get("evidence_refs", combined_evidence_refs),
                 "provider": answer.get("provider", "mock"),
                 "model": answer.get("model", "local-context-only"),
                 "used_mock": used_mock,

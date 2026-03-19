@@ -51,12 +51,16 @@ class FakeQuery:
             return FakeResponse(self.client.run_rows)
         if self.table_name == "run_report_context" and self.payload is None:
             return FakeResponse(self.client.context_rows)
+        if self.table_name == "run_artifacts" and self.payload is None:
+            return FakeResponse([])
         if self.table_name == "agent_chat_logs":
             return FakeResponse(self.client.chat_rows)
         if self.table_name == "runs" and self.payload is not None:
             return FakeResponse([{"id": "db-run-1"}])
         if self.table_name == "run_report_context" and self.payload is not None:
             return FakeResponse([{"id": "ctx-1"}])
+        if self.table_name == "run_artifacts" and self.payload is not None:
+            return FakeResponse([{"id": "artifact-1"}])
         return FakeResponse([])
 
 
@@ -130,8 +134,10 @@ def test_save_pipeline_run_to_supabase_writes_run_and_steps(monkeypatch):
     assert fake_client.upsert_calls
     assert fake_client.upsert_calls[0][0] == "runs"
     assert fake_client.upsert_calls[1][0] == "run_report_context"
-    assert fake_client.insert_calls[-1][0] == "run_steps"
-    assert len(fake_client.insert_calls[-1][1]) == 2
+    assert fake_client.insert_calls[0][0] == "run_steps"
+    assert len(fake_client.insert_calls[0][1]) == 2
+    assert fake_client.insert_calls[1][0] == "run_artifacts"
+    assert len(fake_client.insert_calls[1][1]) >= 2
 
 
 def test_save_pipeline_run_to_supabase_accepts_empty_uploaded(monkeypatch):

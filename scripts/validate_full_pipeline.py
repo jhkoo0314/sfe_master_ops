@@ -59,6 +59,7 @@ def main() -> None:
             "execution_mode": result.execution_mode,
             "overall_status": result.overall_status,
             "overall_score": result.overall_score,
+            "summary_by_module": result.summary_by_module,
             "steps": [step.to_dict() for step in result.steps],
         },
         uploaded={},
