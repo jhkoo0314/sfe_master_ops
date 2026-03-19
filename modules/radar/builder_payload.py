@@ -15,6 +15,13 @@ from common.asset_versions import (
 from modules.radar.schemas import RadarResultAsset
 
 
+def _format_period_label(period_value: str) -> str:
+    text = str(period_value or "").strip()
+    if len(text) == 6 and text.isdigit():
+        return f"{text[:4]}-{text[4:6]}"
+    return text or "-"
+
+
 def build_radar_builder_payload(asset: RadarResultAsset) -> dict:
     top_signal = asset.signals[0] if asset.signals else None
     branch_options: list[str] = []
@@ -28,18 +35,27 @@ def build_radar_builder_payload(asset: RadarResultAsset) -> dict:
             if branch_key and branch_key not in branch_options:
                 branch_options.append(branch_key)
 
-    trend_labels = [
-        f"{asset.meta.period_value}-2",
-        f"{asset.meta.period_value}-1",
-        asset.meta.period_value,
-    ]
+    trend_series = asset.sandbox_summary.trend_series or {}
+    trend_labels = list(trend_series.get("labels") or [])
     goal = round(float(asset.kpi_summary.goal_attainment_pct), 1)
     rtr = round(float(asset.kpi_summary.rtr), 1)
     hir = round(float(asset.kpi_summary.hir), 1)
+    if not trend_labels:
+        period_label = _format_period_label(asset.meta.period_value)
+        trend_labels = [period_label]
+    goal_series = list(trend_series.get("goal_attainment") or [])
+    rtr_series = list(trend_series.get("rtr") or [])
+    hir_series = list(trend_series.get("hir") or [])
+    if not goal_series:
+        goal_series = [goal]
+    if not rtr_series:
+        rtr_series = [rtr]
+    if not hir_series:
+        hir_series = [hir]
 
     payload = {
         "report_title": "RADAR Decision Brief",
-        "period_label": str(asset.meta.period_value),
+        "period_label": _format_period_label(asset.meta.period_value),
         "overall_status": asset.summary.overall_status,
         "top_issue": asset.summary.top_issue or "No critical issue detected",
         "top_issue_desc": (
@@ -60,9 +76,9 @@ def build_radar_builder_payload(asset: RadarResultAsset) -> dict:
         },
         "trend_chart": {
             "labels": trend_labels,
-            "goal_attainment": [round(goal + 4.0, 1), round(goal + 2.0, 1), goal],
-            "rtr": [round(rtr + 4.0, 1), round(rtr + 2.0, 1), rtr],
-            "hir": [round(hir + 4.0, 1), round(hir + 2.0, 1), hir],
+            "goal_attainment": goal_series,
+            "rtr": rtr_series,
+            "hir": hir_series,
         },
         "signals": [
             {

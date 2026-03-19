@@ -25,6 +25,8 @@ from modules.builder.service import (
     render_builder_html,
 )
 from common.company_runtime import get_active_company_key, get_active_company_name, get_company_root
+from modules.crm.service import build_crm_builder_payload
+from result_assets.crm_result_asset import CrmResultAsset
 from result_assets.sandbox_result_asset import SandboxResultAsset
 from result_assets.radar_result_asset import RadarResultAsset
 
@@ -62,6 +64,26 @@ def sync_sandbox_chunk_assets() -> None:
         return
     for chunk_file in source_dir.glob("*.js"):
         shutil.copyfile(chunk_file, target_dir / chunk_file.name)
+
+
+def refresh_crm_builder_payload() -> None:
+    if not CRM_ASSET_PATH.exists():
+        return
+    summary_path = CRM_ASSET_PATH.with_name("crm_validation_summary.json")
+    if not summary_path.exists():
+        return
+
+    crm_asset = CrmResultAsset.model_validate(load_json(CRM_ASSET_PATH))
+    crm_summary = load_json(summary_path)
+    builder_payload = build_crm_builder_payload(
+        asset=crm_asset,
+        summary=crm_summary,
+        company_name=COMPANY_NAME,
+    )
+    CRM_BUILDER_PAYLOAD_PATH.write_text(
+        json.dumps(builder_payload, ensure_ascii=False, indent=2),
+        encoding="utf-8",
+    )
 
 
 def write_builder_output(name: str, builder_input, builder_payload, html: str, asset) -> dict:
@@ -168,6 +190,7 @@ def main() -> None:
 
     crm_ready = CRM_ASSET_PATH.exists() and CRM_BUILDER_PAYLOAD_PATH.exists()
     if crm_ready:
+        refresh_crm_builder_payload()
         crm_input = build_crm_template_input(
             str(CRM_TEMPLATE_PATH),
             builder_payload_path=str(CRM_BUILDER_PAYLOAD_PATH),

@@ -64,6 +64,7 @@ class RadarSandboxSummary(BaseModel):
     top_declines: list[dict] = Field(default_factory=list)
     top_gains: list[dict] = Field(default_factory=list)
     trend_flags: list[str] = Field(default_factory=list)
+    trend_series: dict[str, list] = Field(default_factory=dict)
 
 
 class RadarScopeSummaries(BaseModel):
@@ -151,6 +152,7 @@ class RadarResultAsset(BaseModel):
     kpi_summary: RadarKpiSummary
     scope_summaries: RadarScopeSummaries = Field(default_factory=RadarScopeSummaries)
     validation_summary: RadarValidationSummary
+    sandbox_summary: RadarSandboxSummary = Field(default_factory=RadarSandboxSummary)
     summary: RadarSummary
     signals: list[RadarSignal] = Field(default_factory=list)
     generated_at: datetime = Field(default_factory=datetime.now)

@@ -6,4 +6,4 @@ RADAR는 Sales Data OS의 Intelligence Layer 모듈이다.
 - 출력: signal list, priority score, decision option templates, radar_result_asset
 - 금지: KPI 재계산, 현장 스케줄 지시, 원인 확정
 
-Builder는 render-only 레이어이며 RADAR는 HTML을 생성하지 않는다.
+Builder는 render-only 레이어이다

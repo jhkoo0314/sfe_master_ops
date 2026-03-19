@@ -27,6 +27,7 @@ def build_radar_result_asset(radar_input: RadarInputStandard) -> RadarResultAsse
         kpi_summary=radar_input.kpi_summary,
         scope_summaries=radar_input.scope_summaries,
         validation_summary=radar_input.validation_summary,
+        sandbox_summary=radar_input.sandbox_summary,
         summary=summary,
         signals=finalized,
     )

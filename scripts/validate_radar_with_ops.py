@@ -19,6 +19,7 @@ from modules.radar.schemas import (
     RadarValidationSummary,
 )
 from modules.radar.service import build_radar_result_asset
+from result_assets.crm_result_asset import CrmResultAsset
 from result_assets.sandbox_result_asset import SandboxResultAsset
 
 
@@ -27,6 +28,7 @@ COMPANY_NAME = get_active_company_name(COMPANY_KEY)
 SANDBOX_ROOT = get_company_root(ROOT, "ops_validation", COMPANY_KEY) / "sandbox"
 SANDBOX_ASSET_PATH = SANDBOX_ROOT / "sandbox_result_asset.json"
 SANDBOX_EVAL_PATH = SANDBOX_ROOT / "sandbox_ops_evaluation.json"
+CRM_ASSET_PATH = get_company_root(ROOT, "ops_validation", COMPANY_KEY) / "crm" / "crm_result_asset.json"
 OUTPUT_ROOT = get_company_root(ROOT, "ops_validation", COMPANY_KEY) / "radar"
 
 
@@ -58,10 +60,24 @@ def _calc_pv_change_pct(template_payload: dict) -> float:
     return round(((cur_val - prev_val) / prev_val) * 100.0, 1)
 
 
-def _build_scope_summaries(template_payload: dict) -> tuple[list[dict], list[dict], list[dict]]:
+def _month_label(metric_month: str) -> str:
+    text = str(metric_month or "").strip()
+    if len(text) == 6 and text.isdigit():
+        return f"{text[:4]}-{text[4:6]}"
+    return text or "-"
+
+
+def _build_scope_summaries(template_payload: dict, block_payload: dict) -> tuple[list[dict], list[dict], list[dict]]:
     branches_obj = template_payload.get("branches", {}) if isinstance(template_payload, dict) else {}
+    if not isinstance(branches_obj, dict) or not branches_obj:
+        branch_summary = block_payload.get("branch_summary", {}) if isinstance(block_payload, dict) else {}
+        branches_obj = branch_summary.get("branches", {}) if isinstance(branch_summary, dict) else {}
     by_branch: list[dict] = []
     by_rep: list[dict] = []
+    member_lookup_by_branch = {}
+    branch_member_summary = block_payload.get("branch_member_summary", {}) if isinstance(block_payload, dict) else {}
+    if isinstance(branch_member_summary, dict):
+        member_lookup_by_branch = branch_member_summary.get("members_by_branch", {}) or {}
 
     if isinstance(branches_obj, dict):
         for branch_name, branch_payload in branches_obj.items():
@@ -78,7 +94,8 @@ def _build_scope_summaries(template_payload: dict) -> tuple[list[dict], list[dic
                     "member_count": len(branch_payload.get("members", []) or []),
                 }
             )
-            for member in branch_payload.get("members", []) or []:
+            member_rows = branch_payload.get("members", []) or member_lookup_by_branch.get(branch_name, []) or []
+            for member in member_rows:
                 if not isinstance(member, dict):
                     continue
                 by_rep.append(
@@ -94,6 +111,10 @@ def _build_scope_summaries(template_payload: dict) -> tuple[list[dict], list[dic
 
     by_product: list[dict] = []
     prod_obj = template_payload.get("total_prod_analysis", {}) if isinstance(template_payload, dict) else {}
+    if (not isinstance(prod_obj, dict) or not prod_obj) and isinstance(block_payload, dict):
+        product_analysis = block_payload.get("product_analysis", {}) or {}
+        if isinstance(product_analysis, dict):
+            prod_obj = product_analysis.get("total_prod_analysis", {}) or {}
     if isinstance(prod_obj, dict):
         for product_name, product_payload in prod_obj.items():
             if not isinstance(product_payload, dict):
@@ -112,6 +133,46 @@ def _build_scope_summaries(template_payload: dict) -> tuple[list[dict], list[dic
     by_rep = sorted(by_rep, key=lambda row: row.get("attainment_pct", 0.0))
     by_product = sorted(by_product, key=lambda row: row.get("attainment_pct", 0.0))
     return by_branch[:30], by_rep[:100], by_product[:50]
+
+
+def _build_trend_series(
+    template_payload: dict,
+    metric_months: list[str],
+    crm_asset: CrmResultAsset | None,
+) -> dict[str, list]:
+    total_payload = template_payload.get("total", {}) if isinstance(template_payload, dict) else {}
+    monthly_actual = total_payload.get("monthly_actual", []) if isinstance(total_payload, dict) else []
+    monthly_target = total_payload.get("monthly_target", []) if isinstance(total_payload, dict) else []
+
+    labels = [_month_label(month) for month in metric_months]
+    goal_attainment: list[float] = []
+    for idx, _month in enumerate(metric_months):
+        actual = _to_float(monthly_actual[idx] if idx < len(monthly_actual) else 0.0, 0.0)
+        target = _to_float(monthly_target[idx] if idx < len(monthly_target) else 0.0, 0.0)
+        if target > 0:
+            goal_attainment.append(round((actual / target) * 100.0, 1))
+        else:
+            goal_attainment.append(0.0)
+
+    hir_series: list[float] = []
+    rtr_series: list[float] = []
+    if crm_asset is not None:
+        month_map = {str(row.metric_month): row for row in crm_asset.monthly_kpi_11}
+        for month in metric_months:
+            row = month_map.get(str(month))
+            if row is None:
+                hir_series.append(0.0)
+                rtr_series.append(0.0)
+                continue
+            hir_series.append(round(_to_float(row.metric_set.hir, 0.0), 1))
+            rtr_series.append(round(_to_float(row.metric_set.rtr, 0.0), 1))
+
+    return {
+        "labels": labels,
+        "goal_attainment": goal_attainment,
+        "hir": hir_series,
+        "rtr": rtr_series,
+    }
 
 
 def _build_trend_flags(goal_attainment_pct: float, pv_change_pct: float, hir: float, rtr: float) -> list[str]:
@@ -152,12 +213,16 @@ def main() -> None:
     OUTPUT_ROOT.mkdir(parents=True, exist_ok=True)
 
     sandbox_asset = SandboxResultAsset.model_validate(_load_json(SANDBOX_ASSET_PATH))
+    crm_asset = CrmResultAsset.model_validate(_load_json(CRM_ASSET_PATH)) if CRM_ASSET_PATH.exists() else None
     eval_payload = _load_json(SANDBOX_EVAL_PATH) if SANDBOX_EVAL_PATH.exists() else None
     validation_summary, source_status = _build_validation_summary(eval_payload)
 
     template_payload = {}
+    block_payload = {}
     if sandbox_asset.dashboard_payload and isinstance(sandbox_asset.dashboard_payload.template_payload, dict):
         template_payload = sandbox_asset.dashboard_payload.template_payload
+    if sandbox_asset.dashboard_payload and isinstance(sandbox_asset.dashboard_payload.block_payload, dict):
+        block_payload = sandbox_asset.dashboard_payload.block_payload
 
     total_avg = template_payload.get("total_avg", {}) if isinstance(template_payload, dict) else {}
     metrics = sandbox_asset.analysis_summary.custom_metrics or {}
@@ -171,10 +236,11 @@ def main() -> None:
     bcr = _to_float(total_avg.get("BCR"), 0.0)
     phr = _to_float(total_avg.get("PHR"), 0.0)
 
-    by_branch, by_rep, by_product = _build_scope_summaries(template_payload)
+    by_branch, by_rep, by_product = _build_scope_summaries(template_payload, block_payload)
     top_declines = by_branch[:5]
     top_gains = sorted(by_branch, key=lambda row: row.get("attainment_pct", 0.0), reverse=True)[:5]
     trend_flags = _build_trend_flags(goal_attainment_pct, pv_change_pct, hir, rtr)
+    trend_series = _build_trend_series(template_payload, sandbox_asset.metric_months, crm_asset)
 
     period_value = sandbox_asset.metric_months[-1] if sandbox_asset.metric_months else datetime.now().strftime("%Y%m")
     meta = RadarMeta(
@@ -204,6 +270,7 @@ def main() -> None:
             top_declines=top_declines,
             top_gains=top_gains,
             trend_flags=trend_flags,
+            trend_series=trend_series,
         ),
     )
     radar_asset = build_radar_result_asset(radar_input)
