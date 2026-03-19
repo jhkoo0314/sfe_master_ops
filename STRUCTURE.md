@@ -68,7 +68,7 @@ sfe_master_ops/
 - `modules/sandbox/`
   - Sandbox Result Asset 생성
   - CRM KPI는 입력값을 사용하고 Sandbox에서 재계산하지 않음
-  - `service.py`는 orchestration만 담당하고 조립 책임은 `builders/`로 분리 시작
+  - `service.py`는 orchestration만 담당하고 조립 책임은 `builders/`로 분리 완료
   - KPI 계산 1차 분리는 `modules/kpi/sandbox_engine.py` 호출로 수행
   - `builders/`
     - `template_payload_builder.py`: 지점/담당자/품목 분석 payload 조립
@@ -134,29 +134,37 @@ OPS 판단과 파이프라인 실행을 담당합니다.
 
 - [ops_console.py](/C:/sfe_master_ops/ui/ops_console.py)
   - Streamlit 진입점
-- [console_state.py](/C:/sfe_master_ops/ui/console_state.py)
+- `ui/console/`
+  - 실제 콘솔 구현 패키지
+- [app.py](/C:/sfe_master_ops/ui/console/app.py)
+  - 콘솔 앱 조립
+- [sidebar.py](/C:/sfe_master_ops/ui/console/sidebar.py)
+  - 회사 선택/등록, 실행모드 선택
+- [state.py](/C:/sfe_master_ops/ui/console/state.py)
   - 세션 상태, 업로드 캐시, 실행 로그
-- [console_paths.py](/C:/sfe_master_ops/ui/console_paths.py)
-  - 회사 코드 기준 경로와 source target 계산
-- [console_runner.py](/C:/sfe_master_ops/ui/console_runner.py)
+- [paths.py](/C:/sfe_master_ops/ui/console/paths.py)
+  - 회사 기준 경로와 source target 계산
+- [runner.py](/C:/sfe_master_ops/ui/console/runner.py)
   - 실행 준비 판단, 실행 호출, 실행 이력 저장
-- [console_artifacts.py](/C:/sfe_master_ops/ui/console_artifacts.py)
+- [pipeline_tab.py](/C:/sfe_master_ops/ui/console/tabs/pipeline_tab.py)
+  - 실행 중 본문 상태 박스와 완료/실패 표시
+- [artifacts.py](/C:/sfe_master_ops/ui/console/artifacts.py)
   - 산출물 경로, 미리보기, 보고서 파일 탐색
-- [console_display.py](/C:/sfe_master_ops/ui/console_display.py)
+- [display.py](/C:/sfe_master_ops/ui/console/display.py)
   - 공통 화면 블록, 업로드 행 표시
-- [console_shared.py](/C:/sfe_master_ops/ui/console_shared.py)
-  - 얇게 남겨 둔 공통 표시 헬퍼
-- [console_sidebar.py](/C:/sfe_master_ops/ui/console_sidebar.py)
-  - 사이드바 렌더링
-- [console_tabs.py](/C:/sfe_master_ops/ui/console_tabs.py)
-  - 현재 6개 탭 렌더링과 Agent 관련 로직 일부를 포함
+- [shared.py](/C:/sfe_master_ops/ui/console/shared.py)
+  - 공통 표시 묶음
+- `ui/console/tabs/`
+  - 6개 탭 구현
+- `ui/console/agent/`
+  - Agent run/context/artifact/history/mock/LLM 처리
 
-즉 예전처럼 `ops_console.py` 한 파일에 몰아넣지 않고 분리된 상태입니다.
+즉 예전 `console_*` 파일은 삭제됐고, 실제 구현은 `ui/console/` 아래로 정리된 상태입니다.
 
 현재 상태 메모:
-- 회사 선택은 `company_registry` 기반 선택을 우선 사용합니다.
-- Agent는 `run_report_context`와 `run_artifacts`를 읽는 방향으로 확장 중입니다.
-- 다음 구조 목표는 `docs/architecture/16_responsibility_based_refactor_structure.md` 기준의 `ui/console/` 패키지 분리입니다.
+- 회사 선택은 `company_registry` 기반 선택을 사용합니다.
+- Agent는 `run_report_context`와 `run_artifacts`를 읽습니다.
+- 콘솔 리팩토링 1차가 아니라 실제 파일 삭제까지 마친 상태입니다.
 
 ### `templates/`
 
@@ -228,9 +236,11 @@ OPS 판단과 파이프라인 실행을 담당합니다.
 - [company_registry.py](/C:/sfe_master_ops/common/company_registry.py)
   - 회사 등록/선택과 고정 `company_key` 관리
 - [run_registry.py](/C:/sfe_master_ops/common/run_registry.py)
-  - 기존 호환용 facade
+  - 기존 호환용 facade 유지
+- `ui/console/`
+  - 콘솔 실제 구현 패키지
 - `common/run_storage/`
-  - `runs`, `run_steps`, `run_artifacts`, `run_report_context`, `agent_chat_logs` 저장/조회 분리 시작
+  - `runs`, `run_steps`, `run_artifacts`, `run_report_context`, `agent_chat_logs` 저장/조회 분리 완료
 - `config.py`
 - `exceptions.py`
 - `types.py`

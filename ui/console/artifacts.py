@@ -7,7 +7,7 @@ import pandas as pd
 import streamlit as st
 
 from ops_core.workflow.execution_registry import get_execution_mode_modules
-from ui.console_paths import get_active_company_key, get_project_root
+from ui.console.paths import get_active_company_key, get_project_root
 
 
 def get_artifact_directories(module: str) -> list[tuple[str, str]]:

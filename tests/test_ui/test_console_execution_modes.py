@@ -13,8 +13,8 @@ from ops_core.workflow.execution_registry import (
     get_mode_pipeline_steps,
     get_mode_required_uploads,
 )
-import ui.console_paths as console_paths
-from ui.console_paths import (
+import ui.console.paths as console_paths
+from ui.console.paths import (
     get_source_target_display_path,
     get_source_target_map,
 )
@@ -22,7 +22,7 @@ from ui.console_paths import (
 
 def test_crm_to_territory_mode_metadata():
     assert get_execution_mode_label("crm_to_territory") == "CRM -> Territory"
-    assert get_execution_mode_modules("crm_to_territory") == ["crm", "territory"]
+    assert get_execution_mode_modules("crm_to_territory") == ["crm", "territory", "radar"]
     assert "권역 분석" in get_execution_mode_description("crm_to_territory")
     assert "거래처 담당 배정" in get_execution_mode_requirements("crm_to_territory")
 
@@ -40,9 +40,10 @@ def test_crm_to_territory_mode_required_uploads():
 def test_crm_to_territory_mode_pipeline_steps():
     steps = get_mode_pipeline_steps("crm_to_territory")
 
-    assert len(steps) == 2
+    assert len(steps) == 3
     assert steps[0].module == "crm"
     assert steps[1].module == "territory"
+    assert steps[2].module == "radar"
     assert "정규화" in steps[1].label
 
 

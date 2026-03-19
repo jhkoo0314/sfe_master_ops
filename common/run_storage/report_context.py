@@ -1,4 +1,4 @@
-from common.run_registry import (
+from common.run_storage._shared import (
     _resolve_report_contexts,
     load_run_contexts_from_supabase,
 )

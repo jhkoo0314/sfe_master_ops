@@ -5,7 +5,7 @@ import os
 import pandas as pd
 import streamlit as st
 
-from ui.console_state import load_file_once
+from ui.console.state import load_file_once
 
 
 def render_page_hero(title: str, subtitle: str, badge: str | None = None) -> None:

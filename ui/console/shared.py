@@ -4,7 +4,7 @@
 각각 전용 `ui.console_*` 모듈로 분리했다.
 """
 
-from ui.console_display import (
+from ui.console.display import (
     render_block_card,
     render_page_hero,
     render_panel_header,

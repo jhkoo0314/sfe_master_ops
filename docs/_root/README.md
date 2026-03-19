@@ -24,7 +24,8 @@
 쉽게 말하면:
 
 - CRM / Prescription / Sandbox / Territory / RADAR / Builder가 한 흐름으로 실제 실행됩니다.
-- 운영 콘솔에서 회사 코드 기준으로 실행과 산출물 확인이 가능합니다.
+- 운영 콘솔에서 등록된 회사 선택 기준으로 실행과 산출물 확인이 가능합니다.
+- 콘솔 상단 메뉴는 선택한 화면만 렌더하도록 동작해, 한 화면 오류가 전체 화면을 같이 멈추게 하지 않습니다.
 - 핵심 JSON에는 버전이 붙어 있어 파일 규격 추적이 가능합니다.
 - CRM / Prescription / Sandbox / Territory는 무거운 상세를 필요할 때만 읽는 구조로 정리됐습니다.
 - 파일 크기 / 로딩 시간 회귀 테스트가 들어 있어 다시 무거워지는 문제를 빨리 잡을 수 있습니다.
@@ -131,7 +132,7 @@ Part2 문서 운영 기준:
 
 운영 콘솔:
 - Streamlit 기반
-- 회사 코드 입력
+- 회사 등록/선택
 - 실행모드 선택
 - 업로드 파일 반영
 - 실제 파이프라인 실행
@@ -241,14 +242,26 @@ data/
 
 운영 콘솔:
 - [ops_console.py](/C:/sfe_master_ops/ui/ops_console.py)
-- [console_state.py](/C:/sfe_master_ops/ui/console_state.py)
-- [console_paths.py](/C:/sfe_master_ops/ui/console_paths.py)
-- [console_runner.py](/C:/sfe_master_ops/ui/console_runner.py)
-- [console_artifacts.py](/C:/sfe_master_ops/ui/console_artifacts.py)
-- [console_display.py](/C:/sfe_master_ops/ui/console_display.py)
-- [console_shared.py](/C:/sfe_master_ops/ui/console_shared.py)
-- [console_sidebar.py](/C:/sfe_master_ops/ui/console_sidebar.py)
-- [console_tabs.py](/C:/sfe_master_ops/ui/console_tabs.py)
+  - Streamlit 실행 진입점
+- [app.py](/C:/sfe_master_ops/ui/console/app.py)
+  - 실제 콘솔 앱 조립
+  - 상단 메뉴에서 선택한 화면만 렌더
+- [sidebar.py](/C:/sfe_master_ops/ui/console/sidebar.py)
+  - 회사 선택/등록, 실행모드 선택
+- [state.py](/C:/sfe_master_ops/ui/console/state.py)
+  - 세션 상태, 업로드 캐시, 실행 로그
+- [paths.py](/C:/sfe_master_ops/ui/console/paths.py)
+  - 회사 기준 경로 계산
+- [runner.py](/C:/sfe_master_ops/ui/console/runner.py)
+  - 실제 실행 호출, run 이력 저장
+- [display.py](/C:/sfe_master_ops/ui/console/display.py)
+  - 공통 화면 블록
+- [artifacts.py](/C:/sfe_master_ops/ui/console/artifacts.py)
+  - 산출물 경로/미리보기/다운로드 보조
+- [tabs](/C:/sfe_master_ops/ui/console/tabs)
+  - 6개 탭 구현
+- [agent](/C:/sfe_master_ops/ui/console/agent)
+  - Agent run/context/artifact/LLM 처리
 
 회사별 실행 프로필:
 - [company_profile.py](/C:/sfe_master_ops/common/company_profile.py)

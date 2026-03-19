@@ -25,19 +25,12 @@ from ui.console.tabs import (
 )
 
 
-st.set_page_config(
-    page_title="Sales Data OS Console",
-    page_icon="⚡",
-    layout="wide",
-    initial_sidebar_state="expanded",
-)
-
 css = """
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
 <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Rounded" rel="stylesheet">
 <style>
   :root {
-    --bg: #0d1117;
+    --bg: #161b22;
     --surface: #161b22;
     --surface2: #21262d;
     --border: #30363d;
@@ -49,8 +42,8 @@ css = """
     --warning: #d29922;
     --danger: #f85149;
   }
-  html, body, [data-testid="stAppViewContainer"] {
-    background: var(--bg) !important;
+  html, body, [data-testid="stAppViewContainer"], [data-testid="stMain"], [data-testid="stAppViewContainer"] > .main {
+    background: linear-gradient(180deg, rgba(22,27,34,0.98), rgba(13,17,23,0.98)) !important;
     color: var(--text) !important;
     font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif !important;
   }
@@ -73,8 +66,14 @@ css = """
     -webkit-font-smoothing: antialiased !important;
   }
   [data-testid="stHeader"] {
-    background: rgba(13,17,23,0.85) !important;
-    border-bottom: 1px solid var(--border);
+    background: linear-gradient(180deg, rgba(33,38,45,0.96), rgba(22,27,34,0.96)) !important;
+    border-bottom: 1px solid rgba(88,166,255,0.22) !important;
+    box-shadow: 0 6px 18px rgba(0,0,0,0.18) !important;
+  }
+  [data-testid="stHeader"] * {
+    color: #ffffff !important;
+    -webkit-text-fill-color: #ffffff !important;
+    fill: #ffffff !important;
   }
   [data-testid="stSidebar"] {
     background: linear-gradient(180deg, rgba(22,27,34,0.98), rgba(13,17,23,0.98)) !important;
@@ -130,14 +129,51 @@ css = """
     gap: 10px;
   }
   .stTabs [data-baseweb="tab"] {
-    color: var(--muted) !important;
+    color: var(--text) !important;
     border-radius: 10px;
     font-weight: 700 !important;
     padding: 12px 18px !important;
   }
   .stTabs [aria-selected="true"] {
     background: var(--surface2) !important;
-    color: var(--text) !important;
+    color: #ffffff !important;
+  }
+  .stTabs [data-baseweb="tab"] * {
+    color: #ffffff !important;
+    -webkit-text-fill-color: #ffffff !important;
+    fill: #ffffff !important;
+  }
+  div[role="radiogroup"] {
+    display: flex !important;
+    flex-wrap: nowrap !important;
+    gap: 8px !important;
+    overflow-x: auto !important;
+    overflow-y: hidden !important;
+    padding-bottom: 4px !important;
+    scrollbar-width: thin;
+  }
+  div[role="radiogroup"] label {
+    flex: 0 0 auto !important;
+    white-space: nowrap !important;
+    background: rgba(33,38,45,0.92) !important;
+    border: 1px solid var(--border) !important;
+    border-radius: 12px !important;
+    padding: 8px 12px !important;
+    min-height: auto !important;
+  }
+  div[role="radiogroup"] label p,
+  div[role="radiogroup"] label span,
+  div[role="radiogroup"] label div {
+    color: #ffffff !important;
+    -webkit-text-fill-color: #ffffff !important;
+    opacity: 1 !important;
+    white-space: nowrap !important;
+    line-height: 1.2 !important;
+    font-size: 14px !important;
+  }
+  div[role="radiogroup"] [aria-checked="true"] {
+    background: var(--surface2) !important;
+    border-color: var(--primary) !important;
   }
   .stButton button,
   .stDownloadButton button,
@@ -583,13 +619,23 @@ css = """
 </style>
 """
 
-st.markdown(css, unsafe_allow_html=True)
 
-init_console_state()
-render_sidebar()
 
-tab1, tab2, tab3, tab4, tab5, tab6 = st.tabs(
-    [
+
+def run_console_app() -> None:
+    st.set_page_config(
+        page_title="Sales Data OS Console",
+        page_icon="⚡",
+        layout="wide",
+        initial_sidebar_state="expanded",
+    )
+
+    st.markdown(css, unsafe_allow_html=True)
+
+    init_console_state()
+    render_sidebar()
+
+    tab_options = [
         "🏠 대시보드",
         "📂 데이터 어댑터",
         "🚀 파이프라인",
@@ -597,22 +643,44 @@ tab1, tab2, tab3, tab4, tab5, tab6 = st.tabs(
         "📄 결과물 빌더",
         "🤖 Agent",
     ]
-)
 
-with tab1:
-    render_dashboard_tab()
+    if "active_console_tab" not in st.session_state:
+        st.session_state.active_console_tab = tab_options[0]
 
-with tab2:
-    render_upload_tab()
+    active_tab = st.radio(
+        "콘솔 메뉴",
+        tab_options,
+        index=tab_options.index(st.session_state.active_console_tab) if st.session_state.active_console_tab in tab_options else 0,
+        horizontal=True,
+        label_visibility="collapsed",
+    )
+    st.session_state.active_console_tab = active_tab
 
-with tab3:
-    render_pipeline_tab()
+    def _render_current_tab() -> None:
+        if active_tab == "🏠 대시보드":
+            render_dashboard_tab()
+            return
+        if active_tab == "📂 데이터 어댑터":
+            render_upload_tab()
+            return
+        if active_tab == "🚀 파이프라인":
+            render_pipeline_tab()
+            return
+        if active_tab == "📊 분석 인텔리전스":
+            render_artifacts_tab()
+            return
+        if active_tab == "📄 결과물 빌더":
+            render_builder_tab()
+            return
+        if active_tab == "🤖 Agent":
+            render_agent_tab()
+            return
 
-with tab4:
-    render_artifacts_tab()
+    try:
+        _render_current_tab()
+    except Exception as exc:
+        st.error(f"{active_tab} 화면 렌더 중 오류가 발생했습니다: {exc}")
+        st.exception(exc)
 
-with tab5:
-    render_builder_tab()
 
-with tab6:
-    render_agent_tab()
+__all__ = ["run_console_app"]

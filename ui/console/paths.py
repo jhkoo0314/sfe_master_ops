@@ -15,7 +15,7 @@ from common.company_runtime import get_active_company_key as env_company_key, ge
 
 
 def get_project_root() -> str:
-    return os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+    return str(Path(__file__).resolve().parents[2])
 
 
 def _get_registered_company_from_state() -> tuple[str, str]:

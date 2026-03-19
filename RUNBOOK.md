@@ -47,7 +47,8 @@ uv run streamlit run ui/ops_console.py --server.port 8501
 ```
 
 참고:
-- 운영 콘솔은 현재 `대시보드 / 데이터 어댑터 / 파이프라인 / 분석 인텔리전스 / 결과물 빌더 / Agent` 6개 탭으로 동작합니다.
+- 운영 콘솔은 현재 `ui/console/` 패키지 기준으로 동작합니다.
+- 상단 메뉴는 `대시보드 / 데이터 어댑터 / 파이프라인 / 분석 인텔리전스 / 결과물 빌더 / Agent` 6개 화면 중 선택한 화면만 렌더합니다.
 
 ## 3. 운영 콘솔 사용 순서
 
@@ -58,7 +59,7 @@ uv run streamlit run ui/ops_console.py --server.port 8501
 5. `파이프라인 실행`
 6. 분석 인텔리전스 탭에서 정규화/검증 산출물 확인
 7. 결과물 빌더 탭에서 HTML 열기/다운로드
-8. Agent 탭에서 run 선택 후 질문/응답 확인
+8. Agent 탭에서 run 선택 후 질문/응답/근거/대화이력 확인
 
 ## 4. 실행모드 설명
 
@@ -236,7 +237,7 @@ DB 동기화:
 
 - Agent는 KPI를 재계산하지 않습니다.
 - Agent는 `run_report_context`와 `run_artifacts`를 기준으로 답변합니다.
-- 현재는 `sandbox_report` artifact를 우선 읽는 구조로 확장 중입니다.
+- 현재는 `sandbox_report` artifact를 우선 읽는 구조로 동작합니다.
 - Territory payload는 `manifest + 분리 asset` 구조입니다.
 - 기본 화면은 `담당자 미선택` 상태로 시작하고, 담당자를 고른 뒤 해당 담당자 asset과 선택 월 asset만 읽습니다.
 - `total_valid_preview.html`은 개별 HTML을 한 화면에서 묶어 보여주는 허브입니다.

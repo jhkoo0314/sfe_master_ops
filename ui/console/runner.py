@@ -15,7 +15,7 @@ from ops_core.workflow.execution_registry import (
     get_mode_required_uploads,
 )
 from ops_core.workflow.execution_service import build_execution_context, run_execution_mode
-from ui.console_paths import (
+from ui.console.paths import (
     get_active_company_key,
     get_active_company_name,
     get_project_root,

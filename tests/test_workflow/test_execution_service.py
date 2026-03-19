@@ -9,7 +9,7 @@ if str(ROOT) not in sys.path:
     sys.path.insert(0, str(ROOT))
 
 import ops_core.workflow.execution_service as execution_service
-import ui.console_runner as console_runner
+import ui.console.runner as console_runner
 from ops_core.workflow.execution_models import (
     ExecutionContext,
     ExecutionRunResult,
