@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import re
+from copy import deepcopy
 
 from modules.crm.schemas import CompanyMasterStandard, CrmStandardActivity
 from result_assets.crm_result_asset import CrmResultAsset
@@ -29,6 +30,8 @@ _COACH_WEIGHTS = [
     ("NAR", 0.10),
     ("AHS", 0.10),
 ]
+
+_BEHAVIOR_KEYS = ["PT", "Demo", "Closing", "Needs", "FaceToFace", "Contact", "Access", "Feedback"]
 
 
 def _sanitize_scope_token(value: str) -> str:
@@ -95,140 +98,358 @@ def _metric_tile(code: str, name: str, value: float, tone: str) -> dict:
     }
 
 
-def _build_basic_payload(asset: CrmResultAsset, summary: dict, company_name: str) -> dict:
+def _month_label(metric_month: str) -> str:
+    text = str(metric_month or "").strip()
+    if len(text) == 6 and text.isdigit():
+        return f"{text[:4]}-{text[4:6]}"
+    return text or "-"
+
+
+def _build_monthly_rows(asset: CrmResultAsset) -> list[dict]:
     monthly_rows: list[dict] = []
     legacy_month_map = {str(row.metric_month): row for row in asset.monthly_kpi}
-
-    if asset.monthly_kpi_11:
-        for row in asset.monthly_kpi_11:
-            legacy = legacy_month_map.get(str(row.metric_month))
-            total_visits = int(getattr(legacy, "total_visits", 0) or 0)
-            detail_call_count = int(getattr(legacy, "detail_call_count", 0) or 0)
-            detail_rate = round(detail_call_count / max(total_visits, 1), 4)
-            monthly_rows.append(
-                {
-                    "metric_month": str(row.metric_month),
-                    "month_label": f"{str(row.metric_month)[:4]}-{str(row.metric_month)[4:6]}",
-                    "total_visits": total_visits,
-                    "total_reps_active": int(getattr(legacy, "total_reps_active", row.rep_count) or row.rep_count),
-                    "total_hospitals_visited": int(getattr(legacy, "total_hospitals_visited", 0) or 0),
-                    "avg_visits_per_rep": float(getattr(legacy, "avg_visits_per_rep", 0.0) or 0.0),
-                    "detail_call_count": detail_call_count,
-                    "detail_call_rate": detail_rate,
-                    "hir": float(row.metric_set.hir),
-                    "rtr": float(row.metric_set.rtr),
-                    "bcr": float(row.metric_set.bcr),
-                    "phr": float(row.metric_set.phr),
-                    "nar": float(row.metric_set.nar),
-                    "ahs": float(row.metric_set.ahs),
-                    "pv": float(row.metric_set.pv),
-                    "fgr": float(row.metric_set.fgr),
-                    "pi": float(row.metric_set.pi),
-                    "trg": float(row.metric_set.trg),
-                    "swr": float(row.metric_set.swr),
-                    "coach_score": float(row.metric_set.coach_score),
-                }
-            )
-    else:
-        for row in asset.monthly_kpi:
-            detail_rate = round(row.detail_call_count / max(row.total_visits, 1), 4)
-            monthly_rows.append(
-                {
-                    "metric_month": row.metric_month,
-                    "month_label": f"{str(row.metric_month)[:4]}-{str(row.metric_month)[4:6]}",
-                    "total_visits": row.total_visits,
-                    "total_reps_active": row.total_reps_active,
-                    "total_hospitals_visited": row.total_hospitals_visited,
-                    "avg_visits_per_rep": row.avg_visits_per_rep,
-                    "detail_call_count": row.detail_call_count,
-                    "detail_call_rate": detail_rate,
-                }
-            )
-
-    rep_rows: list[dict] = []
-    profile_map = {p.rep_id: p for p in asset.behavior_profiles}
-    latest_month = None
-    if asset.rep_monthly_kpi_11:
-        latest_month = max(str(row.metric_month) for row in asset.rep_monthly_kpi_11)
-        for row in asset.rep_monthly_kpi_11:
-            if str(row.metric_month) != latest_month:
-                continue
-            profile = profile_map.get(row.rep_id)
-            rep_rows.append(
-                {
-                    "rep_id": row.rep_id,
-                    "rep_name": profile.rep_name if profile else row.rep_id,
-                    "branch_id": profile.branch_id if profile else "",
-                    "branch_name": (profile.branch_name if profile else "") or (profile.branch_id if profile else ""),
-                    "hir": round(float(row.metric_set.hir) / 100.0, 3),
-                    "rtr": round(float(row.metric_set.rtr) / 100.0, 3),
-                    "bcr": round(float(row.metric_set.bcr) / 100.0, 3),
-                    "phr": round(float(row.metric_set.phr) / 100.0, 3),
-                    "nar": round(float(row.metric_set.nar) / 100.0, 3),
-                    "ahs": float(row.metric_set.ahs),
-                    "pv": float(row.metric_set.pv),
-                    "fgr": float(row.metric_set.fgr),
-                    "pi": float(row.metric_set.pi),
-                    "trg": float(row.metric_set.trg),
-                    "swr": float(row.metric_set.swr),
-                    "coach_score": round(float(row.metric_set.coach_score) / 100.0, 3),
-                    "total_visits": int(profile.total_visits) if profile else 0,
-                    "behavior_mix_8": row.behavior_mix_8,
-                }
-            )
-
-    rep_rows = sorted(rep_rows, key=lambda row: (row.get("coach_score", 0.0), row.get("hir", 0.0), row.get("total_visits", 0)), reverse=True)
-
-    team_avg_hir = round(_avg_key(rep_rows, "hir"), 3)
-    team_avg_rtr = round(_avg_key(rep_rows, "rtr"), 3)
-    team_avg_bcr = round(_avg_key(rep_rows, "bcr"), 3)
-    team_avg_phr = round(_avg_key(rep_rows, "phr"), 3)
-    team_avg_nar = round(_avg_key(rep_rows, "nar"), 3)
-    team_avg_ahs_norm = round(_avg_key(rep_rows, "ahs") / 100.0, 3)
-    team_avg_coach = round(_avg_key(rep_rows, "coach_score"), 3)
-
-    trend_labels = [row["month_label"] for row in monthly_rows]
-    trend_hir = [round(float(row.get("hir", 0.0) or 0.0) / 100.0, 3) for row in monthly_rows if "hir" in row]
-    trend_bcr = [round(float(row.get("bcr", 0.0) or 0.0) / 100.0, 3) for row in monthly_rows if "bcr" in row]
-    trend_fgr = [round(float(row.get("fgr", 0.0) or 0.0) - 100.0, 1) for row in monthly_rows if "fgr" in row]
-
-    latest_month_kpi = None
+    for row in asset.monthly_kpi_11 or []:
+        metric_month = str(row.metric_month)
+        legacy = legacy_month_map.get(metric_month)
+        total_visits = int(getattr(legacy, "total_visits", 0) or 0)
+        detail_call_count = int(getattr(legacy, "detail_call_count", 0) or 0)
+        detail_rate = round(detail_call_count / max(total_visits, 1), 4)
+        monthly_rows.append(
+            {
+                "metric_month": metric_month,
+                "month_label": _month_label(metric_month),
+                "total_visits": total_visits,
+                "total_reps_active": int(getattr(legacy, "total_reps_active", row.rep_count) or row.rep_count),
+                "total_hospitals_visited": int(getattr(legacy, "total_hospitals_visited", 0) or 0),
+                "avg_visits_per_rep": float(getattr(legacy, "avg_visits_per_rep", 0.0) or 0.0),
+                "detail_call_count": detail_call_count,
+                "detail_call_rate": detail_rate,
+                "hir": float(row.metric_set.hir),
+                "rtr": float(row.metric_set.rtr),
+                "bcr": float(row.metric_set.bcr),
+                "phr": float(row.metric_set.phr),
+                "nar": float(row.metric_set.nar),
+                "ahs": float(row.metric_set.ahs),
+                "pv": float(row.metric_set.pv),
+                "fgr": float(row.metric_set.fgr),
+                "pi": float(row.metric_set.pi),
+                "trg": float(row.metric_set.trg),
+                "swr": float(row.metric_set.swr),
+                "coach_score": float(row.metric_set.coach_score),
+            }
+        )
     if monthly_rows:
-        latest_month_kpi = monthly_rows[-1]
+        return sorted(monthly_rows, key=lambda row: row["metric_month"])
 
-    leading = []
-    ops = []
-    outcome = []
-    if latest_month_kpi:
-        leading = [
-            _metric_tile("HIR", "High-Impact Rate", round(float(latest_month_kpi.get("hir", 0.0)) / 100.0, 3), "blue"),
-            _metric_tile("RTR", "Relationship Temp.", round(float(latest_month_kpi.get("rtr", 0.0)) / 100.0, 3), "teal"),
-            _metric_tile("BCR", "Behavior Consistency", round(float(latest_month_kpi.get("bcr", 0.0)) / 100.0, 3), "purple"),
-            _metric_tile("PHR", "Proactive Health", round(float(latest_month_kpi.get("phr", 0.0)) / 100.0, 3), "pink"),
-        ]
-        ops = [
-            _metric_tile("NAR", "Next Action Reliability", round(float(latest_month_kpi.get("nar", 0.0)) / 100.0, 3), "amber"),
-            _metric_tile("AHS", "Account Health Score", float(latest_month_kpi.get("ahs", 0.0)), "amber"),
-            _metric_tile("PV", "Pipeline Velocity", float(latest_month_kpi.get("pv", 0.0)), "amber"),
-        ]
-        outcome = [
-            _metric_tile("FGR", "Field Growth Rate", float(latest_month_kpi.get("fgr", 0.0)) - 100.0, "green"),
-            _metric_tile("PI", "Prescription Index", float(latest_month_kpi.get("pi", 0.0)), "green"),
-            _metric_tile("TRG", "Target Readiness Gap", float(latest_month_kpi.get("trg", 0.0)), "muted"),
-            _metric_tile("SWR", "Share Win Rate", float(latest_month_kpi.get("swr", 0.0)), "muted"),
-        ]
+    for row in asset.monthly_kpi or []:
+        detail_rate = round(row.detail_call_count / max(row.total_visits, 1), 4)
+        monthly_rows.append(
+            {
+                "metric_month": str(row.metric_month),
+                "month_label": _month_label(str(row.metric_month)),
+                "total_visits": row.total_visits,
+                "total_reps_active": row.total_reps_active,
+                "total_hospitals_visited": row.total_hospitals_visited,
+                "avg_visits_per_rep": row.avg_visits_per_rep,
+                "detail_call_count": row.detail_call_count,
+                "detail_call_rate": detail_rate,
+            }
+        )
+    return sorted(monthly_rows, key=lambda row: row["metric_month"])
 
-    behavior_keys = ["PT", "Demo", "Closing", "Needs", "FaceToFace", "Contact", "Access", "Feedback"]
-    behavior_axis: list[dict] = []
-    if rep_rows:
-        for key in behavior_keys:
-            score = round(_avg_key([row.get("behavior_mix_8", {}) for row in rep_rows], key), 3)
-            behavior_axis.append({"label": key, "score": score, "tone": "blue"})
 
-    behavior_diagnosis = "CRM KPI 자산 기준으로 표시됩니다."
-    if behavior_axis:
-        weakest = sorted(behavior_axis, key=lambda item: item["score"])[:2]
-        behavior_diagnosis = f"{weakest[0]['label']}({weakest[0]['score'] * 100:.0f}%), {weakest[1]['label']}({weakest[1]['score'] * 100:.0f}%) 축 보강이 우선입니다."
+def _build_rep_rows_by_month(asset: CrmResultAsset) -> tuple[dict[str, list[dict]], dict[str, str]]:
+    profile_map = {p.rep_id: p for p in asset.behavior_profiles}
+    branch_labels: dict[str, str] = {}
+    rep_rows_by_month: dict[str, list[dict]] = {}
+
+    for row in asset.rep_monthly_kpi_11 or []:
+        metric_month = str(row.metric_month)
+        profile = profile_map.get(row.rep_id)
+        branch_id = (profile.branch_id if profile else "") or "UNASSIGNED"
+        branch_name = (profile.branch_name if profile else "") or branch_id or _TEAM_ALL_LABEL
+        branch_labels[branch_id] = branch_name
+        rep_rows_by_month.setdefault(metric_month, []).append(
+            {
+                "metric_month": metric_month,
+                "rep_id": row.rep_id,
+                "rep_name": profile.rep_name if profile else row.rep_id,
+                "branch_id": branch_id,
+                "branch_name": branch_name,
+                "hir": round(float(row.metric_set.hir) / 100.0, 3),
+                "rtr": round(float(row.metric_set.rtr) / 100.0, 3),
+                "bcr": round(float(row.metric_set.bcr) / 100.0, 3),
+                "phr": round(float(row.metric_set.phr) / 100.0, 3),
+                "nar": round(float(row.metric_set.nar) / 100.0, 3),
+                "ahs": float(row.metric_set.ahs),
+                "pv": float(row.metric_set.pv),
+                "fgr": float(row.metric_set.fgr),
+                "pi": float(row.metric_set.pi),
+                "trg": float(row.metric_set.trg),
+                "swr": float(row.metric_set.swr),
+                "coach_score": round(float(row.metric_set.coach_score) / 100.0, 3),
+                "total_visits": int(profile.total_visits) if profile else 0,
+                "behavior_mix_8": dict(row.behavior_mix_8 or {}),
+            }
+        )
+
+    for month, rows in rep_rows_by_month.items():
+        rep_rows_by_month[month] = sorted(
+            rows,
+            key=lambda item: (item.get("coach_score", 0.0), item.get("hir", 0.0), item.get("total_visits", 0)),
+            reverse=True,
+        )
+    return rep_rows_by_month, branch_labels
+
+
+def _filter_rows(rep_rows_by_month: dict[str, list[dict]], period_token: str, team_token: str) -> tuple[list[dict], list[dict]]:
+    selected_months = sorted(rep_rows_by_month.keys()) if period_token == "ALL" else [period_token]
+    monthly_rows: list[dict] = []
+    latest_rows: list[dict] = []
+    for month in selected_months:
+        month_rows = list(rep_rows_by_month.get(month, []))
+        if team_token != _TEAM_ALL_TOKEN:
+            month_rows = [row for row in month_rows if row.get("branch_id") == team_token]
+        if month_rows:
+            monthly_rows.extend(month_rows)
+            latest_rows = month_rows
+    return monthly_rows, latest_rows
+
+
+def _build_trend_rows(monthly_rows: list[dict], period_token: str) -> dict:
+    month_order = sorted({str(row.get("metric_month", "")) for row in monthly_rows if str(row.get("metric_month", "")).strip()})
+    if period_token != "ALL":
+        month_order = [period_token] if period_token in month_order else month_order[:1]
+    trend_source: list[dict] = []
+    for month in month_order:
+        rows = [row for row in monthly_rows if str(row.get("metric_month", "")) == month]
+        if not rows:
+            continue
+        trend_source.append(
+            {
+                "month_label": _month_label(month),
+                "hir": _avg_key(rows, "hir"),
+                "bcr": _avg_key(rows, "bcr"),
+                "fgr": _avg_key(rows, "fgr"),
+            }
+        )
+    return {
+        "labels": [row["month_label"] for row in trend_source],
+        "hir": [round(float(row.get("hir", 0.0)), 3) for row in trend_source],
+        "bcr": [round(float(row.get("bcr", 0.0)), 3) for row in trend_source],
+        "fgr": [round(float(row.get("fgr", 0.0)) - 100.0, 1) for row in trend_source],
+    }
+
+
+def _build_behavior_axis(rows: list[dict]) -> list[dict]:
+    if not rows:
+        return []
+    axis: list[dict] = []
+    for key in _BEHAVIOR_KEYS:
+        score = round(
+            sum(float((row.get("behavior_mix_8") or {}).get(key, 0.0) or 0.0) for row in rows) / max(len(rows), 1),
+            3,
+        )
+        axis.append({"label": key, "score": score, "tone": "blue"})
+    return axis
+
+
+def _build_behavior_diagnosis(axis: list[dict]) -> str:
+    if not axis:
+        return "CRM KPI 자산 기준으로 표시됩니다."
+    weakest = sorted(axis, key=lambda item: item["score"])[:2]
+    if len(weakest) == 1:
+        return f"{weakest[0]['label']}({weakest[0]['score'] * 100:.0f}%) 축 보강이 우선입니다."
+    return f"{weakest[0]['label']}({weakest[0]['score'] * 100:.0f}%), {weakest[1]['label']}({weakest[1]['score'] * 100:.0f}%) 축 보강이 우선입니다."
+
+
+def _build_kpi_banner(rows: list[dict]) -> dict:
+    if not rows:
+        return {"leading": [], "ops": [], "outcome": []}
+    avg_hir = round(_avg_key(rows, "hir"), 3)
+    avg_rtr = round(_avg_key(rows, "rtr"), 3)
+    avg_bcr = round(_avg_key(rows, "bcr"), 3)
+    avg_phr = round(_avg_key(rows, "phr"), 3)
+    avg_nar = round(_avg_key(rows, "nar"), 3)
+    avg_ahs = round(_avg_key(rows, "ahs"), 1)
+    avg_pv = round(_avg_key(rows, "pv"), 1)
+    avg_fgr = round(_avg_key(rows, "fgr"), 1) - 100.0
+    avg_pi = round(_avg_key(rows, "pi"), 1)
+    avg_trg = round(_avg_key(rows, "trg"), 1)
+    avg_swr = round(_avg_key(rows, "swr"), 1)
+    return {
+        "leading": [
+            _metric_tile("HIR", "High-Impact Rate", avg_hir, "blue"),
+            _metric_tile("RTR", "Relationship Temp.", avg_rtr, "teal"),
+            _metric_tile("BCR", "Behavior Consistency", avg_bcr, "purple"),
+            _metric_tile("PHR", "Proactive Health", avg_phr, "pink"),
+        ],
+        "ops": [
+            _metric_tile("NAR", "Next Action Reliability", avg_nar, "amber"),
+            _metric_tile("AHS", "Account Health Score", avg_ahs, "amber"),
+            _metric_tile("PV", "Pipeline Velocity", avg_pv, "amber"),
+        ],
+        "outcome": [
+            _metric_tile("FGR", "Field Growth Rate", avg_fgr, "green"),
+            _metric_tile("PI", "Prescription Index", avg_pi, "green"),
+            _metric_tile("TRG", "Target Readiness Gap", avg_trg, "muted"),
+            _metric_tile("SWR", "Share Win Rate", avg_swr, "muted"),
+        ],
+    }
+
+
+def _build_radar(rows: list[dict]) -> dict:
+    return {
+        "labels": ["HIR", "RTR", "BCR", "PHR", "NAR", "AHS"],
+        "team_avg": [
+            round(_avg_key(rows, "hir"), 3),
+            round(_avg_key(rows, "rtr"), 3),
+            round(_avg_key(rows, "bcr"), 3),
+            round(_avg_key(rows, "phr"), 3),
+            round(_avg_key(rows, "nar"), 3),
+            round(_avg_key(rows, "ahs") / 100.0, 3),
+        ] if rows else [0, 0, 0, 0, 0, 0],
+        "target": [
+            _TARGETS["hir"],
+            _TARGETS["rtr"],
+            _TARGETS["bcr"],
+            _TARGETS["phr"],
+            _TARGETS["nar"],
+            round(_TARGETS["ahs"] / 100.0, 3),
+        ],
+    }
+
+
+def _build_coach_summary(rows: list[dict]) -> dict:
+    return {
+        "score": round(_avg_key(rows, "coach_score"), 3),
+        "delta": 0,
+        "delta_display": "+0.000",
+        "weight_rows": [{"label": label, "value": weight} for label, weight in _COACH_WEIGHTS],
+    }
+
+
+def _build_rep_scope(rep_rows_all_months: list[dict], rep_token: str, period_label: str, team_label: str) -> dict | None:
+    rep_rows = [row for row in rep_rows_all_months if row.get("rep_id") == rep_token]
+    if not rep_rows:
+        return None
+    latest_row = sorted(rep_rows, key=lambda row: str(row.get("metric_month", "")))[-1]
+    behavior_axis = [
+        {"label": key, "score": round(float((latest_row.get("behavior_mix_8") or {}).get(key, 0.0) or 0.0), 3), "tone": "blue"}
+        for key in _BEHAVIOR_KEYS
+    ]
+    return {
+        "period_token": latest_row.get("metric_month", "ALL"),
+        "period_label": period_label,
+        "team_token": latest_row.get("branch_id", _TEAM_ALL_TOKEN),
+        "team_label": team_label,
+        "rep_token": rep_token,
+        "rep_label": latest_row.get("rep_name", rep_token),
+        "kpi_banner": _build_kpi_banner([latest_row]),
+        "radar": _build_radar([latest_row]),
+        "integrity": {
+            "verified_pct": 0,
+            "assisted_pct": 0,
+            "self_only_pct": 0,
+            "verified_count": 0,
+            "assisted_count": 0,
+            "self_only_count": 0,
+            "penalty_count": 0,
+            "unscored_count": 0,
+        },
+        "coach_summary": _build_coach_summary([latest_row]),
+        "behavior_axis": behavior_axis,
+        "behavior_diagnosis": _build_behavior_diagnosis(behavior_axis),
+        "pipeline": {"stages": [], "avg_dwell_days": 0, "conversion_rate": 0},
+        "matrix_rows": [latest_row],
+        "trend": _build_trend_rows(rep_rows, period_token="ALL"),
+        "quality_flags": [],
+        "rep_options": [{"token": _REP_ALL_TOKEN, "label": _REP_ALL_LABEL}],
+        "rep_scope_data": {},
+    }
+
+
+def _build_scope_payload(
+    *,
+    period_token: str,
+    period_label: str,
+    team_token: str,
+    team_label: str,
+    rep_rows_by_month: dict[str, list[dict]],
+) -> dict:
+    monthly_rows, latest_rows = _filter_rows(rep_rows_by_month, period_token, team_token)
+    rep_options = [{"token": _REP_ALL_TOKEN, "label": _REP_ALL_LABEL}]
+    rep_scope_data: dict[str, dict] = {}
+    rep_pairs = {(row.get("rep_id"), row.get("rep_name")) for row in monthly_rows if row.get("rep_id")}
+    for rep_id, rep_name in sorted(rep_pairs, key=lambda item: str(item[1] or item[0])):
+        rep_options.append({"token": rep_id, "label": rep_name})
+        rep_scope = _build_rep_scope(monthly_rows, rep_id, period_label, team_label)
+        if rep_scope:
+            rep_scope_data[rep_id] = rep_scope
+
+    behavior_axis = _build_behavior_axis(latest_rows)
+    return {
+        "period_token": period_token,
+        "period_label": period_label,
+        "team_token": team_token,
+        "team_label": team_label,
+        "rep_token": _REP_ALL_TOKEN,
+        "rep_label": _REP_ALL_LABEL,
+        "kpi_banner": _build_kpi_banner(latest_rows),
+        "radar": _build_radar(latest_rows),
+        "integrity": {
+            "verified_pct": 0,
+            "assisted_pct": 0,
+            "self_only_pct": 0,
+            "verified_count": 0,
+            "assisted_count": 0,
+            "self_only_count": 0,
+            "penalty_count": 0,
+            "unscored_count": 0,
+        },
+        "coach_summary": _build_coach_summary(latest_rows),
+        "behavior_axis": behavior_axis,
+        "behavior_diagnosis": _build_behavior_diagnosis(behavior_axis),
+        "pipeline": {"stages": [], "avg_dwell_days": 0, "conversion_rate": 0},
+        "matrix_rows": latest_rows,
+        "trend": _build_trend_rows(monthly_rows, period_token=period_token),
+        "quality_flags": [],
+        "rep_options": rep_options,
+        "rep_scope_data": rep_scope_data,
+    }
+
+
+def _build_basic_payload(asset: CrmResultAsset, summary: dict, company_name: str) -> dict:
+    monthly_rows = _build_monthly_rows(asset)
+    rep_rows_by_month, branch_labels = _build_rep_rows_by_month(asset)
+
+    period_options = [{"token": "ALL", "label": "전체 기간"}]
+    for row in monthly_rows:
+        period_options.append({"token": row["metric_month"], "label": row["month_label"]})
+
+    team_options = [{"token": _TEAM_ALL_TOKEN, "label": _TEAM_ALL_LABEL}]
+    for branch_id, branch_name in sorted(branch_labels.items(), key=lambda item: item[1]):
+        team_options.append({"token": branch_id, "label": branch_name})
+
+    default_period = monthly_rows[-1]["metric_month"] if monthly_rows else "ALL"
+    default_team = _TEAM_ALL_TOKEN
+    default_rep = _REP_ALL_TOKEN
+
+    scope_data: dict[str, dict] = {}
+    periods = [("ALL", "전체 기간")] + [(row["metric_month"], row["month_label"]) for row in monthly_rows]
+    teams = [(_TEAM_ALL_TOKEN, _TEAM_ALL_LABEL)] + sorted(branch_labels.items(), key=lambda item: item[1])
+    for period_token, period_label in periods:
+        for team_token, team_label in teams:
+            scope_key = f"{period_token}|{team_token}"
+            scope_data[scope_key] = _build_scope_payload(
+                period_token=period_token,
+                period_label=period_label,
+                team_token=team_token,
+                team_label=team_label,
+                rep_rows_by_month=rep_rows_by_month,
+            )
+
+    all_scope = scope_data.get(f"ALL|{_TEAM_ALL_TOKEN}", {})
 
     return {
         "company": company_name,
@@ -253,60 +474,14 @@ def _build_basic_payload(asset: CrmResultAsset, summary: dict, company_name: str
             "note": "Builder is rendering-only. KPI source: crm_result_asset (rep_monthly_kpi_11/monthly_kpi_11).",
         },
         "filters": {
-            "period_options": [{"token": "ALL", "label": "전체 기간"}],
-            "team_options": [{"token": _TEAM_ALL_TOKEN, "label": _TEAM_ALL_LABEL}],
-            "rep_options": [{"token": _REP_ALL_TOKEN, "label": _REP_ALL_LABEL}],
-            "default_period": "ALL",
-            "default_team": _TEAM_ALL_TOKEN,
-            "default_rep": _REP_ALL_TOKEN,
+            "period_options": period_options,
+            "team_options": team_options,
+            "rep_options": deepcopy((all_scope.get("rep_options") or [{"token": _REP_ALL_TOKEN, "label": _REP_ALL_LABEL}])),
+            "default_period": default_period,
+            "default_team": default_team,
+            "default_rep": default_rep,
         },
-        "scope_data": {
-            f"ALL|{_TEAM_ALL_TOKEN}": {
-                "period_token": "ALL",
-                "period_label": "전체 기간",
-                "team_token": _TEAM_ALL_TOKEN,
-                "team_label": _TEAM_ALL_LABEL,
-                "rep_token": _REP_ALL_TOKEN,
-                "rep_label": _REP_ALL_LABEL,
-                "kpi_banner": {"leading": leading, "ops": ops, "outcome": outcome},
-                "radar": {
-                    "labels": ["HIR", "RTR", "BCR", "PHR", "NAR", "AHS"],
-                    "team_avg": [team_avg_hir, team_avg_rtr, team_avg_bcr, team_avg_phr, team_avg_nar, team_avg_ahs_norm],
-                    "target": [
-                        _TARGETS["hir"],
-                        _TARGETS["rtr"],
-                        _TARGETS["bcr"],
-                        _TARGETS["phr"],
-                        _TARGETS["nar"],
-                        round(_TARGETS["ahs"] / 100.0, 3),
-                    ],
-                },
-                "integrity": {
-                    "verified_pct": 0,
-                    "assisted_pct": 0,
-                    "self_only_pct": 0,
-                    "verified_count": 0,
-                    "assisted_count": 0,
-                    "self_only_count": 0,
-                    "penalty_count": 0,
-                    "unscored_count": 0,
-                },
-                "coach_summary": {
-                    "score": team_avg_coach,
-                    "delta": 0,
-                    "delta_display": "+0.000",
-                    "weight_rows": [{"label": label, "value": weight} for label, weight in _COACH_WEIGHTS],
-                },
-                "behavior_axis": behavior_axis,
-                "behavior_diagnosis": behavior_diagnosis,
-                "pipeline": {"stages": [], "avg_dwell_days": 0, "conversion_rate": 0},
-                "matrix_rows": rep_rows,
-                "trend": {"labels": trend_labels, "hir": trend_hir, "bcr": trend_bcr, "fgr": trend_fgr},
-                "quality_flags": [],
-                "rep_options": [{"token": _REP_ALL_TOKEN, "label": _REP_ALL_LABEL}],
-                "rep_scope_data": {},
-            }
-        },
+        "scope_data": scope_data,
     }
 
 
@@ -317,7 +492,7 @@ def build_crm_builder_payload(
     activities: list[CrmStandardActivity] | None = None,
     company_master: list[CompanyMasterStandard] | None = None,
 ) -> dict:
-    # Phase 4: Builder는 계산하지 않고 CRM Result Asset만 주입한다.
+    # Builder는 KPI를 다시 계산하지 않고 crm_result_asset에 이미 들어 있는 결과를 화면용 구조로 조립한다.
     _ = activities
     _ = company_master
     return _build_basic_payload(asset, summary, company_name)
