@@ -78,6 +78,7 @@ class FakeSupabaseClient:
 
 
 def test_list_successful_runs_from_supabase_maps_fields(monkeypatch):
+    monkeypatch.setattr(run_registry, "_supabase_disabled_until", 0.0)
     fake_client = FakeSupabaseClient(
         run_rows=[
             {
@@ -103,6 +104,7 @@ def test_list_successful_runs_from_supabase_maps_fields(monkeypatch):
 
 
 def test_save_pipeline_run_to_supabase_writes_run_and_steps(monkeypatch):
+    monkeypatch.setattr(run_registry, "_supabase_disabled_until", 0.0)
     fake_client = FakeSupabaseClient()
     monkeypatch.setattr(run_registry, "get_supabase_client", lambda: fake_client)
     monkeypatch.setattr(
@@ -141,6 +143,7 @@ def test_save_pipeline_run_to_supabase_writes_run_and_steps(monkeypatch):
 
 
 def test_save_pipeline_run_to_supabase_accepts_empty_uploaded(monkeypatch):
+    monkeypatch.setattr(run_registry, "_supabase_disabled_until", 0.0)
     fake_client = FakeSupabaseClient()
     monkeypatch.setattr(run_registry, "get_supabase_client", lambda: fake_client)
     monkeypatch.setattr(
@@ -173,6 +176,7 @@ def test_save_pipeline_run_to_supabase_accepts_empty_uploaded(monkeypatch):
 
 
 def test_resolve_report_contexts_from_pipeline_summary(monkeypatch):
+    monkeypatch.setattr(run_registry, "_supabase_disabled_until", 0.0)
     company_key = "hangyeol_pharma"
     tmp_path = ROOT / "tests" / "_tmp_run_registry"
     if tmp_path.exists():

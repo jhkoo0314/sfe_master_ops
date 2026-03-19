@@ -1,12 +1,10 @@
+from __future__ import annotations
+
 import json
-import os
-import subprocess
 from datetime import datetime
 from pathlib import Path
-from textwrap import dedent
 from typing import Any
 
-import pandas as pd
 import streamlit as st
 
 from common.company_registry import resolve_company_reference
@@ -17,89 +15,9 @@ from common.run_storage import (
     list_successful_runs_from_supabase,
     load_run_contexts_from_supabase,
 )
-from ops_core.workflow.execution_registry import (
-    get_execution_mode_label,
-    get_execution_mode_modules,
-)
-from ui.console_artifacts import (
-    collect_artifact_files,
-    get_report_download_paths,
-    get_report_output_path,
-    get_report_type_artifacts,
-    get_report_type_description,
-    get_report_type_options,
-    load_artifact_preview,
-)
 from ui.console_agent_llm import build_artifact_contexts, generate_agent_answer, is_llm_configured
-from ui.console_display import (
-    render_block_card,
-    render_page_hero,
-    render_panel_header,
-    render_stage_badge,
-    render_upload_row,
-)
-from ui.console_paths import (
-    get_active_company_key,
-    get_active_company_name,
-    get_project_root,
-    get_source_target_display_path,
-)
-from ui.console_runner import (
-    get_crm_package_status,
-    get_source_target_rows,
-    run_actual_pipeline,
-    save_pipeline_run_history,
-)
-from ui.console_state import add_log
-
-
-def _build_period_filter_defaults(period_mode: str, selected_year: str, selected_sub_period: str) -> dict:
-    defaults = {
-        "period_mode": "all",
-        "year": selected_year or "",
-        "month": "",
-        "quarter": "",
-    }
-    if period_mode == "연간":
-        defaults["period_mode"] = "year"
-    elif period_mode == "분기별":
-        defaults["period_mode"] = "quarter"
-        quarter_map = {"1분기": "Q1", "2분기": "Q2", "3분기": "Q3", "4분기": "Q4"}
-        defaults["quarter"] = f"{selected_year}-{quarter_map.get(selected_sub_period, 'Q1')}" if selected_year else ""
-    elif period_mode == "월별":
-        defaults["period_mode"] = "month"
-        month_num = selected_sub_period.replace("월", "").zfill(2)
-        defaults["month"] = f"{selected_year}-{month_num}" if selected_year else ""
-    return defaults
-
-
-def _materialize_periodized_report(report_output_path: str, report_period: str, report_filters: dict) -> str:
-    source_path = Path(report_output_path)
-    if not source_path.exists():
-        return report_output_path
-    if report_filters.get("period_mode") == "all":
-        return report_output_path
-
-    safe_period = (
-        report_period.replace(" ", "_")
-        .replace("년", "")
-        .replace("월", "")
-        .replace("분기", "Q")
-        .replace("/", "_")
-    )
-    target_path = source_path.with_name(f"{source_path.stem}__{safe_period}{source_path.suffix}")
-    html = source_path.read_text(encoding="utf-8")
-    injected = (
-        "<script>"
-        f"window.__OPS_DEFAULT_FILTER__ = {json.dumps(report_filters, ensure_ascii=False)};"
-        "</script>\n</head>"
-    )
-    if "window.__OPS_DEFAULT_FILTER__" in html:
-        materialized = html
-    else:
-        materialized = html.replace("</head>", injected, 1)
-    target_path.write_text(materialized, encoding="utf-8")
-    return str(target_path)
+from ui.console_display import render_page_hero, render_panel_header
+from ui.console_paths import get_active_company_key, get_active_company_name, get_project_root
 
 
 def _agent_runs_root(company_key: str) -> Path:
@@ -863,6 +781,207 @@ def render_builder_tab() -> None:
 
 
 def render_agent_tab() -> None:
-    from ui.console.agent.service import render_agent_tab as _render_agent_tab
+    company_name = get_active_company_name()
+    raw_company_key = get_active_company_key().strip()
+    company_key = _resolve_company_key_for_agent(raw_company_key)
+    render_page_hero(
+        "Agent (Final Report 해석)",
+        f"{company_name} 실행(run) 단위 결과를 기준으로 질문/답변을 확인합니다. Agent는 계산이 아니라 해석 레이어입니다.",
+        "AGENT",
+    )
 
-    return _render_agent_tab()
+    render_panel_header("Agent Context")
+    st.caption(f"선택 회사 key: `{raw_company_key or '-'}` | Agent 해석 key: `{company_key or '-'}` | 기준: `회사 선택값`")
+    legacy_summary_path = _legacy_pipeline_root(company_key) / "pipeline_validation_summary.json" if company_key else None
+    runs_root_path = _agent_runs_root(company_key) if company_key else None
+    st.caption(
+        f"runs 경로: `{runs_root_path if runs_root_path else '-'}` | "
+        f"legacy 요약: `{legacy_summary_path if legacy_summary_path else '-'}` | "
+        f"legacy 존재: `{legacy_summary_path.exists() if legacy_summary_path else False}`"
+    )
+
+    runs = _scan_successful_runs(company_key) if company_key else []
+    if not runs and legacy_summary_path and legacy_summary_path.exists():
+        legacy_summary = _load_json_if_exists(legacy_summary_path)
+        if legacy_summary:
+            forced_entry = _build_legacy_run_entry(company_key, legacy_summary, legacy_summary_path)
+            forced_entry["storage_type"] = "legacy-forced"
+            runs = [forced_entry]
+    run_ids = [item["run_id"] for item in runs]
+    saved_run_id = st.session_state.get("selected_run_id", "")
+    default_index = run_ids.index(saved_run_id) if saved_run_id in run_ids else 0
+    has_ready_run = bool(company_key and runs)
+
+    def _run_label(run_id: str) -> str:
+        row = next((item for item in runs if item["run_id"] == run_id), None)
+        if not row:
+            return run_id
+        return f"{run_id} | {row.get('mode', '-') or '-'} | {row.get('finished_at', '-') or '-'}"
+
+    render_panel_header("Run Selection")
+    if has_ready_run:
+        st.markdown(
+            f"""<div class="run-selector-note"><b>선택 가능한 run:</b> {len(run_ids)}건<br>현재는 {'단일 run이 자동 선택된 상태입니다.' if len(run_ids) == 1 else '드롭다운에서 run을 바꿀 수 있습니다.'}</div>""",
+            unsafe_allow_html=True,
+        )
+        selected_run_id = st.selectbox("Run 선택", options=run_ids, index=default_index, format_func=_run_label)
+        selected_run = next((item for item in runs if item["run_id"] == selected_run_id), runs[0])
+        selected_run_db_id = str(selected_run.get("run_db_id", "")).strip()
+        needs_reload = (
+            st.session_state.get("selected_run_id") != selected_run_id
+            or st.session_state.get("selected_run_db_id") != selected_run_db_id
+            or st.session_state.get("report_context_prompt") is None
+        )
+        if needs_reload:
+            full_ctx, prompt_ctx = _load_run_contexts(company_key, selected_run_id, run_db_id=selected_run_db_id)
+            st.session_state.selected_run_id = selected_run_id
+            st.session_state.selected_run_db_id = selected_run_db_id
+            st.session_state.selected_mode = str(selected_run.get("mode", ""))
+            st.session_state.report_context_full = full_ctx
+            st.session_state.report_context_prompt = prompt_ctx
+            st.session_state.agent_history = _read_agent_history(company_key, selected_run_id, limit=20, run_db_id=selected_run_db_id)
+    else:
+        st.markdown(
+            """<div class="run-selector-note"><b>선택 가능한 run:</b> 0건<br>run 기반 저장 또는 legacy 요약 파일이 아직 없습니다.</div>""",
+            unsafe_allow_html=True,
+        )
+        st.selectbox("Run 선택", options=["(선택 가능한 run 없음)"], index=0, disabled=True)
+        selected_run = {"mode": "-", "validation_status": "-", "confidence_grade": "-"}
+        st.session_state.selected_run_id = ""
+        st.session_state.selected_run_db_id = ""
+        st.session_state.selected_mode = ""
+        st.session_state.report_context_full = None
+        st.session_state.report_context_prompt = None
+        st.session_state.agent_history = []
+
+    full_ctx = st.session_state.get("report_context_full")
+    prompt_ctx = st.session_state.get("report_context_prompt")
+    mode_text = st.session_state.get("selected_mode") or "-"
+    period_text = "-"
+    comparison_text = "-"
+    if isinstance(full_ctx, dict):
+        period_text = str(full_ctx.get("period") or "-")
+        comparison_text = str(full_ctx.get("comparison_period") or "-")
+    elif isinstance(prompt_ctx, dict):
+        period_text = str(prompt_ctx.get("period") or "-")
+        comparison_text = str(prompt_ctx.get("comparison_period") or "-")
+
+    col1, col2, col3, col4 = st.columns(4)
+    with col1:
+        st.markdown(f"""<div class="metric-card"><div class="metric-lbl">Run Mode</div><div class="metric-val" style="font-size:20px">{mode_text}</div><div class="metric-sub">선택된 실행 모드</div></div>""", unsafe_allow_html=True)
+    with col2:
+        st.markdown(f"""<div class="metric-card"><div class="metric-lbl">Period</div><div class="metric-val" style="font-size:20px">{period_text}</div><div class="metric-sub">보고 기준 기간</div></div>""", unsafe_allow_html=True)
+    with col3:
+        st.markdown(f"""<div class="metric-card"><div class="metric-lbl">Comparison</div><div class="metric-val" style="font-size:20px">{comparison_text}</div><div class="metric-sub">비교 기간</div></div>""", unsafe_allow_html=True)
+    with col4:
+        validation_text = selected_run.get("validation_status") or "-"
+        confidence_text = selected_run.get("confidence_grade") or "-"
+        st.markdown(f"""<div class="metric-card"><div class="metric-lbl">Validation / Confidence</div><div class="metric-val" style="font-size:20px">{validation_text} / {confidence_text}</div><div class="metric-sub">run_meta 기준</div></div>""", unsafe_allow_html=True)
+
+    render_panel_header("Step5 안정화 상태")
+    llm_status = "LLM API 연결됨" if is_llm_configured() else "LLM 미설정: mock fallback 사용"
+    st.info(f"run 선택, 컨텍스트 로딩, 질문/응답, run별 jsonl 저장이 연결되어 있습니다. 현재 상태: {llm_status}")
+
+    if not company_key:
+        st.warning("먼저 사이드바에서 회사를 선택해 주세요.")
+    elif not runs:
+        st.warning("성공한 run을 찾지 못했습니다. 먼저 파이프라인을 실행해 주세요.")
+    if has_ready_run and not isinstance(prompt_ctx, dict):
+        st.warning("report_context.prompt.json을 읽지 못했습니다. 해당 run의 Builder 산출물을 확인해 주세요.")
+    if has_ready_run and not isinstance(full_ctx, dict):
+        st.info("report_context.full.json이 없거나 읽기 실패했습니다. Step2에서는 prompt 기준 최소 표시만 유지합니다.")
+
+    scope = st.selectbox(
+        "답변 범위 (scope)",
+        options=["final_report_only", "evidence_trace"],
+        index=0 if st.session_state.get("current_answer_scope") != "evidence_trace" else 1,
+        disabled=not has_ready_run,
+    )
+    st.session_state.current_answer_scope = scope
+    context_ready = has_ready_run and isinstance(prompt_ctx, dict)
+    question = st.text_area(
+        "질문 입력",
+        height=100,
+        placeholder="예: 이번 run에서 가장 우선순위가 높은 이슈를 쉽게 설명해줘",
+        disabled=not context_ready,
+    )
+    ask = st.button("질문하기", type="primary", disabled=not context_ready)
+    if ask:
+        if not question.strip():
+            st.warning("질문을 먼저 입력해 주세요.")
+        else:
+            evidence_refs = _pick_evidence_refs(full_ctx, limit=3)
+            artifact_rows = _load_run_artifacts(
+                company_key,
+                str(st.session_state.get("selected_run_id", "")),
+                run_db_id=str(st.session_state.get("selected_run_db_id", "")),
+            )
+            artifact_contexts, artifact_refs = build_artifact_contexts(artifact_rows, max_items=4)
+            combined_evidence_refs = list(dict.fromkeys(evidence_refs + artifact_refs))
+            try:
+                answer = generate_agent_answer(
+                    question=question.strip(),
+                    prompt_ctx=prompt_ctx,
+                    full_ctx=full_ctx,
+                    answer_scope=scope,
+                    evidence_refs=combined_evidence_refs,
+                    artifact_contexts=artifact_contexts,
+                )
+                used_mock = False
+            except Exception as exc:
+                answer = _build_mock_agent_answer(question.strip(), prompt_ctx, full_ctx, scope)
+                answer["answer_text"] = (
+                    "[LLM fallback]\n"
+                    f"- 실제 API 호출을 사용하지 못해 mock 답변으로 대체했습니다: {exc}\n\n"
+                    f"{answer['answer_text']}"
+                )
+                used_mock = True
+            record = {
+                "created_at": datetime.now().astimezone().isoformat(timespec="seconds"),
+                "run_id": st.session_state.get("selected_run_id", ""),
+                "mode": mode_text,
+                "question": question.strip(),
+                "answer": answer["answer_text"],
+                "answer_scope": scope,
+                "evidence_refs": answer.get("evidence_refs", combined_evidence_refs),
+                "provider": answer.get("provider", "mock"),
+                "model": answer.get("model", "local-context-only"),
+                "used_mock": used_mock,
+            }
+            if company_key and st.session_state.get("selected_run_id"):
+                _append_agent_history(
+                    company_key,
+                    st.session_state["selected_run_id"],
+                    record,
+                    run_db_id=str(st.session_state.get("selected_run_db_id", "")),
+                )
+            st.session_state.agent_history = [record] + st.session_state.get("agent_history", [])
+            st.session_state.agent_history = st.session_state.agent_history[:20]
+            st.success("답변을 생성했고 run 이력(jsonl)에 저장했습니다.")
+
+    render_panel_header("근거 요약 (상위 3개)")
+    evidence_items = _pick_evidence_items(full_ctx, limit=3)
+    if evidence_items:
+        for item in evidence_items:
+            st.markdown(
+                f"""<div class="evidence-pill"><b>{item['type']}</b><br>{item['path']}</div>""",
+                unsafe_allow_html=True,
+            )
+    else:
+        st.info("evidence_index를 찾지 못했습니다. Step4에서 표시 고도화 예정입니다.")
+
+    render_panel_header("대화 이력 (최신 20개)")
+    history = st.session_state.get("agent_history", [])
+    if not history:
+        st.info("아직 저장된 대화가 없습니다.")
+        return
+    for idx, item in enumerate(history, start=1):
+        created_at = item.get("created_at", "-")
+        with st.expander(f"{idx}. {created_at} | {item.get('answer_scope', '-')}", expanded=(idx == 1)):
+            st.markdown(f"**질문**\n\n{item.get('question', '')}")
+            st.markdown(f"**답변**\n\n{item.get('answer', '')}")
+            refs = item.get("evidence_refs", [])
+            if refs:
+                st.markdown("**근거 파일**")
+                for ref in refs:
+                    st.markdown(f"""<div class="evidence-pill"><b>evidence</b><br>{ref}</div>""", unsafe_allow_html=True)

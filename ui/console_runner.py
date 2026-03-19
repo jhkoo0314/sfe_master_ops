@@ -7,7 +7,7 @@ import uuid
 from datetime import datetime
 from pathlib import Path
 
-from common.run_registry import save_pipeline_run_to_supabase
+from common.run_storage.runs import save_pipeline_run_to_supabase
 from ops_core.workflow.execution_registry import (
     get_execution_mode_label,
     get_execution_mode_modules,

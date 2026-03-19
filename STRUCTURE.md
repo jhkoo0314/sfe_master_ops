@@ -68,7 +68,11 @@ sfe_master_ops/
 - `modules/sandbox/`
   - Sandbox Result Asset 생성
   - CRM KPI는 입력값을 사용하고 Sandbox에서 재계산하지 않음
+  - `service.py`는 orchestration만 담당하고 조립 책임은 `builders/`로 분리 시작
   - KPI 계산 1차 분리는 `modules/kpi/sandbox_engine.py` 호출로 수행
+  - `builders/`
+    - `template_payload_builder.py`: 지점/담당자/품목 분석 payload 조립
+    - `block_payload_builder.py`: block resolver용 block payload 조립
   - block architecture 적용
     - `block_registry.py`: block 계약/메타 정의
     - `block_resolver.py`: block/slot/branch 조회 + fallback + 카운터
@@ -224,7 +228,9 @@ OPS 판단과 파이프라인 실행을 담당합니다.
 - [company_registry.py](/C:/sfe_master_ops/common/company_registry.py)
   - 회사 등록/선택과 고정 `company_key` 관리
 - [run_registry.py](/C:/sfe_master_ops/common/run_registry.py)
-  - `runs`, `run_steps`, `run_artifacts`, `run_report_context` 저장/조회 보조
+  - 기존 호환용 facade
+- `common/run_storage/`
+  - `runs`, `run_steps`, `run_artifacts`, `run_report_context`, `agent_chat_logs` 저장/조회 분리 시작
 - `config.py`
 - `exceptions.py`
 - `types.py`
