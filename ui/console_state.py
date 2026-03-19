@@ -43,6 +43,18 @@ def init_console_state() -> None:
         st.session_state.company_key = ""
     if "company_name" not in st.session_state:
         st.session_state.company_name = ""
+    if "selected_run_id" not in st.session_state:
+        st.session_state.selected_run_id = ""
+    if "selected_mode" not in st.session_state:
+        st.session_state.selected_mode = ""
+    if "report_context_full" not in st.session_state:
+        st.session_state.report_context_full = None
+    if "report_context_prompt" not in st.session_state:
+        st.session_state.report_context_prompt = None
+    if "agent_history" not in st.session_state:
+        st.session_state.agent_history = []
+    if "current_answer_scope" not in st.session_state:
+        st.session_state.current_answer_scope = "final_report_only"
 
 
 def add_log(msg: str) -> None:

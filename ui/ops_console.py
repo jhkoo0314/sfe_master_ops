@@ -16,6 +16,7 @@ sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 from ui.console_state import init_console_state
 from ui.console_sidebar import render_sidebar
 from ui.console_tabs import (
+    render_agent_tab,
     render_artifacts_tab,
     render_builder_tab,
     render_dashboard_tab,
@@ -398,6 +399,35 @@ css = """
     border: 1px solid var(--border);
     background: rgba(22,27,34,0.92);
   }
+  .evidence-pill {
+    margin: 8px 0;
+    padding: 12px 14px;
+    border-radius: 12px;
+    border: 1px solid rgba(88,166,255,0.28);
+    background: rgba(88,166,255,0.10);
+    color: #79c0ff !important;
+    font-size: 13px;
+    font-weight: 700;
+    line-height: 1.5;
+    word-break: break-all;
+  }
+  .evidence-pill code {
+    color: #79c0ff !important;
+    background: transparent !important;
+    padding: 0 !important;
+  }
+  .run-selector-note {
+    margin: 8px 0 14px 0;
+    padding: 12px 14px;
+    border-radius: 12px;
+    border: 1px solid rgba(88,166,255,0.24);
+    background: linear-gradient(180deg, rgba(33,38,45,0.94), rgba(22,27,34,0.94));
+    color: var(--text) !important;
+    line-height: 1.55;
+  }
+  .run-selector-note b {
+    color: #79c0ff !important;
+  }
   .step-pass { border-left: 4px solid var(--success); }
   .step-warn { border-left: 4px solid var(--warning); }
   .step-fail { border-left: 4px solid var(--danger); }
@@ -538,13 +568,14 @@ st.markdown(css, unsafe_allow_html=True)
 init_console_state()
 render_sidebar()
 
-tab1, tab2, tab3, tab4, tab5 = st.tabs(
+tab1, tab2, tab3, tab4, tab5, tab6 = st.tabs(
     [
         "🏠 대시보드",
         "📂 데이터 어댑터",
         "🚀 파이프라인",
         "📊 분석 인텔리전스",
         "📄 결과물 빌더",
+        "🤖 Agent",
     ]
 )
 
@@ -562,3 +593,6 @@ with tab4:
 
 with tab5:
     render_builder_tab()
+
+with tab6:
+    render_agent_tab()

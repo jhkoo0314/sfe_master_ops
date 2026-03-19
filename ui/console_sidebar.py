@@ -28,8 +28,21 @@ def render_sidebar() -> None:
         )
         st.session_state.execution_mode = execution_mode
 
-        company_key = st.text_input("회사 코드", value=get_active_company_key(), help="예: hangyeol_pharma, demo_company")
-        company_name = st.text_input("회사 이름", value=get_active_company_name(), help="화면과 이력에 표시할 이름입니다.")
+        if "sidebar_company_key" not in st.session_state:
+            st.session_state.sidebar_company_key = get_active_company_key()
+        if "sidebar_company_name" not in st.session_state:
+            st.session_state.sidebar_company_name = get_active_company_name()
+
+        company_key = st.text_input(
+            "회사 코드",
+            key="sidebar_company_key",
+            help="예: hangyeol_pharma, demo_company",
+        )
+        company_name = st.text_input(
+            "회사 이름",
+            key="sidebar_company_name",
+            help="화면과 이력에 표시할 이름입니다.",
+        )
         st.session_state.company_key = company_key.strip()
         st.session_state.company_name = company_name.strip()
 

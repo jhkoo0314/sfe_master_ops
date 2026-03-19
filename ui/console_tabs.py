@@ -4,6 +4,7 @@ import subprocess
 from datetime import datetime
 from pathlib import Path
 from textwrap import dedent
+from typing import Any
 
 import pandas as pd
 import streamlit as st
@@ -29,7 +30,9 @@ from ui.console_display import (
     render_upload_row,
 )
 from ui.console_paths import (
+    get_active_company_key,
     get_active_company_name,
+    get_project_root,
     get_source_target_display_path,
 )
 from ui.console_runner import (
@@ -88,6 +91,266 @@ def _materialize_periodized_report(report_output_path: str, report_period: str, 
         materialized = html.replace("</head>", injected, 1)
     target_path.write_text(materialized, encoding="utf-8")
     return str(target_path)
+
+
+def _agent_runs_root(company_key: str) -> Path:
+    return Path(get_project_root()) / "data" / "ops_validation" / company_key / "runs"
+
+
+def _legacy_pipeline_root(company_key: str) -> Path:
+    return Path(get_project_root()) / "data" / "ops_validation" / company_key / "pipeline"
+
+
+def _normalize_company_key(company_key: str) -> str:
+    return company_key.strip().lower().replace("-", "_").replace(" ", "_")
+
+
+def _resolve_company_key_for_agent(company_key: str) -> str:
+    normalized = _normalize_company_key(company_key)
+    alias_map = {
+        "다온파마": "daon_pharma",
+        "다온제약": "daon_pharma",
+        "한결파마": "hangyeol_pharma",
+        "한결제약": "hangyeol_pharma",
+        "daonpharma": "daon_pharma",
+        "hangyeolpharma": "hangyeol_pharma",
+    }
+    if company_key in alias_map:
+        normalized = alias_map[company_key]
+    elif normalized in alias_map:
+        normalized = alias_map[normalized]
+    ops_root = Path(get_project_root()) / "data" / "ops_validation"
+    if not normalized or not ops_root.exists():
+        return normalized
+
+    if (ops_root / normalized).exists():
+        return normalized
+
+    for entry in ops_root.iterdir():
+        if not entry.is_dir():
+            continue
+        if _normalize_company_key(entry.name) == normalized:
+            return entry.name
+    return normalized
+
+
+def _build_legacy_run_entry(company_key: str, legacy_summary: dict[str, Any], summary_path: Path) -> dict[str, str]:
+    overall_score = float(legacy_summary.get("overall_score", 0) or 0)
+    overall_status = str(legacy_summary.get("overall_status", "")).upper()
+    finished_at = ""
+    try:
+        finished_at = datetime.fromtimestamp(summary_path.stat().st_mtime).astimezone().isoformat(timespec="seconds")
+    except OSError:
+        finished_at = ""
+    return {
+        "run_id": str(legacy_summary.get("run_id") or "legacy-latest"),
+        "mode": str(legacy_summary.get("execution_mode", "")),
+        "finished_at": finished_at,
+        "validation_status": "PASS" if overall_status == "PASS" else "WARN" if overall_status == "WARN" else overall_status or "-",
+        "confidence_grade": "A" if overall_score >= 95 else "B" if overall_score >= 85 else "C",
+        "storage_type": "legacy",
+    }
+
+
+def _load_json_if_exists(path: Path) -> dict[str, Any] | None:
+    if not path.exists():
+        return None
+    try:
+        return json.loads(path.read_text(encoding="utf-8"))
+    except (OSError, json.JSONDecodeError):
+        return None
+
+
+def _scan_successful_runs(company_key: str) -> list[dict[str, Any]]:
+    runs_root = _agent_runs_root(company_key)
+    collected: list[dict[str, Any]] = []
+    if runs_root.exists():
+        for run_dir in runs_root.iterdir():
+            if not run_dir.is_dir():
+                continue
+            run_meta = _load_json_if_exists(run_dir / "run_meta.json")
+            if not run_meta:
+                continue
+            if str(run_meta.get("status", "")).lower() != "success":
+                continue
+            run_id = str(run_meta.get("run_id") or run_dir.name)
+            collected.append(
+                {
+                    "run_id": run_id,
+                    "mode": str(run_meta.get("mode", "")),
+                    "finished_at": str(run_meta.get("finished_at", "")),
+                    "validation_status": str(run_meta.get("validation_status", "")),
+                    "confidence_grade": str(run_meta.get("confidence_grade", "")),
+                    "storage_type": "run",
+                }
+            )
+
+    if collected:
+        return sorted(collected, key=lambda item: (item.get("finished_at") or "", item["run_id"]), reverse=True)
+
+    legacy_summary = _load_json_if_exists(_legacy_pipeline_root(company_key) / "pipeline_validation_summary.json")
+    if not legacy_summary:
+        return []
+    summary_path = _legacy_pipeline_root(company_key) / "pipeline_validation_summary.json"
+    return [_build_legacy_run_entry(company_key, legacy_summary, summary_path)]
+
+
+def _agent_history_path(company_key: str, run_id: str) -> Path:
+    return _agent_runs_root(company_key) / run_id / "chat" / "agent_chat_history.jsonl"
+
+
+def _read_agent_history(company_key: str, run_id: str, limit: int = 20) -> list[dict[str, Any]]:
+    history_path = _agent_history_path(company_key, run_id)
+    if not history_path.exists():
+        return []
+    rows: list[dict[str, Any]] = []
+    try:
+        with history_path.open("r", encoding="utf-8") as f:
+            for line in f:
+                line = line.strip()
+                if not line:
+                    continue
+                try:
+                    rows.append(json.loads(line))
+                except json.JSONDecodeError:
+                    continue
+    except OSError:
+        return []
+    return rows[-limit:][::-1]
+
+
+def _append_agent_history(company_key: str, run_id: str, record: dict[str, Any]) -> None:
+    history_path = _agent_history_path(company_key, run_id)
+    history_path.parent.mkdir(parents=True, exist_ok=True)
+    with history_path.open("a", encoding="utf-8") as f:
+        f.write(json.dumps(record, ensure_ascii=False) + "\n")
+
+
+def _load_run_contexts(company_key: str, run_id: str) -> tuple[dict[str, Any] | None, dict[str, Any] | None]:
+    run_dir = _agent_runs_root(company_key) / run_id
+    full_ctx = _load_json_if_exists(run_dir / "report_context.full.json")
+    prompt_ctx = _load_json_if_exists(run_dir / "report_context.prompt.json")
+    if full_ctx or prompt_ctx:
+        return full_ctx, prompt_ctx
+
+    legacy_summary = _load_json_if_exists(_legacy_pipeline_root(company_key) / "pipeline_validation_summary.json")
+    if not legacy_summary:
+        return None, None
+
+    stages = legacy_summary.get("stages", {})
+    builder_stage = stages.get("builder", {}) if isinstance(stages, dict) else {}
+    radar_stage = stages.get("radar", {}) if isinstance(stages, dict) else {}
+    territory_stage = stages.get("territory", {}) if isinstance(stages, dict) else {}
+    sandbox_stage = stages.get("sandbox", {}) if isinstance(stages, dict) else {}
+
+    linked_artifacts: list[dict[str, str]] = []
+    evidence_index: list[dict[str, str]] = []
+    if isinstance(builder_stage, dict):
+        for key in ["crm_analysis", "sandbox_report", "territory_map", "prescription_flow", "radar_report", "total_valid"]:
+            item = builder_stage.get(key)
+            if not isinstance(item, dict):
+                continue
+            html_path = item.get("html")
+            if html_path:
+                linked_artifacts.append({"type": key, "path": str(html_path)})
+                evidence_index.append({"type": key, "path": str(html_path)})
+
+    executive_summary = (
+        f"{company_key} run 요약입니다. 전체 상태는 {legacy_summary.get('overall_status', '-')}, "
+        f"점수는 {legacy_summary.get('overall_score', '-')}, "
+        f"주요 RADAR 이슈는 {radar_stage.get('top_issue', '없음')} 입니다."
+    )
+    full_ctx = {
+        "run_id": run_id,
+        "company_key": company_key,
+        "mode": legacy_summary.get("execution_mode", ""),
+        "generated_at": datetime.now().astimezone().isoformat(timespec="seconds"),
+        "period": radar_stage.get("period_value", "-"),
+        "comparison_period": "-",
+        "validation_summary": {"overall_status": legacy_summary.get("overall_status", "-")},
+        "confidence_grade": "A" if float(legacy_summary.get("overall_score", 0) or 0) >= 95 else "B",
+        "executive_summary": executive_summary,
+        "key_findings": [
+            f"Sandbox metric month count: {sandbox_stage.get('metric_month_count', '-')}",
+            f"Territory quality status: {territory_stage.get('quality_status', '-')}",
+            f"RADAR top issue: {radar_stage.get('top_issue', '-')}",
+        ],
+        "priority_issues": [radar_stage.get("top_issue", "priority issue 없음")],
+        "evidence_index": evidence_index,
+        "linked_artifacts": linked_artifacts,
+    }
+    prompt_ctx = {
+        "run_id": run_id,
+        "mode": legacy_summary.get("execution_mode", ""),
+        "generated_at": full_ctx["generated_at"],
+        "period": full_ctx["period"],
+        "comparison_period": "-",
+        "executive_summary": executive_summary,
+        "top_findings": full_ctx["key_findings"][:3],
+        "priority_issues": full_ctx["priority_issues"][:3],
+        "answer_scope": "final_report_only",
+        "forbidden_actions": ["recalculate_kpi", "raw_rejoin"],
+    }
+    return full_ctx, prompt_ctx
+
+
+def _pick_evidence_items(full_ctx: dict[str, Any] | None, limit: int = 3) -> list[dict[str, str]]:
+    if not full_ctx:
+        return []
+    evidence_index = full_ctx.get("evidence_index", [])
+    refs: list[dict[str, str]] = []
+    if isinstance(evidence_index, list):
+        for item in evidence_index:
+            if not isinstance(item, dict):
+                continue
+            path = item.get("path")
+            if path:
+                refs.append(
+                    {
+                        "type": str(item.get("type", "evidence")),
+                        "path": str(path),
+                    }
+                )
+            if len(refs) >= limit:
+                break
+    return refs
+
+
+def _pick_evidence_refs(full_ctx: dict[str, Any] | None, limit: int = 3) -> list[str]:
+    return [item["path"] for item in _pick_evidence_items(full_ctx, limit=limit)]
+
+
+def _build_mock_agent_answer(
+    question: str,
+    prompt_ctx: dict[str, Any] | None,
+    full_ctx: dict[str, Any] | None,
+    answer_scope: str,
+) -> dict[str, Any]:
+    executive_summary = ""
+    if isinstance(prompt_ctx, dict):
+        executive_summary = str(prompt_ctx.get("executive_summary", "")).strip()
+    if not executive_summary and isinstance(full_ctx, dict):
+        executive_summary = str(full_ctx.get("executive_summary", "")).strip()
+    if not executive_summary:
+        executive_summary = "현재 run 문맥에서 요약 본문을 찾지 못했습니다."
+
+    evidence_refs = _pick_evidence_refs(full_ctx, limit=3)
+    caution = "이 답변은 report_context 범위 내 mock 해석이며 KPI를 재계산하지 않습니다."
+    if answer_scope == "evidence_trace":
+        follow_up = "근거 파일 경로를 열어 수치 원문을 확인하세요."
+    else:
+        follow_up = "필요하면 answer scope를 evidence_trace로 바꿔 근거 중심으로 다시 질문하세요."
+
+    answer_text = (
+        "[핵심 답변]\n"
+        f"- 질문: {question}\n"
+        f"- 요약: {executive_summary}\n\n"
+        "[근거]\n"
+        + ("\n".join([f"- {ref}" for ref in evidence_refs]) if evidence_refs else "- 근거 인덱스 없음")
+        + "\n\n[주의사항]\n"
+        f"- {caution}\n\n[추가로 볼 포인트]\n- {follow_up}"
+    )
+    return {"answer_text": answer_text, "evidence_refs": evidence_refs}
 
 
 def render_dashboard_tab() -> None:
@@ -510,3 +773,174 @@ def render_builder_tab() -> None:
                         )
     else:
         st.warning("선택한 보고서 HTML 파일을 아직 찾지 못했습니다. 먼저 관련 검증을 실행해 주세요.")
+
+
+def render_agent_tab() -> None:
+    company_name = get_active_company_name()
+    raw_company_key = get_active_company_key().strip()
+    company_key = _resolve_company_key_for_agent(raw_company_key)
+    render_page_hero(
+        "Agent (Final Report 해석)",
+        f"{company_name} 실행(run) 단위 결과를 기준으로 질문/답변을 확인합니다. Agent는 계산이 아니라 해석 레이어입니다.",
+        "AGENT",
+    )
+
+    render_panel_header("Agent Context")
+    st.caption(f"입력 회사 코드: `{raw_company_key or '-'}` | 해석된 회사 코드: `{company_key or '-'}` | 기준: `회사 코드`")
+    legacy_summary_path = _legacy_pipeline_root(company_key) / "pipeline_validation_summary.json" if company_key else None
+    runs_root_path = _agent_runs_root(company_key) if company_key else None
+    st.caption(
+        f"runs 경로: `{runs_root_path if runs_root_path else '-'}` | "
+        f"legacy 요약: `{legacy_summary_path if legacy_summary_path else '-'}` | "
+        f"legacy 존재: `{legacy_summary_path.exists() if legacy_summary_path else False}`"
+    )
+
+    runs = _scan_successful_runs(company_key) if company_key else []
+    if not runs and legacy_summary_path and legacy_summary_path.exists():
+        legacy_summary = _load_json_if_exists(legacy_summary_path)
+        if legacy_summary:
+            forced_entry = _build_legacy_run_entry(company_key, legacy_summary, legacy_summary_path)
+            forced_entry["storage_type"] = "legacy-forced"
+            runs = [forced_entry]
+    run_ids = [item["run_id"] for item in runs]
+    saved_run_id = st.session_state.get("selected_run_id", "")
+    default_index = run_ids.index(saved_run_id) if saved_run_id in run_ids else 0
+    has_ready_run = bool(company_key and runs)
+
+    def _run_label(run_id: str) -> str:
+        row = next((item for item in runs if item["run_id"] == run_id), None)
+        if not row:
+            return run_id
+        return f"{run_id} | {row.get('mode', '-') or '-'} | {row.get('finished_at', '-') or '-'}"
+
+    render_panel_header("Run Selection")
+    if has_ready_run:
+        st.markdown(
+            f"""<div class="run-selector-note"><b>선택 가능한 run:</b> {len(run_ids)}건<br>현재는 {'단일 run이 자동 선택된 상태입니다.' if len(run_ids) == 1 else '드롭다운에서 run을 바꿀 수 있습니다.'}</div>""",
+            unsafe_allow_html=True,
+        )
+        selected_run_id = st.selectbox("Run 선택", options=run_ids, index=default_index, format_func=_run_label)
+        selected_run = next((item for item in runs if item["run_id"] == selected_run_id), runs[0])
+        needs_reload = (
+            st.session_state.get("selected_run_id") != selected_run_id
+            or st.session_state.get("report_context_prompt") is None
+        )
+        if needs_reload:
+            full_ctx, prompt_ctx = _load_run_contexts(company_key, selected_run_id)
+            st.session_state.selected_run_id = selected_run_id
+            st.session_state.selected_mode = str(selected_run.get("mode", ""))
+            st.session_state.report_context_full = full_ctx
+            st.session_state.report_context_prompt = prompt_ctx
+            st.session_state.agent_history = _read_agent_history(company_key, selected_run_id, limit=20)
+    else:
+        st.markdown(
+            """<div class="run-selector-note"><b>선택 가능한 run:</b> 0건<br>run 기반 저장 또는 legacy 요약 파일이 아직 없습니다.</div>""",
+            unsafe_allow_html=True,
+        )
+        st.selectbox("Run 선택", options=["(선택 가능한 run 없음)"], index=0, disabled=True)
+        selected_run = {"mode": "-", "validation_status": "-", "confidence_grade": "-"}
+        st.session_state.selected_run_id = ""
+        st.session_state.selected_mode = ""
+        st.session_state.report_context_full = None
+        st.session_state.report_context_prompt = None
+        st.session_state.agent_history = []
+
+    full_ctx = st.session_state.get("report_context_full")
+    prompt_ctx = st.session_state.get("report_context_prompt")
+    mode_text = st.session_state.get("selected_mode") or "-"
+    period_text = "-"
+    comparison_text = "-"
+    if isinstance(full_ctx, dict):
+        period_text = str(full_ctx.get("period") or "-")
+        comparison_text = str(full_ctx.get("comparison_period") or "-")
+    elif isinstance(prompt_ctx, dict):
+        period_text = str(prompt_ctx.get("period") or "-")
+        comparison_text = str(prompt_ctx.get("comparison_period") or "-")
+
+    col1, col2, col3, col4 = st.columns(4)
+    with col1:
+        st.markdown(f"""<div class="metric-card"><div class="metric-lbl">Run Mode</div><div class="metric-val" style="font-size:20px">{mode_text}</div><div class="metric-sub">선택된 실행 모드</div></div>""", unsafe_allow_html=True)
+    with col2:
+        st.markdown(f"""<div class="metric-card"><div class="metric-lbl">Period</div><div class="metric-val" style="font-size:20px">{period_text}</div><div class="metric-sub">보고 기준 기간</div></div>""", unsafe_allow_html=True)
+    with col3:
+        st.markdown(f"""<div class="metric-card"><div class="metric-lbl">Comparison</div><div class="metric-val" style="font-size:20px">{comparison_text}</div><div class="metric-sub">비교 기간</div></div>""", unsafe_allow_html=True)
+    with col4:
+        validation_text = selected_run.get("validation_status") or "-"
+        confidence_text = selected_run.get("confidence_grade") or "-"
+        st.markdown(f"""<div class="metric-card"><div class="metric-lbl">Validation / Confidence</div><div class="metric-val" style="font-size:20px">{validation_text} / {confidence_text}</div><div class="metric-sub">run_meta 기준</div></div>""", unsafe_allow_html=True)
+
+    render_panel_header("Step5 안정화 상태")
+    st.info("run 선택, 컨텍스트 로딩, 질문/응답(mock), run별 jsonl 저장이 연결되어 있고 손상/누락 케이스에서도 화면이 유지되도록 방어하고 있습니다.")
+
+    if not company_key:
+        st.warning("먼저 사이드바에서 회사 코드(company_key)를 입력해 주세요.")
+    elif not runs:
+        st.warning("성공한 run을 찾지 못했습니다. 먼저 파이프라인을 실행해 주세요.")
+    if has_ready_run and not isinstance(prompt_ctx, dict):
+        st.warning("report_context.prompt.json을 읽지 못했습니다. 해당 run의 Builder 산출물을 확인해 주세요.")
+    if has_ready_run and not isinstance(full_ctx, dict):
+        st.info("report_context.full.json이 없거나 읽기 실패했습니다. Step2에서는 prompt 기준 최소 표시만 유지합니다.")
+
+    scope = st.selectbox(
+        "답변 범위 (scope)",
+        options=["final_report_only", "evidence_trace"],
+        index=0 if st.session_state.get("current_answer_scope") != "evidence_trace" else 1,
+        disabled=not has_ready_run,
+    )
+    st.session_state.current_answer_scope = scope
+    context_ready = has_ready_run and isinstance(prompt_ctx, dict)
+    question = st.text_area(
+        "질문 입력",
+        height=100,
+        placeholder="예: 이번 run에서 가장 우선순위가 높은 이슈를 쉽게 설명해줘",
+        disabled=not context_ready,
+    )
+    ask = st.button("질문하기", type="primary", disabled=not context_ready)
+    if ask:
+        if not question.strip():
+            st.warning("질문을 먼저 입력해 주세요.")
+        else:
+            answer = _build_mock_agent_answer(question.strip(), prompt_ctx, full_ctx, scope)
+            record = {
+                "created_at": datetime.now().astimezone().isoformat(timespec="seconds"),
+                "run_id": st.session_state.get("selected_run_id", ""),
+                "mode": mode_text,
+                "question": question.strip(),
+                "answer": answer["answer_text"],
+                "answer_scope": scope,
+                "evidence_refs": answer["evidence_refs"],
+                "provider": "mock",
+                "model": "local-context-only",
+            }
+            if company_key and st.session_state.get("selected_run_id"):
+                _append_agent_history(company_key, st.session_state["selected_run_id"], record)
+            st.session_state.agent_history = [record] + st.session_state.get("agent_history", [])
+            st.session_state.agent_history = st.session_state.agent_history[:20]
+            st.success("답변을 생성했고 run 이력(jsonl)에 저장했습니다.")
+
+    render_panel_header("근거 요약 (상위 3개)")
+    evidence_items = _pick_evidence_items(full_ctx, limit=3)
+    if evidence_items:
+        for item in evidence_items:
+            st.markdown(
+                f"""<div class="evidence-pill"><b>{item['type']}</b><br>{item['path']}</div>""",
+                unsafe_allow_html=True,
+            )
+    else:
+        st.info("evidence_index를 찾지 못했습니다. Step4에서 표시 고도화 예정입니다.")
+
+    render_panel_header("대화 이력 (최신 20개)")
+    history = st.session_state.get("agent_history", [])
+    if not history:
+        st.info("아직 저장된 대화가 없습니다.")
+        return
+    for idx, item in enumerate(history, start=1):
+        created_at = item.get("created_at", "-")
+        with st.expander(f"{idx}. {created_at} | {item.get('answer_scope', '-')}", expanded=(idx == 1)):
+            st.markdown(f"**질문**\n\n{item.get('question', '')}")
+            st.markdown(f"**답변**\n\n{item.get('answer', '')}")
+            refs = item.get("evidence_refs", [])
+            if refs:
+                st.markdown("**근거 파일**")
+                for ref in refs:
+                    st.markdown(f"""<div class="evidence-pill"><b>evidence</b><br>{ref}</div>""", unsafe_allow_html=True)

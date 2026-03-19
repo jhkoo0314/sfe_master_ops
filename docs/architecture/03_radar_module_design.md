@@ -1,8 +1,3 @@
-아래는 **Codex가 바로 구현 작업으로 들어갈 수 있는 수준**으로 정리한 **RADAR 모듈 설계 문서 초안**이다.
-문서명은 예를 들어 `docs/architecture/03_radar_module_design.md` 로 두면 좋다.
-
----
-
 # RADAR Module Design
 
 ## For Sales Data OS / SFE Portfolio Prototype
