@@ -29,6 +29,7 @@ from ui.console_artifacts import (
     get_report_type_options,
     load_artifact_preview,
 )
+from ui.console_agent_llm import generate_agent_answer, is_llm_configured
 from ui.console_display import (
     render_block_card,
     render_page_hero,
@@ -898,7 +899,8 @@ def render_agent_tab() -> None:
         st.markdown(f"""<div class="metric-card"><div class="metric-lbl">Validation / Confidence</div><div class="metric-val" style="font-size:20px">{validation_text} / {confidence_text}</div><div class="metric-sub">run_meta 기준</div></div>""", unsafe_allow_html=True)
 
     render_panel_header("Step5 안정화 상태")
-    st.info("run 선택, 컨텍스트 로딩, 질문/응답(mock), run별 jsonl 저장이 연결되어 있고 손상/누락 케이스에서도 화면이 유지되도록 방어하고 있습니다.")
+    llm_status = "LLM API 연결됨" if is_llm_configured() else "LLM 미설정: mock fallback 사용"
+    st.info(f"run 선택, 컨텍스트 로딩, 질문/응답, run별 jsonl 저장이 연결되어 있습니다. 현재 상태: {llm_status}")
 
     if not company_key:
         st.warning("먼저 사이드바에서 회사를 선택해 주세요.")
@@ -928,7 +930,24 @@ def render_agent_tab() -> None:
         if not question.strip():
             st.warning("질문을 먼저 입력해 주세요.")
         else:
-            answer = _build_mock_agent_answer(question.strip(), prompt_ctx, full_ctx, scope)
+            evidence_refs = _pick_evidence_refs(full_ctx, limit=3)
+            try:
+                answer = generate_agent_answer(
+                    question=question.strip(),
+                    prompt_ctx=prompt_ctx,
+                    full_ctx=full_ctx,
+                    answer_scope=scope,
+                    evidence_refs=evidence_refs,
+                )
+                used_mock = False
+            except Exception as exc:
+                answer = _build_mock_agent_answer(question.strip(), prompt_ctx, full_ctx, scope)
+                answer["answer_text"] = (
+                    "[LLM fallback]\n"
+                    f"- 실제 API 호출을 사용하지 못해 mock 답변으로 대체했습니다: {exc}\n\n"
+                    f"{answer['answer_text']}"
+                )
+                used_mock = True
             record = {
                 "created_at": datetime.now().astimezone().isoformat(timespec="seconds"),
                 "run_id": st.session_state.get("selected_run_id", ""),
@@ -937,8 +956,9 @@ def render_agent_tab() -> None:
                 "answer": answer["answer_text"],
                 "answer_scope": scope,
                 "evidence_refs": answer["evidence_refs"],
-                "provider": "mock",
-                "model": "local-context-only",
+                "provider": answer.get("provider", "mock"),
+                "model": answer.get("model", "local-context-only"),
+                "used_mock": used_mock,
             }
             if company_key and st.session_state.get("selected_run_id"):
                 _append_agent_history(
