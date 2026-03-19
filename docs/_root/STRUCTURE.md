@@ -145,9 +145,14 @@ OPS 판단과 파이프라인 실행을 담당합니다.
 - [console_sidebar.py](/C:/sfe_master_ops/ui/console_sidebar.py)
   - 사이드바 렌더링
 - [console_tabs.py](/C:/sfe_master_ops/ui/console_tabs.py)
-  - 데이터 어댑터 / 파이프라인 / 분석 인텔리전스 / 결과물 빌더 탭
+  - 현재 6개 탭 렌더링과 Agent 관련 로직 일부를 포함
 
 즉 예전처럼 `ops_console.py` 한 파일에 몰아넣지 않고 분리된 상태입니다.
+
+현재 상태 메모:
+- 회사 선택은 `company_registry` 기반 선택을 우선 사용합니다.
+- Agent는 `run_report_context`와 `run_artifacts`를 읽는 방향으로 확장 중입니다.
+- 다음 구조 목표는 `docs/architecture/16_responsibility_based_refactor_structure.md` 기준의 `ui/console/` 패키지 분리입니다.
 
 ### `templates/`
 

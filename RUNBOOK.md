@@ -47,18 +47,18 @@ uv run streamlit run ui/ops_console.py --server.port 8501
 ```
 
 참고:
-- 운영 콘솔은 현재 `대시보드 / 데이터 어댑터 / 파이프라인 / 분석 인텔리전스 / 결과물 빌더` 5개 탭으로 동작합니다.
+- 운영 콘솔은 현재 `대시보드 / 데이터 어댑터 / 파이프라인 / 분석 인텔리전스 / 결과물 빌더 / Agent` 6개 탭으로 동작합니다.
 
 ## 3. 운영 콘솔 사용 순서
 
-1. 사이드바에서 `회사 코드` 입력
-2. 필요하면 `회사 이름` 입력
-3. `실행모드` 선택
-4. 데이터 어댑터 탭에서 raw 파일 업로드
-5. 파이프라인 탭에서 `실행 전 반영 파일 확인`
-6. `파이프라인 실행`
-7. 분석 인텔리전스 탭에서 정규화/검증 산출물 확인
-8. 결과물 빌더 탭에서 HTML 열기/다운로드
+1. 사이드바에서 등록된 회사 선택 또는 신규 회사 등록
+2. `실행모드` 선택
+3. 데이터 어댑터 탭에서 raw 파일 업로드
+4. 파이프라인 탭에서 `실행 전 반영 파일 확인`
+5. `파이프라인 실행`
+6. 분석 인텔리전스 탭에서 정규화/검증 산출물 확인
+7. 결과물 빌더 탭에서 HTML 열기/다운로드
+8. Agent 탭에서 run 선택 후 질문/응답 확인
 
 ## 4. 실행모드 설명
 
@@ -127,6 +127,13 @@ CRM 패키지:
 data/company_source/{company_key}/
 data/ops_standard/{company_key}/
 data/ops_validation/{company_key}/
+```
+
+run 저장 예:
+
+```text
+data/ops_validation/{company_key}/runs/{run_id}/
+data/ops_validation/{company_key}/runs/{run_id}/chat/agent_chat_history.jsonl
 ```
 
 예:
@@ -209,6 +216,12 @@ Builder 결과:
 - `*_payload_standard.json`
 - `*_result_asset.json`
 
+DB 동기화:
+- `runs`
+- `run_steps`
+- `run_artifacts`
+- `run_report_context`
+
 ## 8. Builder 운영 메모
 
 - Builder는 raw를 읽지 않습니다.
@@ -218,6 +231,12 @@ Builder 결과:
 - Sandbox 보고서는 `sandbox_result_asset.json` 안의 payload를 그대로 쓰되, 무거운 지점 상세는 `manifest + branch asset` 구조로 분리됩니다.
 - Sandbox 보고서는 첫 화면에 요약만 먼저 열고, 지점을 고를 때만 해당 지점 asset을 읽습니다.
 - Sandbox 필터는 `branch_index`를 기준으로 지점 목록을 먼저 보여주고, 지점 선택 시 `branch asset`을 로딩해 담당자 목록을 채웁니다.
+
+## 9. Agent 운영 메모
+
+- Agent는 KPI를 재계산하지 않습니다.
+- Agent는 `run_report_context`와 `run_artifacts`를 기준으로 답변합니다.
+- 현재는 `sandbox_report` artifact를 우선 읽는 구조로 확장 중입니다.
 - Territory payload는 `manifest + 분리 asset` 구조입니다.
 - 기본 화면은 `담당자 미선택` 상태로 시작하고, 담당자를 고른 뒤 해당 담당자 asset과 선택 월 asset만 읽습니다.
 - `total_valid_preview.html`은 개별 HTML을 한 화면에서 묶어 보여주는 허브입니다.

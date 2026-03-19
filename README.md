@@ -1,12 +1,14 @@
 # Sales Data OS
 
-원천데이터를 넣으면 `정규화 -> 모듈 분석 -> OPS 검증 게이트 -> Builder HTML 생성`까지 이어지는 Sales Data OS 운영 검증 프로젝트입니다.
+원천데이터를 넣으면 `정규화 -> 모듈 분석/KPI 계산 -> Validation Layer(OPS) 검증 게이트 -> Intelligence -> Builder HTML 생성`까지 이어지는 Sales Data OS 운영 검증 프로젝트입니다.
 
 지금 상태의 핵심은 이것입니다.
 
 - 회사별 raw를 같은 틀로 흡수하고 어디까지 연결되는지 검증
 - CRM, Prescription, Sandbox, Territory, Builder를 실제로 실행 가능
 - 회사 코드별로 결과 폴더를 분리
+- run 기준 저장(`runs`, `run_steps`, `run_artifacts`, `run_report_context`)이 로컬/DB에 연결됨
+- Agent 탭은 `run_report_context`와 `run_artifacts`를 읽는 방향으로 확장 중
 - 코드 기준으로 HTML 보고서 6종과 통합 허브까지 생성 가능
 - 실제 저장된 보고서 수는 회사별 마지막 실행 상태에 따라 다를 수 있음
 
@@ -124,12 +126,12 @@ Part2 문서 운영 기준:
 
 운영 콘솔:
 - Streamlit 기반
-- 회사 코드 입력
+- 회사 등록/선택 기반
 - 실행모드 선택
 - 업로드 파일 반영
 - 실제 파이프라인 실행
 - 산출물 미리보기/다운로드
-- 대시보드 / 데이터 어댑터 / 파이프라인 / 분석 인텔리전스 / 결과물 빌더 5개 탭 사용
+- 대시보드 / 데이터 어댑터 / 파이프라인 / 분석 인텔리전스 / 결과물 빌더 / Agent 6개 탭 사용
 - 현재 실행모드:
   - `CRM -> Sandbox`
   - `CRM -> Territory`
@@ -175,7 +177,7 @@ Part2 문서 운영 기준:
 data/
 ├── company_source/{company_key}/   # 회사별 원천데이터
 ├── ops_standard/{company_key}/     # 정규화 결과
-├── ops_validation/{company_key}/   # 검증 결과 + builder payload + HTML
+├── ops_validation/{company_key}/   # 검증 결과 + builder payload + HTML + run 저장
 ├── public/                         # 공공 기준 데이터
 └── sample_data/                    # 샘플/기획 참고 데이터
 ```
@@ -184,6 +186,12 @@ data/
 - `data/company_source/daon_pharma`
 - `data/ops_standard/daon_pharma`
 - `data/ops_validation/daon_pharma`
+
+run 저장 예:
+- `data/ops_validation/{company_key}/runs/{run_id}/`
+- `report_context.full.json`
+- `report_context.prompt.json`
+- `chat/agent_chat_history.jsonl`
 
 현재 확인된 회사 예시:
 - `daon_pharma`: Builder 보고서 6종 저장 확인

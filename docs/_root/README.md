@@ -1,6 +1,13 @@
 # Sales Data OS
 
-원천데이터를 넣으면 `정규화 -> 모듈 분석/KPI 계산 -> OPS 검증 게이트 -> Intelligence(RADAR) -> Builder HTML 생성`까지 이어지는 Sales Data OS 운영 검증 프로젝트입니다.
+원천데이터를 넣으면 `정규화 -> 모듈 분석/KPI 계산 -> Validation Layer(OPS) 검증 게이트 -> Intelligence(RADAR) -> Builder HTML 생성`까지 이어지는 Sales Data OS 운영 검증 프로젝트입니다.
+
+현재는 run 기반 저장과 Agent artifact-reading 구조가 함께 진행 중입니다.
+
+- `runs`
+- `run_steps`
+- `run_artifacts`
+- `run_report_context`
 
 지금 상태의 핵심은 이것입니다.
 
