@@ -1,12 +1,17 @@
 import streamlit as st
 
+from common.company_registry import (
+    find_company_by_name,
+    list_registered_companies,
+    register_company,
+)
 from ops_core.workflow.execution_registry import (
     get_execution_mode_description,
     get_execution_mode_label,
     get_execution_mode_modules,
     get_execution_mode_requirements,
 )
-from ui.console_paths import get_active_company_key, get_active_company_name
+from ui.console_paths import get_active_company_key, get_active_company_name, get_project_root
 
 
 def render_sidebar() -> None:
@@ -28,23 +33,76 @@ def render_sidebar() -> None:
         )
         st.session_state.execution_mode = execution_mode
 
-        if "sidebar_company_key" not in st.session_state:
-            st.session_state.sidebar_company_key = get_active_company_key()
-        if "sidebar_company_name" not in st.session_state:
-            st.session_state.sidebar_company_name = get_active_company_name()
+        project_root = get_project_root()
+        companies = list_registered_companies(project_root)
+        company_keys = [item.company_key for item in companies]
+        current_key = st.session_state.get("company_key", get_active_company_key()).strip()
+        default_index = company_keys.index(current_key) if current_key in company_keys else 0
 
-        company_key = st.text_input(
-            "회사 코드",
-            key="sidebar_company_key",
-            help="예: hangyeol_pharma, demo_company",
+        def _company_label(company_key: str) -> str:
+            for item in companies:
+                if item.company_key == company_key:
+                    return f"{item.company_name} ({item.company_key})"
+            return company_key
+
+        company_options = company_keys if company_keys else [""]
+        selected_company_key = st.selectbox(
+            "회사 선택",
+            company_options,
+            index=default_index if company_keys else 0,
+            format_func=_company_label,
+            disabled=not bool(company_keys),
         )
-        company_name = st.text_input(
-            "회사 이름",
-            key="sidebar_company_name",
-            help="화면과 이력에 표시할 이름입니다.",
-        )
-        st.session_state.company_key = company_key.strip()
-        st.session_state.company_name = company_name.strip()
+
+        selected_company = next((item for item in companies if item.company_key == selected_company_key), None)
+        if selected_company is not None:
+            st.session_state.company_key = selected_company.company_key
+            st.session_state.company_name = selected_company.company_name
+            st.markdown(
+                f"""
+                <div class="selected-company-note">
+                  <div><span class="label">선택 회사</span> {selected_company.company_name}</div>
+                  <div><span class="label">고정 key</span> <span class="value">{selected_company.company_key}</span></div>
+                </div>
+                """,
+                unsafe_allow_html=True,
+            )
+        else:
+            st.session_state.company_key = ""
+            st.session_state.company_name = ""
+
+        with st.expander("신규 회사 등록", expanded=False):
+            if "register_company_name" not in st.session_state:
+                st.session_state.register_company_name = ""
+            if "register_company_code_external" not in st.session_state:
+                st.session_state.register_company_code_external = ""
+
+            register_name = st.text_input(
+                "회사 이름",
+                key="register_company_name",
+                help="예: 지원제약",
+            )
+            register_external_code = st.text_input(
+                "외부 회사 코드(선택)",
+                key="register_company_code_external",
+                help="기존 업무 코드가 있으면 저장합니다.",
+            )
+            if st.button("회사 등록", use_container_width=True):
+                try:
+                    existing = find_company_by_name(project_root, register_name)
+                    entry = existing or register_company(
+                        project_root,
+                        register_name,
+                        company_code_external=register_external_code,
+                    )
+                    st.session_state.company_key = entry.company_key
+                    st.session_state.company_name = entry.company_name
+                    st.session_state.register_company_name = ""
+                    st.session_state.register_company_code_external = ""
+                    st.success(f"등록 완료: {entry.company_name} ({entry.company_key})")
+                    st.rerun()
+                except ValueError as exc:
+                    st.error(str(exc))
 
         status_rows = []
         for mod, stat in st.session_state.module_status.items():

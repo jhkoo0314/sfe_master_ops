@@ -465,7 +465,7 @@ def prepare_sandbox_chunk_assets(
                     runtime_block["asset_base"] = payload.get("asset_base", "")
             return
         for chunk_file in source_asset_dir.glob("*.js"):
-            shutil.copy2(chunk_file, target_asset_dir / chunk_file.name)
+            (target_asset_dir / chunk_file.name).write_bytes(chunk_file.read_bytes())
         payload["asset_base"] = target_asset_dir.name
         block_payload = payload.get("block_payload")
         if isinstance(block_payload, dict):

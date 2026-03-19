@@ -167,6 +167,7 @@
                     <select id='rSel'><option value='NONE'>담당자 선택</option></select>
                 </div>
                 <p id='branchLoadStatus' class='text-[10px] font-bold text-slate-500 uppercase'>지점 상세 대기</p>
+                <p id='productScopeStatus' class='text-[10px] font-bold text-slate-400 uppercase'>품목 상태 대기</p>
             </div>
         </header>
 
@@ -636,12 +637,81 @@
             return pSel.value || 'ALL';
         }
 
+        function resolveScopeProductMap(branchKey, repName) {
+            if (repName && repName !== 'NONE') {
+                const memberResolved = resolveBranchBlock(branchKey, 'branch_member_summary');
+                let members = [];
+                if (memberResolved.data && Array.isArray(memberResolved.data.members)) {
+                    members = memberResolved.data.members;
+                } else if (memberResolved.data && memberResolved.data.members_by_branch && Array.isArray(memberResolved.data.members_by_branch[branchKey])) {
+                    members = memberResolved.data.members_by_branch[branchKey];
+                }
+                const member = members.find(item => item.성명 === repName);
+                return (member && member.prod_analysis) ? member.prod_analysis : {};
+            }
+            if (branchKey && branchKey !== 'TOTAL') {
+                const branchResolved = resolveBranchBlock(branchKey, 'branch_summary');
+                const branchData = branchResolved.data || {};
+                return branchData.prod_analysis || {};
+            }
+            return (db && db.total_prod_analysis) ? db.total_prod_analysis : {};
+        }
+
+        function resolveProductPeriodTarget(prodData) {
+            if (!prodData) return 0;
+            const monthlyTarget = normalizeMonthly(prodData.monthly_target || []);
+            if (periodMode === 'yearly') {
+                return monthlyTarget.reduce((a, b) => a + b, 0);
+            }
+            if (periodMode === 'quarterly') {
+                const chosenQuarter = quarterSel.value === 'AUTO'
+                    ? Math.max(0, Math.floor(monthlyTarget.findLastIndex(v => Number(v || 0) > 0) / 3))
+                    : Number(quarterSel.value || 0);
+                const start = Math.max(0, chosenQuarter) * 3;
+                return monthlyTarget.slice(start, start + 3).reduce((a, b) => a + b, 0);
+            }
+            const chosenMonth = monthSel.value === 'AUTO'
+                ? Math.max(0, monthlyTarget.findLastIndex(v => Number(v || 0) > 0))
+                : Number(monthSel.value || 0);
+            return Number(monthlyTarget[chosenMonth] || 0);
+        }
+
+        function refillProductOptions(branchKey, repName) {
+            const currentValue = getSelectedProduct();
+            const productMap = resolveScopeProductMap(branchKey, repName);
+            const productNames = Object.keys(productMap || {}).sort((a, b) => a.localeCompare(b, 'ko'));
+            const options = ['<option value="ALL">모든 품목</option>'];
+            productNames.forEach(productName => {
+                const prodData = productMap[productName] || {};
+                const currentTarget = resolveProductPeriodTarget(prodData);
+                const statusLabel = currentTarget > 0 ? '목표 있음' : '목표 없음';
+                options.push(`<option value="${productName}">${productName} · ${statusLabel}</option>`);
+            });
+            pSel.innerHTML = options.join('');
+            const nextValue = (currentValue !== 'ALL' && productMap[currentValue]) ? currentValue : 'ALL';
+            pSel.value = nextValue;
+
+            const statusEl = document.getElementById('productScopeStatus');
+            if (statusEl) {
+                if (nextValue === 'ALL') {
+                    statusEl.innerText = `현재 범위 품목 ${productNames.length}개`;
+                    statusEl.className = 'text-[10px] font-bold text-slate-400 uppercase';
+                } else {
+                    const targetValue = resolveProductPeriodTarget(productMap[nextValue] || {});
+                    statusEl.innerText = targetValue > 0
+                        ? `${nextValue} 현재 기간 목표 있음`
+                        : `${nextValue} 현재 기간 목표 없음`;
+                    statusEl.className = 'text-[10px] font-bold uppercase ' + (targetValue > 0 ? 'text-emerald-600' : 'text-amber-600');
+                }
+            }
+        }
+
         function getScopedGroupData(branchKey) {
             const productKey = getSelectedProduct();
             const productBlock = resolveBlock('product_analysis');
             const totalProdAnalysis = (productBlock.data && productBlock.data.total_prod_analysis)
                 ? productBlock.data.total_prod_analysis
-                : {};
+                : ((db && db.total_prod_analysis) ? db.total_prod_analysis : {});
             if (branchKey === 'TOTAL') {
                 const totalSummary = resolveBlock('total_summary');
                 const totalTrend = resolveBlock('total_trend');
@@ -672,6 +742,8 @@
                     monthly_actual: memberData.prod_analysis[productKey].monthly_actual || memberData.monthly_actual,
                     monthly_target: memberData.prod_analysis[productKey].monthly_target || memberData.monthly_target,
                     layer1: memberData.prod_analysis[productKey].layer1 || memberData.layer1,
+                    analysis: memberData.prod_analysis[productKey].analysis || memberData.analysis || {},
+                    activity_counts: memberData.prod_analysis[productKey].activity_counts || memberData.activity_counts || {},
                     prod_matrix: (memberData.prod_matrix || []).filter(p => p.name === productKey),
                 };
             }
@@ -795,8 +867,15 @@
             if (branchKey === 'TOTAL') return;
             const memberBlock = resolveBranchBlock(branchKey, 'branch_member_summary');
             let members = [];
-            if (memberBlock.status === 'ok' && memberBlock.data && Array.isArray(memberBlock.data.members)) {
+            if ((memberBlock.status === 'ok' || memberBlock.status === 'fallback') && memberBlock.data && Array.isArray(memberBlock.data.members)) {
                 members = memberBlock.data.members;
+            } else if (
+                (memberBlock.status === 'ok' || memberBlock.status === 'fallback')
+                && memberBlock.data
+                && memberBlock.data.members_by_branch
+                && Array.isArray(memberBlock.data.members_by_branch[branchKey])
+            ) {
+                members = memberBlock.data.members_by_branch[branchKey];
             }
             members.forEach(m => { rSel.add(new Option(m.성명, m.성명)); });
         }
@@ -938,9 +1017,11 @@
             const summaryBlock = resolveBlock('total_summary');
             const activityBlock = resolveBlock('activity_analysis');
             const summaryAvg = (summaryBlock.data && summaryBlock.data.avg) ? summaryBlock.data.avg : (data.avg || {});
-            const analysisData = (activityBlock.data && Object.keys(activityBlock.data).length)
-                ? activityBlock.data
-                : (data.analysis || {});
+            const analysisData = (data.analysis && Object.keys(data.analysis).length)
+                ? data.analysis
+                : ((activityBlock.data && Object.keys(activityBlock.data).length)
+                    ? activityBlock.data
+                    : {});
 
             const rL_Short = ['HIR', 'RTR', 'BCR', 'PHR', 'PI', 'FGR'];
             const rL_Full = ['유효활동(HIR)','관계온도(RTR)','규칙성(BCR)','계획(PHR)','성과지수(PI)','성장률(FGR)'];
@@ -1004,7 +1085,10 @@
             });
 
             const behaviorMap = { 'PT':'제품설명','Demo':'시연','Closing':'클로징','Needs':'니즈파악','FaceToFace':'대면활동','Contact':'연락','Access':'접근성','Feedback':'피드백' };
-            const sorted = Object.entries(m.activity_counts || {}).sort((a,b)=>a[1]-b[1]);
+            const tornadoSource = (m.analysis && m.analysis.importance && Object.keys(m.analysis.importance).length)
+                ? m.analysis.importance
+                : (m.activity_counts || {});
+            const sorted = Object.entries(tornadoSource).sort((a,b)=>a[1]-b[1]);
             safeNewChart('rTornado', 'chart_r_tornado', {
                 type: 'bar',
                 data: { labels: sorted.map(e=>behaviorMap[e[0]] || e[0]), datasets: [{ data: sorted.map(e=>e[1]), backgroundColor: '#1e293b' }] },
@@ -1041,11 +1125,7 @@
         }
 
         refillBranchOptions();
-        const productSlot = resolveBlock('product_analysis');
-        const productOptions = (productSlot.data && Array.isArray(productSlot.data.products))
-            ? productSlot.data.products
-            : [];
-        pSel.innerHTML = '<option value="ALL">모든 품목</option>' + productOptions.map(product => `<option value="${product}">${product}</option>`).join('');
+        refillProductOptions('TOTAL', 'NONE');
 
         if (isChunkedBranchMode()) {
             setBranchLoadStatus('지점 상세는 선택 시 로드됩니다.');
@@ -1059,18 +1139,32 @@
                 if (!loaded) {
                     setBranchLoadStatus(`${b} 상세 로딩 실패`, true);
                     refillRepOptions('TOTAL');
+                    refillProductOptions('TOTAL', 'NONE');
                     update();
                     return;
                 }
                 setBranchLoadStatus(`${b} 상세 로드 완료`);
             }
             refillRepOptions(b);
+            refillProductOptions(b, 'NONE');
             update();
         };
-        rSel.onchange = update;
-        pSel.onchange = update;
-        monthSel.onchange = update;
-        quarterSel.onchange = update;
+        rSel.onchange = () => {
+            refillProductOptions(bSel.value, rSel.value);
+            update();
+        };
+        pSel.onchange = () => {
+            refillProductOptions(bSel.value, rSel.value);
+            update();
+        };
+        monthSel.onchange = () => {
+            refillProductOptions(bSel.value, rSel.value);
+            update();
+        };
+        quarterSel.onchange = () => {
+            refillProductOptions(bSel.value, rSel.value);
+            update();
+        };
         const setPeriodBtn = (mode) => {
             periodMode = mode;
             [periodMonthly, periodQuarterly, periodYearly].forEach(btn => {
@@ -1079,6 +1173,7 @@
             });
             monthSel.classList.toggle('hidden', mode !== 'monthly');
             quarterSel.classList.toggle('hidden', mode !== 'quarterly');
+            refillProductOptions(bSel.value, rSel.value);
             update();
         };
 

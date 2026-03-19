@@ -325,6 +325,26 @@ css = """
     color: var(--text) !important;
     font-size: 13px;
   }
+  .selected-company-note {
+    margin: 8px 0 12px 0;
+    padding: 12px 14px;
+    border-radius: 12px;
+    border: 1px solid rgba(88,166,255,0.24);
+    background: linear-gradient(180deg, rgba(33,38,45,0.94), rgba(22,27,34,0.94));
+    color: var(--text) !important;
+    line-height: 1.6;
+    font-size: 13px;
+  }
+  .selected-company-note .label {
+    color: var(--primary) !important;
+    font-weight: 800;
+    margin-right: 8px;
+  }
+  .selected-company-note .value {
+    color: #79c0ff !important;
+    font-weight: 800;
+    font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace !important;
+  }
   .ops-network {
     padding: 18px;
     border: 1px solid var(--border);

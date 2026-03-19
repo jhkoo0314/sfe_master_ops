@@ -9,6 +9,13 @@ from typing import Any
 import pandas as pd
 import streamlit as st
 
+from common.company_registry import resolve_company_reference
+from common.run_registry import (
+    append_agent_chat_log_to_supabase,
+    list_agent_chat_logs_from_supabase,
+    list_successful_runs_from_supabase,
+    load_run_contexts_from_supabase,
+)
 from ops_core.workflow.execution_registry import (
     get_execution_mode_label,
     get_execution_mode_modules,
@@ -106,19 +113,12 @@ def _normalize_company_key(company_key: str) -> str:
 
 
 def _resolve_company_key_for_agent(company_key: str) -> str:
+    project_root = get_project_root()
+    registered = resolve_company_reference(project_root, company_key)
+    if registered is not None:
+        return registered.company_key
+
     normalized = _normalize_company_key(company_key)
-    alias_map = {
-        "다온파마": "daon_pharma",
-        "다온제약": "daon_pharma",
-        "한결파마": "hangyeol_pharma",
-        "한결제약": "hangyeol_pharma",
-        "daonpharma": "daon_pharma",
-        "hangyeolpharma": "hangyeol_pharma",
-    }
-    if company_key in alias_map:
-        normalized = alias_map[company_key]
-    elif normalized in alias_map:
-        normalized = alias_map[normalized]
     ops_root = Path(get_project_root()) / "data" / "ops_validation"
     if not normalized or not ops_root.exists():
         return normalized
@@ -162,6 +162,10 @@ def _load_json_if_exists(path: Path) -> dict[str, Any] | None:
 
 
 def _scan_successful_runs(company_key: str) -> list[dict[str, Any]]:
+    supabase_runs = list_successful_runs_from_supabase(company_key, limit=20)
+    if supabase_runs:
+        return supabase_runs
+
     runs_root = _agent_runs_root(company_key)
     collected: list[dict[str, Any]] = []
     if runs_root.exists():
@@ -199,7 +203,12 @@ def _agent_history_path(company_key: str, run_id: str) -> Path:
     return _agent_runs_root(company_key) / run_id / "chat" / "agent_chat_history.jsonl"
 
 
-def _read_agent_history(company_key: str, run_id: str, limit: int = 20) -> list[dict[str, Any]]:
+def _read_agent_history(company_key: str, run_id: str, limit: int = 20, run_db_id: str = "") -> list[dict[str, Any]]:
+    if run_db_id:
+        supabase_rows = list_agent_chat_logs_from_supabase(run_db_id, limit=limit)
+        if supabase_rows:
+            return supabase_rows
+
     history_path = _agent_history_path(company_key, run_id)
     if not history_path.exists():
         return []
@@ -219,14 +228,29 @@ def _read_agent_history(company_key: str, run_id: str, limit: int = 20) -> list[
     return rows[-limit:][::-1]
 
 
-def _append_agent_history(company_key: str, run_id: str, record: dict[str, Any]) -> None:
+def _append_agent_history(company_key: str, run_id: str, record: dict[str, Any], run_db_id: str = "") -> None:
+    if run_db_id:
+        append_agent_chat_log_to_supabase(
+            run_db_id,
+            mode=str(record.get("mode", "")),
+            user_question=str(record.get("question", "")),
+            assistant_answer=str(record.get("answer", "")),
+            answer_scope=str(record.get("answer_scope", "final_report_only")),
+            model_name=str(record.get("model", "")),
+        )
+
     history_path = _agent_history_path(company_key, run_id)
     history_path.parent.mkdir(parents=True, exist_ok=True)
     with history_path.open("a", encoding="utf-8") as f:
         f.write(json.dumps(record, ensure_ascii=False) + "\n")
 
 
-def _load_run_contexts(company_key: str, run_id: str) -> tuple[dict[str, Any] | None, dict[str, Any] | None]:
+def _load_run_contexts(company_key: str, run_id: str, run_db_id: str = "") -> tuple[dict[str, Any] | None, dict[str, Any] | None]:
+    if run_db_id:
+        full_ctx, prompt_ctx = load_run_contexts_from_supabase(run_db_id)
+        if full_ctx or prompt_ctx:
+            return full_ctx, prompt_ctx
+
     run_dir = _agent_runs_root(company_key) / run_id
     full_ctx = _load_json_if_exists(run_dir / "report_context.full.json")
     prompt_ctx = _load_json_if_exists(run_dir / "report_context.prompt.json")
@@ -786,7 +810,7 @@ def render_agent_tab() -> None:
     )
 
     render_panel_header("Agent Context")
-    st.caption(f"입력 회사 코드: `{raw_company_key or '-'}` | 해석된 회사 코드: `{company_key or '-'}` | 기준: `회사 코드`")
+    st.caption(f"선택 회사 key: `{raw_company_key or '-'}` | Agent 해석 key: `{company_key or '-'}` | 기준: `회사 선택값`")
     legacy_summary_path = _legacy_pipeline_root(company_key) / "pipeline_validation_summary.json" if company_key else None
     runs_root_path = _agent_runs_root(company_key) if company_key else None
     st.caption(
@@ -821,17 +845,20 @@ def render_agent_tab() -> None:
         )
         selected_run_id = st.selectbox("Run 선택", options=run_ids, index=default_index, format_func=_run_label)
         selected_run = next((item for item in runs if item["run_id"] == selected_run_id), runs[0])
+        selected_run_db_id = str(selected_run.get("run_db_id", "")).strip()
         needs_reload = (
             st.session_state.get("selected_run_id") != selected_run_id
+            or st.session_state.get("selected_run_db_id") != selected_run_db_id
             or st.session_state.get("report_context_prompt") is None
         )
         if needs_reload:
-            full_ctx, prompt_ctx = _load_run_contexts(company_key, selected_run_id)
+            full_ctx, prompt_ctx = _load_run_contexts(company_key, selected_run_id, run_db_id=selected_run_db_id)
             st.session_state.selected_run_id = selected_run_id
+            st.session_state.selected_run_db_id = selected_run_db_id
             st.session_state.selected_mode = str(selected_run.get("mode", ""))
             st.session_state.report_context_full = full_ctx
             st.session_state.report_context_prompt = prompt_ctx
-            st.session_state.agent_history = _read_agent_history(company_key, selected_run_id, limit=20)
+            st.session_state.agent_history = _read_agent_history(company_key, selected_run_id, limit=20, run_db_id=selected_run_db_id)
     else:
         st.markdown(
             """<div class="run-selector-note"><b>선택 가능한 run:</b> 0건<br>run 기반 저장 또는 legacy 요약 파일이 아직 없습니다.</div>""",
@@ -840,6 +867,7 @@ def render_agent_tab() -> None:
         st.selectbox("Run 선택", options=["(선택 가능한 run 없음)"], index=0, disabled=True)
         selected_run = {"mode": "-", "validation_status": "-", "confidence_grade": "-"}
         st.session_state.selected_run_id = ""
+        st.session_state.selected_run_db_id = ""
         st.session_state.selected_mode = ""
         st.session_state.report_context_full = None
         st.session_state.report_context_prompt = None
@@ -873,7 +901,7 @@ def render_agent_tab() -> None:
     st.info("run 선택, 컨텍스트 로딩, 질문/응답(mock), run별 jsonl 저장이 연결되어 있고 손상/누락 케이스에서도 화면이 유지되도록 방어하고 있습니다.")
 
     if not company_key:
-        st.warning("먼저 사이드바에서 회사 코드(company_key)를 입력해 주세요.")
+        st.warning("먼저 사이드바에서 회사를 선택해 주세요.")
     elif not runs:
         st.warning("성공한 run을 찾지 못했습니다. 먼저 파이프라인을 실행해 주세요.")
     if has_ready_run and not isinstance(prompt_ctx, dict):
@@ -913,7 +941,12 @@ def render_agent_tab() -> None:
                 "model": "local-context-only",
             }
             if company_key and st.session_state.get("selected_run_id"):
-                _append_agent_history(company_key, st.session_state["selected_run_id"], record)
+                _append_agent_history(
+                    company_key,
+                    st.session_state["selected_run_id"],
+                    record,
+                    run_db_id=str(st.session_state.get("selected_run_db_id", "")),
+                )
             st.session_state.agent_history = [record] + st.session_state.get("agent_history", [])
             st.session_state.agent_history = st.session_state.agent_history[:20]
             st.success("답변을 생성했고 run 이력(jsonl)에 저장했습니다.")

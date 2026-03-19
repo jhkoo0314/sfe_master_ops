@@ -4,7 +4,7 @@ import os
 from pathlib import Path
 
 
-def get_active_company_key(default: str = "hangyeol_pharma") -> str:
+def get_active_company_key(default: str = "") -> str:
     return os.environ.get("OPS_COMPANY_KEY", default).strip() or default
 
 

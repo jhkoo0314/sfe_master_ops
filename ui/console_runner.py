@@ -7,6 +7,7 @@ import uuid
 from datetime import datetime
 from pathlib import Path
 
+from common.run_registry import save_pipeline_run_to_supabase
 from ops_core.workflow.execution_registry import (
     get_execution_mode_label,
     get_execution_mode_modules,
@@ -97,6 +98,15 @@ def save_pipeline_run_history(result: dict, uploaded: dict) -> str:
     }
     with open(history_path, "a", encoding="utf-8") as f:
         f.write(json.dumps(record, ensure_ascii=False) + "\n")
+
+    supabase_run_db_id = save_pipeline_run_to_supabase(
+        company_key=get_active_company_key(),
+        company_name=get_active_company_name(),
+        result=result,
+        uploaded=uploaded,
+    )
+    if supabase_run_db_id:
+        result["supabase_run_db_id"] = supabase_run_db_id
     return str(history_path)
 
 

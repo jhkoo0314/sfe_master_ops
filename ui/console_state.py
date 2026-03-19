@@ -45,6 +45,8 @@ def init_console_state() -> None:
         st.session_state.company_name = ""
     if "selected_run_id" not in st.session_state:
         st.session_state.selected_run_id = ""
+    if "selected_run_db_id" not in st.session_state:
+        st.session_state.selected_run_db_id = ""
     if "selected_mode" not in st.session_state:
         st.session_state.selected_mode = ""
     if "report_context_full" not in st.session_state:

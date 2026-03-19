@@ -8,30 +8,16 @@ ROOT = Path(__file__).resolve().parents[1]
 if str(ROOT) not in sys.path:
     sys.path.insert(0, str(ROOT))
 
-from common.company_profile import get_company_ops_profile
 from common.company_runtime import get_active_company_key, get_active_company_name, get_company_root
 from ops_core.workflow.execution_registry import get_execution_mode_modules
 from ops_core.workflow.execution_service import build_execution_context, run_execution_mode
-from scripts.generate_source_raw import main as generate_source_main
 
 
 def main() -> None:
     company_key = get_active_company_key()
     company_name = get_active_company_name(company_key)
-    profile = get_company_ops_profile(company_key)
     output_root = get_company_root(ROOT, "ops_validation", company_key) / "pipeline"
     output_root.mkdir(parents=True, exist_ok=True)
-
-    generation_note = None
-    if profile.raw_generator_module:
-        try:
-            generate_source_main()
-        except FileNotFoundError as exc:
-            generation_note = f"raw 생성용 샘플 파일이 없어 생성 단계는 건너뛰었습니다: {exc}"
-        except Exception as exc:
-            generation_note = f"raw 생성 단계는 건너뛰고 기존 source 파일을 사용했습니다: {exc}"
-    else:
-        generation_note = "등록된 raw 생성 모듈이 없어 기존 source 파일을 그대로 사용했습니다."
 
     context = build_execution_context(
         project_root=ROOT,
@@ -56,7 +42,6 @@ def main() -> None:
             for module in get_execution_mode_modules("integrated_full")
         },
         "steps": [step.to_dict() for step in result.steps],
-        "generation_note": generation_note,
         "all_passed": result.overall_status == "PASS",
     }
 

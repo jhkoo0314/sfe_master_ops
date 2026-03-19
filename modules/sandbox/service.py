@@ -314,6 +314,7 @@ def _build_report_template_payload(
     join_quality: JoinQualitySummary,
     official_kpi_6: dict[str, float | str],
 ) -> dict:
+    behavior_keys = ["PT", "Demo", "Closing", "Needs", "FaceToFace", "Contact", "Access", "Feedback"]
     months = sorted(input_std.metric_months)
     month_index = {month: idx for idx, month in enumerate(months[:12])}
 
@@ -337,6 +338,14 @@ def _build_report_template_payload(
         "pi_count": 0.0,
         "fgr_sum": 0.0,
         "fgr_count": 0.0,
+        "PT": 0.0,
+        "Demo": 0.0,
+        "Closing": 0.0,
+        "Needs": 0.0,
+        "FaceToFace": 0.0,
+        "Contact": 0.0,
+        "Access": 0.0,
+        "Feedback": 0.0,
     }))
     rep_product: dict[str, dict[str, dict]] = defaultdict(lambda: defaultdict(lambda: {
         "product_name": None,
@@ -420,6 +429,14 @@ def _build_report_template_payload(
                     tuned[left][right] = round(max(-1.0, min(1.0, value * 1.18)), 2)
         return tuned
 
+    def average_metric(month_payload: dict[str, float], metric_key: str) -> float:
+        sum_key = f"{metric_key.lower()}_sum"
+        count_key = f"{metric_key.lower()}_count"
+        count = float(month_payload.get(count_key, 0.0) or 0.0)
+        if count <= 0:
+            return 0.0
+        return round(float(month_payload.get(sum_key, 0.0) or 0.0) / count, 2)
+
     for row in input_std.crm_records:
         rep_meta.setdefault(row.rep_id, {
             "rep_name": row.rep_name or row.rep_id,
@@ -454,13 +471,18 @@ def _build_report_template_payload(
             visit_weight = max(float(row.total_visits), 1.0)
             for behavior_key, mix_value in row.behavior_mix_8.items():
                 norm_key = normalize_behavior_key(behavior_key)
-                rep_activity_counts[row.rep_id][norm_key] += max(float(mix_value), 0.0) * visit_weight
+                weighted_value = max(float(mix_value), 0.0) * visit_weight
+                rep_activity_counts[row.rep_id][norm_key] += weighted_value
+                bucket[norm_key] += weighted_value
         elif row.activity_types:
             distributed_count = max(float(row.total_visits) / max(len(row.activity_types), 1), 1.0)
             for activity_type in row.activity_types:
-                rep_activity_counts[row.rep_id][normalize_behavior_key(activity_type)] += distributed_count
+                norm_key = normalize_behavior_key(activity_type)
+                rep_activity_counts[row.rep_id][norm_key] += distributed_count
+                bucket[norm_key] += distributed_count
         else:
             rep_activity_counts[row.rep_id]["FaceToFace"] += max(float(row.total_visits), 1.0)
+            bucket["FaceToFace"] += max(float(row.total_visits), 1.0)
 
     for row in input_std.sales_records:
         rep_meta.setdefault(row.rep_id, {
@@ -610,6 +632,35 @@ def _build_report_template_payload(
             prod_growth = round(float(latest_prod_month["fgr"]), 1)
             prod_pi = round(float(prod_yearly["attainment_rate"]), 1)
             prod_ms = round((prod_total_actual / max(total_actual, 1)) * 100.0, 1) if total_actual > 0 else 0.0
+            product_activity_counts = {key: 0.0 for key in behavior_keys}
+            product_analysis_rows: list[dict[str, float]] = []
+            for month, month_payload in month_stats.items():
+                idx = month_index.get(month)
+                if idx is None or idx >= len(prod_monthly_actual):
+                    continue
+                month_sales = float(month_payload.get("sales", 0.0) or 0.0)
+                product_sales = float(prod_monthly_actual[idx] or 0.0)
+                sales_share = (product_sales / month_sales) if month_sales > 0 else 0.0
+                layer1_month = layer1_point(prod_layer1, "monthly", idx)
+                row_metrics = {
+                    "HIR": average_metric(month_payload, "hir"),
+                    "RTR": average_metric(month_payload, "rtr"),
+                    "BCR": average_metric(month_payload, "bcr"),
+                    "PHR": average_metric(month_payload, "phr"),
+                    "PI": round(float(layer1_month.get("pi", 0.0) or 0.0), 2),
+                    "FGR": round(float(layer1_month.get("fgr", 0.0) or 0.0), 2),
+                }
+                for behavior_key in behavior_keys:
+                    scaled_behavior = round(float(month_payload.get(behavior_key, 0.0) or 0.0) * sales_share, 2)
+                    row_metrics[behavior_key] = scaled_behavior
+                    product_activity_counts[behavior_key] += scaled_behavior
+                product_analysis_rows.append(row_metrics)
+
+            product_importance = {
+                key: round(calc_corr(product_analysis_rows, key, "PI"), 2)
+                for key in behavior_keys
+            }
+            product_correlation = build_matrix(product_analysis_rows)
             product_rows.append({
                 "name": product_name,
                 "ms": prod_ms,
@@ -624,7 +675,13 @@ def _build_report_template_payload(
                 "PI": prod_pi,
                 "FGR": prod_growth,
                 "avg_ms": prod_ms,
-                "analysis": {"importance": {}, "correlation": {}, "adj_correlation": {}, "ccf": []},
+                "activity_counts": {key: round(value, 1) for key, value in product_activity_counts.items()},
+                "analysis": {
+                    "importance": product_importance,
+                    "correlation": product_correlation,
+                    "adj_correlation": amplify_matrix(product_correlation),
+                    "ccf": [],
+                },
             }
             total_row = total_prod_analysis.setdefault(product_name, {
                 "achieve": 0.0,
@@ -916,6 +973,7 @@ def _build_product_analysis_block(template_payload: dict) -> dict:
         "products": products,
         "product_count": len(products),
         "total_product_keys": sorted(total_prod.keys()),
+        "total_prod_analysis": total_prod,
         "source_ref": "template_payload.total_prod_analysis",
     }
 
@@ -924,6 +982,10 @@ def _build_activity_analysis_block(template_payload: dict) -> dict:
     total = dict(template_payload.get("total", {}) or {})
     analysis = dict(total.get("analysis", {}) or {})
     return {
+        "importance": dict(analysis.get("importance", {}) or {}),
+        "correlation": dict(analysis.get("correlation", {}) or {}),
+        "adj_correlation": dict(analysis.get("adj_correlation", {}) or {}),
+        "ccf": list(analysis.get("ccf", []) or []),
         "importance_keys": sorted((analysis.get("importance", {}) or {}).keys()),
         "matrix_keys": sorted((analysis.get("correlation", {}) or {}).keys()),
         "source_ref": "template_payload.total.analysis",

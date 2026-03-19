@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import json
 from pathlib import Path
+import shutil
 import sys
 from datetime import datetime
 
@@ -49,6 +50,18 @@ TOTAL_VALID_TEMPLATE_PATH = ROOT / "templates" / "total_valid_templates.html"
 
 def load_json(path: Path) -> dict:
     return json.loads(path.read_text(encoding="utf-8"))
+
+
+def sync_sandbox_chunk_assets() -> None:
+    source_dir = SANDBOX_ASSET_PATH.with_name("sandbox_template_payload_assets")
+    target_dir = OUTPUT_ROOT / "sandbox_report_preview_assets"
+    target_dir.mkdir(parents=True, exist_ok=True)
+    for existing in target_dir.glob("*.js"):
+        existing.unlink()
+    if not source_dir.exists():
+        return
+    for chunk_file in source_dir.glob("*.js"):
+        shutil.copyfile(chunk_file, target_dir / chunk_file.name)
 
 
 def write_builder_output(name: str, builder_input, builder_payload, html: str, asset) -> dict:
@@ -138,6 +151,7 @@ def main() -> None:
             asset_source_path=str(SANDBOX_ASSET_PATH),
             output_root=str(OUTPUT_ROOT),
         )
+        sync_sandbox_chunk_assets()
         sandbox_input.payload_seed = sandbox_payload.payload
         sandbox_html = render_builder_html(sandbox_payload)
         sandbox_result_asset = build_html_builder_asset(sandbox_input, sandbox_html)
