@@ -26,6 +26,12 @@ Validation Layer (OPS) 역할은 이렇게 이해하면 됩니다.
 - Builder는 코드상 보고서 6종 생성 가능
 - 실제 저장된 보고서 수는 회사별 마지막 실행 상태에 따라 다를 수 있음
 
+## 문서 기준
+
+- Part2 진행 상태 단일 기준: `docs/architecture/12_part2_status_source_of_truth.md`
+- 진행 요약/안내: `docs/ai/07_current_phase.md`
+- Part2 레거시 허브: `docs/part2/README.md`
+
 ## 2. 실행 전 준비
 
 의존성 설치:

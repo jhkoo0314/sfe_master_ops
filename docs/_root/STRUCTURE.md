@@ -8,6 +8,12 @@
 원천데이터 -> Adapter -> Module/Core Engine -> Result Asset -> Validation Layer(OPS) -> Intelligence(RADAR) -> Builder
 ```
 
+## 문서 기준
+
+- Part2 진행 상태 단일 기준: `docs/architecture/12_part2_status_source_of_truth.md`
+- 진행 요약/안내: `docs/ai/07_current_phase.md`
+- Part2 레거시 허브: `docs/part2/README.md`
+
 이 프로젝트는 `완전 무설정 범용 제품`보다는  
 `회사별로 얇게 커스텀 가능한 공통 틀`에 가깝습니다.
 

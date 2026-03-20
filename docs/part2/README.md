@@ -23,6 +23,6 @@
 
 ## 동기화 규칙
 
-1. 코드 변경 후 먼저 `docs/ai/07_current_phase.md`를 갱신한다.
-2. 그 다음 `docs/architecture/12_part2_status_source_of_truth.md`를 갱신한다.
+1. Part2 진행 상태는 `docs/architecture/12_part2_status_source_of_truth.md`만 갱신한다.
+2. `docs/ai/07_current_phase.md`는 실행 안내/요약만 유지한다.
 3. `docs/part2/*`는 원칙적으로 새 변경을 반영하지 않고 이력 보존용으로 유지한다.

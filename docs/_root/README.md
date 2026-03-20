@@ -57,8 +57,9 @@
 5. `규칙 / 임계치 외부화`
 
 Part2 문서 운영 기준:
-- 활성 상태/실행 문서: `docs/architecture/12_part2_status_source_of_truth.md`
-- Part2 레거시 허브: `docs/part2/README.md`
+- 활성 상태/실행 단일 기준: `docs/architecture/12_part2_status_source_of_truth.md`
+- 진행 요약/안내: `docs/ai/07_current_phase.md` (요약만 유지)
+- Part2 레거시 허브: `docs/part2/README.md` (이력 보존)
 
 ## 2026-03-15 동기화 상태 (CRM KPI 거버넌스)
 
