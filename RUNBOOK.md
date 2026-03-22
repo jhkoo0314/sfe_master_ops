@@ -182,9 +182,12 @@ data/ops_validation/daon_pharma/
 회사별 raw 파일 위치와 어댑터 설정은 [company_profile.py](/C:/sfe_master_ops/common/company_profile.py)에서 가져옵니다.
 
 참고:
-- raw 샘플 데이터가 필요할 때는 `scripts/generate_source_raw.py`를 먼저 보고, 실제 회사별 생성은 profile에 등록된 스크립트가 실행됩니다.
+- raw 샘플 데이터가 필요할 때는 `scripts/generate_source_raw.py`를 먼저 보고, 실제 테스트용 생성은 profile에 등록된 스크립트가 실행됩니다.
 - 회사별 raw 생성 구현 파일은 `scripts/raw_generators/` 아래에 둡니다.
-- 현재 raw generator 구조는 회사별 파일 기반이며, 공통 엔진 + 설정 기반 구조로 정리하는 설계 문서는 `docs/architecture/17_raw_generator_refactor_plan.md`를 기준으로 봅니다.
+- 현재 raw generator 구조는 아직 회사별 파일 기반입니다.
+- 하지만 실제 운영 기준에서 더 중요한 다음 구현 대상은 **공통 intake/onboarding engine**입니다.
+- 운영 목표 흐름은 `회사 등록 -> raw 업로드 -> intake gate/onboarding -> adapter -> 기존 파이프라인`입니다.
+- 테스트용 raw generator 정리 설계는 `docs/architecture/17_raw_generator_refactor_plan.md`를 보고, 실제 운영용 공통 입력 설계는 `docs/architecture/19_intake_gate_and_onboarding_plan.md`, `docs/architecture/20_common_intake_engine_implementation_plan.md`를 기준으로 봅니다.
 
 ## 7. 주요 산출물
 

@@ -62,16 +62,22 @@ Part2의 완료/진행/대기 상태는 이 문서를 기준으로 본다.
 - Part2 진행 문서의 최신 구조 반영(Agent 탭/Run storage 포함)
   - [x] Agent 탭 연결 상태와 경로 반영
   - [x] run_storage 경로 반영
+- 실제 회사 raw intake/onboarding 공통화 설계 고정
+  - [x] intake gate 운영 설계 문서 작성
+  - [x] 공통 intake engine 구현 계획 문서 작성
+  - [x] 공통엔진 1개 + `scenario + mapping + rules` 업데이트 구조로 방향 고정
+  - [ ] intake/onboarding 공통엔진 구현
 - raw generator 구조 단순화 설계 고정
   - [x] 공통 생성기 구조 설계 문서 초안 작성
-  - [ ] 설정 기반 공통 generation engine 구현
-  - [ ] 회사별 generator thin wrapper 전환
+  - [ ] 설정 기반 공통 generation engine 구현 (후순위, 현재 필수 구현 아님)
+  - [ ] 회사별 generator thin wrapper 전환 (후순위, 현재 필수 구현 아님)
 
 ## 대기(Next)
 
+- 공통 intake/onboarding engine 구현 착수
 - Part2 다음 우선순위 모듈 착수 준비
 - run 중심 저장 구조 및 report context 반영 설계의 구현 전환
-- raw generator 공통화 구현 착수
+- raw generator 공통화 구현 착수 (후순위, 필요 시)
 
 ## 운영 고정 원칙
 

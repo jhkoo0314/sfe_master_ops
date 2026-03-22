@@ -219,9 +219,10 @@ OPS 판단과 파이프라인 실행을 담당합니다.
 운영 메모:
 - 현재 기준 진입점 이름은 위 공통 이름만 사용합니다.
 - 실제 경로와 입력 파일 선택은 계속 `company_runtime.py`가 회사 코드 기준으로 처리합니다.
-- raw 샘플 생성은 `generate_source_raw.py`가 공통 진입점이고, 실제 회사별 생성 로직은 `company_profile.py`에 연결된 생성 스크립트가 담당합니다.
+- raw 샘플 생성은 `generate_source_raw.py`가 공통 진입점이고, 실제 테스트용 생성 로직은 `company_profile.py`에 연결된 생성 스크립트가 담당합니다.
 - 현재 raw generator는 아직 회사별 파일 기반입니다.
-- 이 구조를 공통 엔진 + 설정 기반으로 정리하는 설계 문서는 `docs/architecture/17_raw_generator_refactor_plan.md`입니다.
+- 다만 실제 운영에서 더 중요한 것은 생성기 공통화보다 `raw -> intake/onboarding -> adapter` 공통 입구를 만드는 것입니다.
+- 그래서 테스트용 생성기 정리 설계는 `docs/architecture/17_raw_generator_refactor_plan.md`, 실제 운영용 공통 입력 설계는 `docs/architecture/18_real_company_raw_input_flow.md`, `docs/architecture/19_intake_gate_and_onboarding_plan.md`, `docs/architecture/20_common_intake_engine_implementation_plan.md`를 함께 봅니다.
 
 현재 중요한 점:
 - CRM 검증 스크립트가 `crm_builder_payload.json` 생성

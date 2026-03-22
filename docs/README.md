@@ -24,6 +24,8 @@
 - Builder 단계는 RADAR 결과를 포함한 HTML 결과를 렌더링함
   - `radar_report_preview.html` (자산이 준비된 경우)
 - 회사 코드/회사 이름 입력 기본값은 빈값으로 시작하도록 UI 반영됨
+- 다음 핵심 구현 우선순위는 실제 회사 raw를 받는 공통 intake/onboarding engine이다.
+- 테스트용 raw generator 문서는 보조 설계로 두고, 실제 운영 기준은 `18`, `19`, `20` 문서를 먼저 본다.
 
 ## 문서 위치
 
@@ -36,6 +38,9 @@
 - `docs/ai/`: Codex 작업용 축약 문서 세트
 - `docs/architecture/`: Sales Data OS 아키텍처 감사/목표/리팩토링 계획
   - `docs/architecture/12_part2_status_source_of_truth.md` (Part2 진행 상태 단일 기준)
+  - `docs/architecture/18_real_company_raw_input_flow.md` (실제 회사 raw 입력 운영 흐름 기준)
+  - `docs/architecture/19_intake_gate_and_onboarding_plan.md` (실제 회사 raw intake/onboarding 운영 설계)
+  - `docs/architecture/20_common_intake_engine_implementation_plan.md` (공통 intake engine 구현 계획)
   - `docs/architecture/09_sales_data_os_agent_run_architecture.md`
   - `docs/architecture/10_agent_tab_mvp.md`
   - `docs/architecture/11_run_based_storage.md`
