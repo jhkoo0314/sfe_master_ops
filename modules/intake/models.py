@@ -130,6 +130,7 @@ class IntakeResult:
     company_key: str
     company_name: str
     status: IntakeStatus
+    cache_signature: str | None = None
     scenario_key: str | None = None
     scenario_label: str | None = None
     findings: list[IntakeFinding] = field(default_factory=list)

@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import re
+from functools import lru_cache
 from pathlib import Path
 from typing import Any, Mapping
 
@@ -28,6 +29,7 @@ from .suggestions import (
     build_optional_field_suggestion,
     build_optional_source_missing_suggestion,
     build_saved_mapping_fallback_suggestion,
+    infer_best_candidate_column,
 )
 from .staging import (
     save_intake_result_snapshot,
@@ -70,6 +72,16 @@ def _read_source_frame(path: str | Path) -> pd.DataFrame | None:
     source_path = Path(path)
     if not source_path.exists():
         return None
+    stat = source_path.stat()
+    dataframe = _read_source_frame_cached(str(source_path), stat.st_mtime_ns, stat.st_size)
+    if dataframe is None:
+        return None
+    return dataframe.copy()
+
+
+@lru_cache(maxsize=32)
+def _read_source_frame_cached(path_str: str, mtime_ns: int, file_size: int) -> pd.DataFrame | None:
+    source_path = Path(path_str)
     suffix = source_path.suffix.lower()
     if suffix == ".csv":
         return pd.read_csv(source_path)
@@ -267,6 +279,12 @@ def _resolve_mapping(columns: list[str], source_key: str) -> tuple[dict[str, str
             matched_column = normalized_columns.get(_normalize_column_name(alias))
             if matched_column:
                 break
+        if matched_column is None:
+            matched_column = infer_best_candidate_column(
+                columns,
+                aliases,
+                semantic_field=semantic_field,
+            )
         if matched_column:
             resolved_mapping[semantic_field] = matched_column
         elif semantic_field in rule.required_fields:
@@ -358,26 +376,37 @@ class CommonIntakeEngine:
                 for semantic_field in missing_required:
                     if semantic_field in resolved_mapping:
                         continue
-                    status = "needs_review"
-                    package_findings.append(
-                        IntakeFinding(
-                            level="warn",
-                            source_key=source.source_key,
-                            issue_code="missing_required_semantic_field",
-                            message=f"필수 의미 컬럼 `{semantic_field}` 를 아직 확정하지 못했습니다.",
-                            column_name=semantic_field,
-                        )
-                    )
+                    candidate_columns: list[str] = []
                     if source_rule is not None:
-                        package_suggestions.append(
-                            build_missing_required_field_suggestion(
+                        suggestion = build_missing_required_field_suggestion(
+                            source_key=source.source_key,
+                            semantic_field=semantic_field,
+                            columns=source.columns,
+                            rule=source_rule,
+                        )
+                        candidate_columns = suggestion.candidate_columns
+                        package_suggestions.append(suggestion)
+                    if candidate_columns:
+                        package_findings.append(
+                            IntakeFinding(
+                                level="warn",
                                 source_key=source.source_key,
-                                semantic_field=semantic_field,
-                                columns=source.columns,
-                                rule=source_rule,
+                                issue_code="candidate_review_recommended",
+                                message=f"필수 의미 컬럼 `{semantic_field}` 는 후보가 있어 우선 진행 가능하지만, 분석 해석 전에 한 번 확인하는 것이 안전합니다.",
+                                column_name=semantic_field,
                             )
                         )
-
+                    else:
+                        status = "needs_review"
+                        package_findings.append(
+                            IntakeFinding(
+                                level="warn",
+                                source_key=source.source_key,
+                                issue_code="missing_required_semantic_field",
+                                message=f"필수 의미 컬럼 `{semantic_field}` 를 아직 확정하지 못했습니다.",
+                                column_name=semantic_field,
+                            )
+                        )
                 for semantic_field in missing_review:
                     if semantic_field in resolved_mapping:
                         continue
@@ -456,6 +485,7 @@ def build_intake_result(
     source_targets: Mapping[str, tuple[str, str]],
     uploaded: Mapping[str, dict[str, object] | None] | None = None,
     execution_mode: str | None = None,
+    cache_signature: str | None = None,
 ) -> IntakeResult:
     sources: list[IntakeSourceInput] = []
     source_frames: dict[str, Any] = {}
@@ -513,6 +543,7 @@ def build_intake_result(
         sources=sources,
     )
     result = CommonIntakeEngine().inspect(request)
+    result.cache_signature = cache_signature
     scenario = resolve_intake_scenario(
         execution_mode=execution_mode,
         source_keys=[package.source_key for package in result.packages],

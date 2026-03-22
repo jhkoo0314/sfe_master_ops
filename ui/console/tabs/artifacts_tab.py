@@ -39,6 +39,18 @@ def render_artifacts_tab() -> None:
         for alert in intake_result.get("timing_alerts", []):
             st.markdown(f"- {alert.get('message')}")
 
+    advisory_suggestions = [
+        suggestion
+        for suggestion in (intake_result or {}).get("suggestions", [])
+        if suggestion.get("suggestion_type") == "required_mapping_candidate"
+    ]
+    if advisory_suggestions:
+        render_panel_header("입력 데이터 주의사항", "실행은 진행했지만, 해석 전에 사람이 다시 보면 좋은 항목입니다.")
+        st.info("아래 항목은 치명적이지 않아 실행은 진행했지만, 결과 해석 정확도를 위해 분석 전에 한 번 더 확인하는 것이 좋습니다.")
+        for suggestion in advisory_suggestions[:8]:
+            candidate_text = ", ".join(suggestion.get("candidate_columns", [])) or "후보 없음"
+            st.markdown(f"- `{suggestion.get('source_key')}`: {suggestion.get('message')} 후보: {candidate_text}")
+
     render_panel_header("판정 이유 분석", "각 단계가 왜 PASS, WARN, APPROVED, FAIL로 판정됐는지 reasoning note와 요약 파일 기준으로 확인합니다.")
     if os.path.exists(analysis_doc_path):
         with open(analysis_doc_path, "rb") as f:

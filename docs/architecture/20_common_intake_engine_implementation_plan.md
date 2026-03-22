@@ -326,6 +326,7 @@ onboarding-ready 상태를 표현
 완료 기준:
 
 - intake 결과를 콘솔에서 바로 읽을 수 있음
+- 비치명적 candidate 제안은 실행 차단이 아니라 advisory로 남길 수 있음
 
 ### Phase 5. staging / onboarding-ready 저장
 
@@ -357,6 +358,7 @@ onboarding-ready 상태를 표현
 4. 파이프라인 탭에서 adapter-ready 여부 확인
 5. 기간 차이 감지 시 계속 진행 여부 확인
 6. 분석 인텔리전스 탭에 공통 분석 구간 설명 문구 표시
+7. 실행은 허용됐지만 해석 전에 다시 볼 advisory 항목 표시
 
 완료 기준:
 
@@ -464,6 +466,13 @@ data/company_source/{company_key}/_onboarding/
 - 기존 파이프라인 결과 유지
 
 즉 intake는 앞단 투명성을 높이고, 이후 실행 흐름은 기존 구조를 활용한다.
+
+현재 운영 보정 메모 (`2026-03-22`):
+
+- 인테이크가 너무 빡빡하면 사용자 피로가 커지므로, candidate가 있는 비치명적 매핑 애매함은 advisory로 완화했다.
+- 다온제약 실제 컬럼 기준 보강 완료
+  - CRM: `실행일`, `액션유형`
+  - Prescription: `brand (브랜드)`, `sku (SKU)`
 
 ---
 

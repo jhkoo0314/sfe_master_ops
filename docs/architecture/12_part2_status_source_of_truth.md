@@ -61,13 +61,21 @@ Part2의 완료/진행/대기 상태는 이 문서를 기준으로 본다.
   - `scenario + mapping + rules` 구조 연결
   - 기본 자동 수정(컬럼명 trim, 월/날짜 형식 정리, 중복 제거) 반영
   - 제안 문장/컬럼 후보 추천 반영
+  - candidate가 있는 비치명적 매핑 애매함은 실행을 막지 않고 advisory로 남기도록 완화
   - source별 기간 범위 감지와 기간 차이 경고 반영
   - 공통 분석 구간(예: 6개월) 자동 계산 반영
   - 실행 전 “기간 차이가 있어도 계속 진행할지” 확인 UI 반영
-  - 분석 인텔리전스 탭에 “기간 차이는 있지만 공통 구간 기준 검증 완료” 설명 문구 반영
+  - 분석 인텔리전스 탭에 “기간 차이는 있지만 공통 구간 기준 검증 완료” 설명 문구와 intake 주의사항 섹션 반영
   - `_intake_staging`, `_onboarding` 저장 연결
   - 운영 콘솔 업로드/파이프라인 탭에 intake 결과 표시 연결
   - execution service가 `_intake_staging` 정리본을 실제 Adapter 입력으로 사용하도록 연결
+- 다온제약 intake 인식 품질 보강 완료 (`2026-03-22`)
+  - CRM 활동 파일의 `실행일`, `액션유형` 인식 보강
+  - 처방 파일의 `brand (브랜드)`, `sku (SKU)` 인식 보강
+  - 현재 다온제약 기준 intake 결과
+    - `crm_to_sandbox`: `ready`, `ready_for_adapter=True`, advisory `0`
+    - `integrated_full`: `ready`, `ready_for_adapter=True`, advisory `0`
+  - 즉 다온제약은 현재 “실행 막힘 없는 intake” 상태로 정리됨
 - `monthly_merge_pharma` 통합 실행 재검증 통과 (`2026-03-22`)
   - 실행 엔진 입력이 `company_source` 원본이 아니라 `_intake_staging` 기준으로 전환된 상태에서 재검증
   - `scripts/validate_full_pipeline.py` 기준 전체 파이프라인 완료
@@ -121,6 +129,8 @@ Part2의 완료/진행/대기 상태는 이 문서를 기준으로 본다.
   - [x] 공통 intake engine 구현 계획 문서 작성
   - [x] 공통엔진 1개 + `scenario + mapping + rules` 업데이트 구조로 방향 고정
   - [x] intake/onboarding 공통엔진 구현
+  - [x] 비치명적 intake 제안은 advisory로 완화
+  - [x] 다온제약 실제 컬럼 인식 보강
 - raw generator 구조 단순화 설계 고정
   - [x] 공통 생성기 구조 설계 문서 초안 작성
   - [ ] 설정 기반 공통 generation engine 구현 (후순위, 현재 필수 구현 아님)

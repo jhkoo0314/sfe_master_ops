@@ -55,6 +55,7 @@ def inspect_intake_inputs(
     context: ExecutionContext,
     execution_mode: str | None = None,
     uploaded: Mapping[str, dict[str, Any] | None] | None = None,
+    cache_signature: str | None = None,
 ) -> IntakeResult:
     return build_intake_result(
         project_root=context.project_root,
@@ -63,6 +64,7 @@ def inspect_intake_inputs(
         source_targets=context.source_targets,
         uploaded=uploaded,
         execution_mode=execution_mode,
+        cache_signature=cache_signature,
     )
 
 

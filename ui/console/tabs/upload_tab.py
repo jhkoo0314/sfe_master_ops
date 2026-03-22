@@ -48,6 +48,7 @@ def render_upload_tab() -> None:
           <div class="stat-chip"><div class="label">Ready For Adapter</div><div class="value">{'YES' if intake_summary['ready_for_adapter'] else 'NO'}</div></div>
           <div class="stat-chip"><div class="label">Auto Fixes</div><div class="value">{intake_summary['fix_count']}</div></div>
           <div class="stat-chip"><div class="label">Needs Review</div><div class="value">{intake_summary['review_count']}</div></div>
+          <div class="stat-chip"><div class="label">Advisory</div><div class="value">{intake_summary['advisory_count']}</div></div>
           <div class="stat-chip"><div class="label">Timing Alerts</div><div class="value">{intake_summary['timing_alert_count']}</div></div>
         </div>
         """,
@@ -56,7 +57,9 @@ def render_upload_tab() -> None:
     if intake_summary["blocked_count"]:
         st.error(f"필수 입력 부족으로 막힌 항목이 {intake_summary['blocked_count']}개 있습니다.")
     elif intake_summary["review_count"]:
-        st.warning(f"사람 확인이 필요한 intake 항목이 {intake_summary['review_count']}개 있습니다.")
+        st.warning(f"실행 전에 꼭 확인해야 하는 intake 항목이 {intake_summary['review_count']}개 있습니다.")
+    elif intake_summary["advisory_count"]:
+        st.info(f"치명적이지 않은 intake 주의 항목이 {intake_summary['advisory_count']}개 있습니다. 실행은 가능하며 분석 화면에서 다시 설명됩니다.")
     else:
         st.success("현재 업로드 기준으로 onboarding-ready 상태입니다.")
     if intake_result.get("analysis_summary_message"):

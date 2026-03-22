@@ -8,7 +8,7 @@ from datetime import datetime
 from pathlib import Path
 
 from common.run_storage.runs import save_pipeline_run_to_supabase
-from modules.intake import inspect_monthly_raw
+from modules.intake import inspect_monthly_raw, load_intake_result_snapshot
 from modules.validation.workflow.execution_registry import (
     get_execution_mode_label,
     get_execution_mode_modules,
@@ -139,10 +139,16 @@ def get_monthly_raw_status() -> dict:
 
 def _build_intake_signature(execution_mode: str, uploaded: dict) -> str:
     parts = [get_active_company_key(), execution_mode]
+    source_targets = get_source_target_map()
     for key in sorted(uploaded):
         value = uploaded.get(key)
         if value is None:
-            parts.append(f"{key}:none")
+            target_path = Path(source_targets[key][0])
+            if target_path.exists():
+                stat = target_path.stat()
+                parts.append(f"{key}:file:{target_path.name}:{stat.st_mtime_ns}:{stat.st_size}")
+            else:
+                parts.append(f"{key}:none")
             continue
         parts.append(
             f"{key}:{value.get('name','')}:{value.get('row_count','')}:{len(value.get('columns', []))}"
@@ -151,6 +157,7 @@ def _build_intake_signature(execution_mode: str, uploaded: dict) -> str:
 
 
 def run_intake_inspection(execution_mode: str, uploaded: dict) -> dict:
+    signature = _build_intake_signature(execution_mode, uploaded)
     context = build_execution_context(
         project_root=get_project_root(),
         company_key=get_active_company_key(),
@@ -161,6 +168,7 @@ def run_intake_inspection(execution_mode: str, uploaded: dict) -> dict:
         context=context,
         execution_mode=execution_mode,
         uploaded=uploaded,
+        cache_signature=signature,
     ).to_dict()
 
 
@@ -170,6 +178,12 @@ def ensure_intake_result(execution_mode: str, uploaded: dict) -> dict | None:
     cached_result = st.session_state.get("intake_result")
     if cached_result is not None and cached_signature == signature:
         return cached_result
+    if not any(value is not None for value in uploaded.values()):
+        snapshot = load_intake_result_snapshot(get_project_root(), get_active_company_key())
+        if snapshot is not None and snapshot.get("cache_signature") == signature:
+            st.session_state.intake_signature = signature
+            st.session_state.intake_result = snapshot
+            return snapshot
     result = run_intake_inspection(execution_mode, uploaded)
     st.session_state.intake_signature = signature
     st.session_state.intake_result = result
@@ -189,12 +203,20 @@ def summarize_intake_result(intake_result: dict | None) -> dict:
             "analysis_month_count": 0,
         }
     packages = intake_result.get("packages", [])
+    findings = intake_result.get("findings", [])
+    suggestions = intake_result.get("suggestions", [])
     return {
         "status": intake_result.get("status", "unknown"),
         "ready_for_adapter": bool(intake_result.get("ready_for_adapter")),
         "package_count": len(packages),
         "blocked_count": sum(1 for package in packages if package.get("status") == "blocked"),
         "review_count": sum(1 for package in packages if package.get("status") == "needs_review"),
+        "advisory_count": sum(
+            1
+            for finding in findings
+            if finding.get("issue_code") == "candidate_review_recommended"
+        ),
+        "suggestion_count": len(suggestions),
         "fix_count": len(intake_result.get("fixes", [])),
         "timing_alert_count": len(intake_result.get("timing_alerts", [])),
         "analysis_month_count": int(intake_result.get("analysis_month_count") or 0),

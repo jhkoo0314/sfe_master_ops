@@ -100,6 +100,14 @@ def save_intake_result_snapshot(project_root: str | Path, result: IntakeResult) 
     return latest_path, history_path
 
 
+def load_intake_result_snapshot(project_root: str | Path, company_key: str) -> dict[str, Any] | None:
+    onboarding_root = Path(project_root) / "data" / "company_source" / company_key / "_onboarding"
+    latest_path = onboarding_root / "intake_result.latest.json"
+    if not latest_path.exists():
+        return None
+    return json.loads(latest_path.read_text(encoding="utf-8"))
+
+
 def update_onboarding_registry_from_result(project_root: str | Path, result: IntakeResult) -> Path:
     payload = load_company_onboarding_registry(project_root, result.company_key)
     source_mappings = payload.setdefault("source_mappings", {})

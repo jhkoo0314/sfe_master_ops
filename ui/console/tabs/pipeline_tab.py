@@ -63,7 +63,9 @@ def render_pipeline_tab() -> None:
     if intake_summary["blocked_count"]:
         st.error(f"필수 입력 부족으로 막힌 intake 항목이 {intake_summary['blocked_count']}개 있습니다.")
     elif intake_summary["review_count"]:
-        st.warning(f"사람 확인이 필요한 intake 항목이 {intake_summary['review_count']}개 있습니다. 필요한 경우 업로드 탭의 Intake 제안을 먼저 확인하세요.")
+        st.warning(f"실행 전에 꼭 확인해야 하는 intake 항목이 {intake_summary['review_count']}개 있습니다. 필요한 경우 업로드 탭의 Intake 제안을 먼저 확인하세요.")
+    elif intake_summary["advisory_count"]:
+        st.info(f"치명적이지 않은 intake 주의 항목이 {intake_summary['advisory_count']}개 있습니다. 실행은 가능하며, 분석 탭에서 문제 지점을 다시 설명합니다.")
     else:
         st.success("현재 intake 기준으로 Adapter 전달 준비가 완료되었습니다.")
     if intake_result.get("analysis_summary_message"):
