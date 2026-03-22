@@ -1,14 +1,14 @@
 """
-Validation Layer (OPS) 파이프라인 오케스트레이터
+Validation asset orchestrator for Sales Data OS.
 
-각 모듈의 evaluate 함수를 순서대로 호출하여
-전체 파이프라인의 흐름을 제어한다.
+This module handles only Validation Layer (OPS) result-asset evaluation.
+It does not prepare raw files, switch staging roots, or run adapter scripts.
 
-설계 원칙:
-- 각 모듈의 평가 로직은 각자의 router에서 독립적으로 구현
-- 오케스트레이터는 '호출'과 '결과 취합'만 담당
-- FAIL 발생 시 즉시 중단 (stop_on_fail=True 기본값)
-- WARN은 계속 진행하되 권고사항 기록
+Design principles:
+- Each module keeps its own evaluation logic in the router layer.
+- The orchestrator only controls evaluation order and result aggregation.
+- FAIL can stop the validation flow immediately.
+- WARN records guidance but can continue the handoff decision flow.
 """
 
 import time
@@ -36,7 +36,12 @@ def get_pipeline_status() -> PipelineStatusSummary:
     return _pipeline_registry
 
 
-def run_pipeline(
+def get_validation_pipeline_status() -> PipelineStatusSummary:
+    """Explicit alias for the Result Asset validation flow status."""
+    return get_pipeline_status()
+
+
+def run_validation_pipeline(
     payload: PipelineRunPayload,
     crm_asset=None,
     prescription_asset=None,
@@ -44,8 +49,9 @@ def run_pipeline(
     territory_asset=None,
 ) -> PipelineRunResult:
     """
-    OPS 전체 파이프라인 실행.
-    각 단계를 순서대로 평가하고 결과를 취합한다.
+    Run the Result Asset validation flow only.
+
+    This is not the runtime execution path used by the console uploader.
     """
     run_id = payload.run_id or str(uuid.uuid4())
     started_at = datetime.now()
@@ -166,6 +172,27 @@ def run_pipeline(
 
     return _finalize(run_id, payload.scenario, steps, overall,
                      recommended_actions, final_eligible, started_at)
+
+
+def run_pipeline(
+    payload: PipelineRunPayload,
+    crm_asset=None,
+    prescription_asset=None,
+    sandbox_asset=None,
+    territory_asset=None,
+) -> PipelineRunResult:
+    """
+    Backward-compatible wrapper.
+
+    Prefer ``run_validation_pipeline`` for new code so the role is explicit.
+    """
+    return run_validation_pipeline(
+        payload=payload,
+        crm_asset=crm_asset,
+        prescription_asset=prescription_asset,
+        sandbox_asset=sandbox_asset,
+        territory_asset=territory_asset,
+    )
 
 
 def _finalize(

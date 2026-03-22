@@ -10,7 +10,7 @@ from ui.console.runner import (
     summarize_intake_result,
 )
 from ui.console.state import save_monthly_upload_batch
-from ops_core.workflow.monthly_source_merge import get_monthly_raw_root
+from modules.intake import get_monthly_raw_root
 
 
 def render_upload_tab() -> None:

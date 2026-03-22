@@ -20,6 +20,8 @@ def get_active_company_name(default: str | None = None) -> str:
 def get_company_root(root: Path, bucket: str, company_key: str | None = None) -> Path:
     active_key = company_key or get_active_company_key()
     if bucket == "company_source":
+        # The intake runtime can temporarily override the source root so
+        # adapters read staged inputs instead of original raw files.
         override_root = os.environ.get("OPS_COMPANY_SOURCE_ROOT", "").strip()
         if override_root:
             return Path(override_root)

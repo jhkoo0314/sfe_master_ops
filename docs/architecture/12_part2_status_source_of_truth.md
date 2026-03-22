@@ -70,6 +70,17 @@ Part2의 완료/진행/대기 상태는 이 문서를 기준으로 본다.
   - 전체 상태 `WARN`, 전체 점수 `94.7`
   - CRM `PASS` / Prescription `PASS` / Sandbox `PASS` / Territory `WARN` / RADAR `APPROVED` / Builder `PASS`
   - Builder HTML 6종 생성 확인
+- `ops_core` 구조 리팩토링 Step 1~7 완료 (`2026-03-22`)
+  - `execution_service.py` 내부 책임 분해 완료
+  - monthly merge 본체를 `modules/intake/merge.py`로 이동
+  - staged source runtime helper를 `modules/intake/runtime.py`로 이동
+  - script import/cache reset을 `common/runtime_helpers/import_cache.py`로 이동
+  - `orchestrator.py`와 `execution_service.py` 경계를 평가/실행 기준으로 정리
+  - 문서/주석/README에서 `ops_core`를 `Validation / Orchestration Layer 구현 패키지`로 재정의
+  - 위치 이동 검토 결과: `modules/validation` 방향은 맞지만 `지금 즉시 hard rename`은 보류
+  - 상세 문서:
+    - `docs/architecture/21_ops_core_refactor_plan.md`
+    - `docs/architecture/22_ops_core_location_migration_review.md`
 
 ## 진행중(In Progress)
 
@@ -85,12 +96,18 @@ Part2의 완료/진행/대기 상태는 이 문서를 기준으로 본다.
   - [x] 공통 생성기 구조 설계 문서 초안 작성
   - [ ] 설정 기반 공통 generation engine 구현 (후순위, 현재 필수 구현 아님)
   - [ ] 회사별 generator thin wrapper 전환 (후순위, 현재 필수 구현 아님)
+- `ops_core -> modules/validation` 점진 전환 준비
+  - [x] `ops_core` 책임 분리 및 의미 재정의
+  - [x] 위치 이동 검토 문서화
+  - [ ] `modules/validation` bridge 패키지 추가
+  - [ ] 새 import를 `modules.validation...` 기준으로 점진 전환
 
 ## 대기(Next)
 
 - Part2 다음 우선순위 모듈 착수 준비
 - run 중심 저장 구조 및 report context 반영 설계의 구현 전환
 - raw generator 공통화 구현 착수 (후순위, 필요 시)
+- `modules/validation` bridge 추가 후 실제 import 전환 검토
 
 ## 운영 고정 원칙
 

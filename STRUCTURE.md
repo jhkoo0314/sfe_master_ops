@@ -99,23 +99,30 @@ sfe_master_ops/
 
 ### `ops_core/`
 
-OPS 판단과 파이프라인 실행을 담당합니다.
+현재 `Validation / Orchestration Layer (OPS)` 구현 패키지입니다.
 
 여기서 OPS는:
 - 직접 계산하는 분석 엔진이 아니라
-- `중앙 관제 게이트` 역할입니다
+- `검증/전달 판단 게이트` 역할입니다
 
 즉 하는 일은 주로 이것입니다.
 
 - 매핑 상태 확인
 - 품질 상태 확인
 - 다음 단계 전달 판단
-- 실행 흐름 관리
+- Result Asset 평가 흐름 관리
+- 실제 실행 흐름 조정
 
 주요 위치:
 - `ops_core/main.py`
 - `ops_core/api/`
 - `ops_core/workflow/`
+
+현재 메모:
+- `ops_core/api/`는 Result Asset 평가 API에 가깝습니다.
+- `ops_core/workflow/orchestrator.py`는 평가 오케스트레이션입니다.
+- `ops_core/workflow/execution_service.py`는 실제 실행 조정기입니다.
+- raw 정리, staging 준비, monthly merge 본체는 점진적으로 `modules/intake` 쪽으로 이동 중입니다.
 
 ### `result_assets/`
 

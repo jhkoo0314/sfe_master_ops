@@ -14,7 +14,7 @@ import uuid
 from fastapi import APIRouter, HTTPException
 from pydantic import BaseModel
 
-from ops_core.workflow.orchestrator import run_pipeline, get_pipeline_status
+from ops_core.workflow.orchestrator import get_pipeline_status, run_validation_pipeline
 from ops_core.workflow.schemas import PipelineRunPayload, PipelineRunResult, PipelineStatusSummary
 
 router = APIRouter(prefix="/ops/pipeline", tags=["OPS - Pipeline"])
@@ -69,8 +69,8 @@ async def run_full_pipeline(request: PipelineRunRequest):
         )
 
         # Result Asset 역직렬화 (실제로는 여기서 Pydantic 모델로 파싱)
-        # 현재는 orchestrator에 dict 전달 → 각 평가 함수가 처리
-        result = run_pipeline(
+        # 현재는 validation orchestrator에 dict 전달 → 각 평가 함수가 처리
+        result = run_validation_pipeline(
             payload=payload,
             crm_asset=request.crm_asset,
             prescription_asset=request.prescription_asset,

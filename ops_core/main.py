@@ -2,7 +2,8 @@
 Validation Layer (OPS) FastAPI 앱 진입점
 
 Sales Data OS에서 OPS는 Validation / Orchestration Layer를 담당한다.
-모든 모듈의 Result Asset 평가, 연결 판단, 상태 조회를 담당한다.
+이 패키지는 플랫폼 전체 코어가 아니라 현재 Validation / Orchestration 구현 경계다.
+주요 역할은 Result Asset 평가, 연결 판단, 상태 조회다.
 
 실행:
   uv run uvicorn ops_core.main:app --reload --port 8000

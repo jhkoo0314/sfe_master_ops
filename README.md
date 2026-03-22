@@ -100,13 +100,14 @@ Part2 문서 운영 기준:
 ## 핵심 원칙
 
 ```text
-원천데이터 -> Adapter -> Module -> Result Asset -> OPS -> Builder
+원천데이터 -> Adapter -> Module -> Result Asset -> Validation Layer (OPS) -> Intelligence (RADAR) -> Builder
 ```
 
 - OPS는 raw를 직접 읽지 않습니다.
 - Adapter가 먼저 회사별 차이를 정리합니다.
 - 모듈은 자기 Result Asset과 Builder용 payload를 만듭니다.
 - OPS는 시스템 전체가 아니라 `Validation / Orchestration Layer` 역할에 가깝습니다.
+- RADAR는 Validation 승인 결과를 받아 해석/우선순위 판단을 돕는 Intelligence 단계입니다.
 - Builder는 계산보다는 `payload를 읽어 템플릿에 주입하는 단계`입니다.
 
 ## 현재 동작 범위

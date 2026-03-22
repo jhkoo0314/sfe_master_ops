@@ -8,7 +8,7 @@ from pathlib import Path
 
 import pandas as pd
 import streamlit as st
-from ops_core.workflow.monthly_source_merge import MONTHLY_FILE_NAMES
+from modules.intake import MONTHLY_FILE_NAMES
 
 UPLOADED_DATA_KEYS = (
     "crm_activity",

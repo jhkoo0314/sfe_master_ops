@@ -8,7 +8,7 @@ from datetime import datetime
 from pathlib import Path
 
 from common.run_storage.runs import save_pipeline_run_to_supabase
-from ops_core.workflow.monthly_source_merge import inspect_monthly_raw
+from modules.intake import inspect_monthly_raw
 from ui.console.analysis_explainer import explain_module_result
 from ops_core.workflow.execution_registry import (
     get_execution_mode_label,
@@ -259,6 +259,8 @@ def run_actual_pipeline(execution_mode: str, uploaded: dict) -> dict:
         company_name=get_active_company_name(),
         source_targets=get_source_target_map(),
     )
+    # Keep the long-lived public entrypoint here so existing console tests
+    # and callers can still intercept the runtime execution boundary.
     return run_execution_mode(
         context=context,
         execution_mode=execution_mode,

@@ -12,12 +12,12 @@
 
 ## 핵심 흐름
 
-`원천데이터 -> Adapter -> Module/Core Engine -> Result Asset -> Validation Layer (OPS) -> Builder`
+`원천데이터 -> Adapter -> Module/Core Engine -> Result Asset -> Validation Layer (OPS) -> Intelligence (RADAR) -> Builder`
 
 ## 책임 분리
 
 - KPI 계산: `modules/kpi/*` (단일 소스)
-- Validation/Orchestration: `ops_core/*`
+- Validation/Orchestration 구현 패키지: `ops_core/*`
 - Builder: render-only (재계산 금지)
 
 ## 모듈 역할

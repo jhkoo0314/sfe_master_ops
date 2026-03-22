@@ -9,7 +9,7 @@
 
 - `adapters/`: 회사 raw를 공통 구조로 변환
 - `modules/`: 모듈별 계산과 표준화
-- `ops_core/`: OPS 중앙 판단과 실행 흐름
+- `ops_core/`: Validation / Orchestration Layer 구현 패키지
 - `result_assets/`: 모듈 간 교환 표준
 - `ui/`: 운영 콘솔
 - `templates/`: HTML 템플릿
@@ -39,4 +39,4 @@
 
 ## 결론
 
-저장소는 adapter, module, ops_core, builder, ui, data가 역할별로 분리된 구조이며, 실행과 산출물 저장은 `company_key` 기준으로 관리된다.
+저장소는 adapter, module, validation/orchestration, builder, ui, data가 역할별로 분리된 구조이며, 실행과 산출물 저장은 `company_key` 기준으로 관리된다.

@@ -8,10 +8,14 @@ ROOT = Path(__file__).resolve().parents[1]
 if str(ROOT) not in sys.path:
     sys.path.insert(0, str(ROOT))
 
+from common.company_profile import get_company_ops_profile
 from common.company_runtime import get_active_company_key, get_active_company_name, get_company_root
 from common.run_storage.runs import save_pipeline_run_to_supabase
 from ops_core.workflow.execution_registry import get_execution_mode_modules
-from ops_core.workflow.execution_service import build_execution_context, run_execution_mode
+from ops_core.workflow.execution_service import (
+    build_execution_context,
+    run_execution_mode,
+)
 
 
 def main() -> None:
@@ -25,6 +29,7 @@ def main() -> None:
         company_key=company_key,
         company_name=company_name,
     )
+    # This public entrypoint forwards to the runtime execution service.
     result = run_execution_mode(
         context=context,
         execution_mode="integrated_full",

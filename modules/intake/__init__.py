@@ -7,6 +7,21 @@ from .models import (
     IntakeSuggestion,
     OnboardingPackage,
 )
+from .merge import (
+    MONTHLY_FILE_NAMES,
+    MERGEABLE_SOURCE_KEYS,
+    MonthlyMergeResult,
+    get_monthly_raw_root,
+    inspect_monthly_raw,
+    merge_monthly_raw_sources,
+)
+from .runtime import (
+    INTAKE_SOURCE_ROOT_ENV,
+    activate_intake_source_root,
+    clear_intake_source_root,
+    get_intake_staged_source_root,
+    prepare_intake_staged_sources,
+)
 from .rules import IntakeRule, get_intake_rule, list_intake_rules
 from .scenarios import IntakeScenario, get_intake_scenario, resolve_intake_scenario
 from .service import CommonIntakeEngine, build_intake_result
@@ -31,13 +46,18 @@ __all__ = [
     "CommonIntakeEngine",
     "IntakeFinding",
     "IntakeFix",
+    "INTAKE_SOURCE_ROOT_ENV",
+    "MERGEABLE_SOURCE_KEYS",
+    "MONTHLY_FILE_NAMES",
     "IntakeRequest",
     "IntakeResult",
     "IntakeSourceInput",
     "IntakeSuggestion",
     "IntakeRule",
     "IntakeScenario",
+    "MonthlyMergeResult",
     "OnboardingPackage",
+    "activate_intake_source_root",
     "build_intake_result",
     "build_mapping_review_suggestion",
     "build_missing_required_field_suggestion",
@@ -45,11 +65,17 @@ __all__ = [
     "build_optional_source_missing_suggestion",
     "build_saved_mapping_fallback_suggestion",
     "ensure_staged_source_copy",
+    "clear_intake_source_root",
     "get_intake_rule",
     "get_intake_scenario",
+    "get_intake_staged_source_root",
     "get_intake_source_staging_dir",
     "get_intake_staging_root",
+    "get_monthly_raw_root",
+    "inspect_monthly_raw",
     "list_intake_rules",
+    "merge_monthly_raw_sources",
+    "prepare_intake_staged_sources",
     "resolve_intake_scenario",
     "save_intake_result_snapshot",
     "save_onboarding_package",

@@ -48,6 +48,23 @@ class ExecutionStepResult:
 
 
 @dataclass
+class ExecutionPreparationResult:
+    monthly_merge_result: Any | None = None
+    staged_paths: list[str] = field(default_factory=list)
+    intake_result: Any | None = None
+    staged_source_root: str | None = None
+    recommended_actions: list[str] = field(default_factory=list)
+
+
+@dataclass
+class ExecutionLoopResult:
+    steps: list[ExecutionStepResult] = field(default_factory=list)
+    final_eligible_modules: list[str] = field(default_factory=list)
+    summary_by_module: dict[str, dict[str, Any]] = field(default_factory=dict)
+    recommended_actions: list[str] = field(default_factory=list)
+
+
+@dataclass
 class ExecutionRunResult:
     run_id: str
     execution_mode: str

@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-import sys
 from functools import lru_cache
 
 from ops_core.workflow.execution_models import ExecutionModeDefinition, ExecutionStepDefinition
@@ -318,25 +317,3 @@ def get_mode_pipeline_steps(mode: str) -> list[ExecutionStepDefinition]:
 
 def get_summary_relative_path(module: str) -> str | None:
     return _SUMMARY_RELATIVE_PATHS.get(module)
-
-
-def clear_execution_step_registry_cache() -> None:
-    _get_step_registry.cache_clear()
-
-
-def clear_execution_runtime_modules() -> None:
-    clear_execution_step_registry_cache()
-    module_names = [
-        "scripts.normalize_crm_source",
-        "scripts.normalize_prescription_source",
-        "scripts.normalize_sandbox_source",
-        "scripts.normalize_territory_source",
-        "scripts.validate_builder_with_ops",
-        "scripts.validate_crm_with_ops",
-        "scripts.validate_prescription_with_ops",
-        "scripts.validate_radar_with_ops",
-        "scripts.validate_sandbox_with_ops",
-        "scripts.validate_territory_with_ops",
-    ]
-    for name in module_names:
-        sys.modules.pop(name, None)
