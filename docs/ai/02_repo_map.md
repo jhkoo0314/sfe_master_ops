@@ -9,7 +9,8 @@
 
 - `adapters/`: 회사 raw를 공통 구조로 변환
 - `modules/`: 모듈별 계산과 표준화
-- `ops_core/`: Validation / Orchestration Layer 구현 패키지
+- `modules/validation/`: Validation / Orchestration 기본 패키지
+- `ops_core/`: 호환 유지용 Validation / Orchestration 패키지
 - `result_assets/`: 모듈 간 교환 표준
 - `ui/`: 운영 콘솔
 - `templates/`: HTML 템플릿
@@ -21,7 +22,8 @@
 ## 자주 확인할 위치
 
 - `ui/ops_console.py`
-- `ops_core/main.py`
+- `modules/validation/main.py`
+- `ops_core/main.py` (`호환 경로`)
 - `common/company_profile.py`
 - `scripts/validate_full_pipeline.py`
 - 각 모듈의 builder payload 관련 파일

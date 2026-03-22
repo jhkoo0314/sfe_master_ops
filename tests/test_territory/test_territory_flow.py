@@ -14,7 +14,7 @@ from modules.sandbox.schemas import HospitalAnalysisRecord
 from modules.territory.schemas import SIDO_CENTROIDS
 from modules.territory.templates import TerritoryMapContract
 from modules.territory.service import build_territory_result_asset
-from ops_core.api.territory_router import evaluate_territory_asset
+from modules.validation.api.territory_router import evaluate_territory_asset
 from common.types import QualityGateStatus
 from common.exceptions import MissingResultAssetError
 from tests.fixtures.territory_fixtures import (

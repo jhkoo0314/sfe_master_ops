@@ -139,7 +139,7 @@ System prompt 핵심 원칙:
 
 ## 12. 현재 코드와 연결 포인트
 - Streamlit 탭 구성: `ui/ops_console.py`, `ui/console_tabs.py`
-- 실행 결과(run_id/steps): `ops_core/workflow/execution_service.py`
-- 모드 정의: `ops_core/workflow/execution_registry.py`
+- 실행 결과(run_id/steps): `modules/validation/workflow/execution_service.py`
+- 모드 정의: `modules/validation/workflow/execution_registry.py`
 - Builder 결과 생성: `scripts/validate_builder_with_ops.py`
 - 최종 Builder 스키마: `modules/builder/schemas.py`

@@ -170,8 +170,8 @@ Builder는 render/composition 레이어로서 다음을 생성한다.
 - 4단계: 안정화 후 기존 `module 단독 조회`는 read-only로 축소
 
 ## 10. 현재 코드와 연결 포인트
-- 실행 run_id 생성: `ops_core/workflow/execution_service.py`
-- 실행 모드/step 순서: `ops_core/workflow/execution_registry.py`
+- 실행 run_id 생성: `modules/validation/workflow/execution_service.py`
+- 실행 모드/step 순서: `modules/validation/workflow/execution_registry.py`
 - Builder 출력 생성: `scripts/validate_builder_with_ops.py`
 - Builder 결과 스키마: `modules/builder/schemas.py`
 - 현재 회사별 저장 루트: `data/ops_validation/{company_key}/`

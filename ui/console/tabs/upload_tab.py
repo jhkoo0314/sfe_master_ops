@@ -48,6 +48,7 @@ def render_upload_tab() -> None:
           <div class="stat-chip"><div class="label">Ready For Adapter</div><div class="value">{'YES' if intake_summary['ready_for_adapter'] else 'NO'}</div></div>
           <div class="stat-chip"><div class="label">Auto Fixes</div><div class="value">{intake_summary['fix_count']}</div></div>
           <div class="stat-chip"><div class="label">Needs Review</div><div class="value">{intake_summary['review_count']}</div></div>
+          <div class="stat-chip"><div class="label">Timing Alerts</div><div class="value">{intake_summary['timing_alert_count']}</div></div>
         </div>
         """,
         unsafe_allow_html=True,
@@ -58,6 +59,13 @@ def render_upload_tab() -> None:
         st.warning(f"사람 확인이 필요한 intake 항목이 {intake_summary['review_count']}개 있습니다.")
     else:
         st.success("현재 업로드 기준으로 onboarding-ready 상태입니다.")
+    if intake_result.get("analysis_summary_message"):
+        if intake_summary["timing_alert_count"]:
+            st.warning(intake_result["analysis_summary_message"])
+        else:
+            st.info(intake_result["analysis_summary_message"])
+    for alert in intake_result.get("timing_alerts", []):
+        st.caption(f"- {alert.get('message')}")
 
     package_rows = []
     for package in intake_result.get("packages", []):
@@ -70,6 +78,12 @@ def render_upload_tab() -> None:
                 "자동수정": len(package.get("fixes", [])),
                 "제안": len(package.get("suggestions", [])),
                 "Adapter 전달": "가능" if package.get("ready_for_adapter") else "보류",
+                "기간": (
+                    f"{package['period_coverage']['start_month']} ~ {package['period_coverage']['end_month']} "
+                    f"({package['period_coverage']['month_count']}개월)"
+                    if package.get("period_coverage")
+                    else "-"
+                ),
                 "Staging 경로": package.get("staged_path"),
             }
         )

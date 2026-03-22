@@ -17,7 +17,8 @@
 ## 책임 분리
 
 - KPI 계산: `modules/kpi/*` (단일 소스)
-- Validation/Orchestration 구현 패키지: `ops_core/*`
+- Validation/Orchestration 기본 패키지: `modules/validation/*`
+- 호환용 패키지: `ops_core/*`
 - Builder: render-only (재계산 금지)
 
 ## 모듈 역할
@@ -33,6 +34,8 @@
 - KPI 계산은 `modules/kpi/*`에서 수행
 - Sandbox 기반 실행모드에서는 RADAR 단계가 파이프라인에 자동 포함
 - `CRM -> PDF` 모드는 Sandbox 단계가 없어 RADAR 자동 실행 대상 아님
+- Validation API 기본 진입점은 `modules.validation.main:app`
+- `ops_core.main:app`는 호환용 주소로 함께 유지
 
 ## 운영 원칙
 

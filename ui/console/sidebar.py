@@ -5,7 +5,7 @@ from common.company_registry import (
     list_registered_companies,
     register_company,
 )
-from ops_core.workflow.execution_registry import (
+from modules.validation.workflow.execution_registry import (
     get_execution_mode_description,
     get_execution_mode_label,
     get_execution_mode_modules,

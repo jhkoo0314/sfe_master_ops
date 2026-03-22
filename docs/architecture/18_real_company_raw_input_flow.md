@@ -147,7 +147,7 @@ data/company_source/monthly_merge_pharma/monthly_raw/202502/
 
 관련 위치:
 
-- `ops_core/workflow/monthly_source_merge.py`
+- `modules/intake/merge.py`
 
 ### 5.3 실제 동작 방식
 
@@ -171,8 +171,8 @@ data/company_source/monthly_merge_pharma/monthly_raw/202502/
 
 관련 위치:
 
-- `ops_core/workflow/execution_service.py`
-- `ops_core/workflow/execution_registry.py`
+- `modules/validation/workflow/execution_service.py`
+- `modules/validation/workflow/execution_registry.py`
 - `ui/console/tabs/pipeline_tab.py`
 
 실행 순서는 아래와 같다.
@@ -241,7 +241,7 @@ raw를 표준 스키마로 바꾼다.
 
 관련 위치:
 
-- `ops_core/api/*_router.py`
+- `modules/validation/api/*_router.py`
 - `scripts/validate_*_with_ops.py`
 
 OPS가 하는 일:

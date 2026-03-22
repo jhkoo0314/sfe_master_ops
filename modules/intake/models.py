@@ -5,6 +5,7 @@ from typing import Any, Literal
 
 IntakeLevel = Literal["info", "warn", "error"]
 IntakeStatus = Literal["ready", "ready_with_fixes", "needs_review", "blocked"]
+TimingDirection = Literal["ahead", "behind"]
 
 
 @dataclass(frozen=True)
@@ -43,6 +44,32 @@ class IntakeSuggestion:
 
 
 @dataclass(frozen=True)
+class IntakePeriodCoverage:
+    source_key: str
+    period_column: str
+    start_month: str
+    end_month: str
+    month_count: int
+    distinct_months: list[str] = field(default_factory=list)
+
+    def to_dict(self) -> dict[str, Any]:
+        return asdict(self)
+
+
+@dataclass(frozen=True)
+class IntakeTimingAlert:
+    level: IntakeLevel
+    source_key: str
+    message: str
+    direction: TimingDirection
+    month_gap: int
+    reference_end_month: str
+
+    def to_dict(self) -> dict[str, Any]:
+        return asdict(self)
+
+
+@dataclass(frozen=True)
 class IntakeSourceInput:
     source_key: str
     original_path: str
@@ -73,6 +100,7 @@ class OnboardingPackage:
     fixes: list[IntakeFix] = field(default_factory=list)
     suggestions: list[IntakeSuggestion] = field(default_factory=list)
     resolved_mapping: dict[str, str] = field(default_factory=dict)
+    period_coverage: IntakePeriodCoverage | None = None
     ready_for_adapter: bool = False
 
     def to_dict(self) -> dict[str, Any]:
@@ -107,6 +135,14 @@ class IntakeResult:
     findings: list[IntakeFinding] = field(default_factory=list)
     fixes: list[IntakeFix] = field(default_factory=list)
     suggestions: list[IntakeSuggestion] = field(default_factory=list)
+    period_coverages: list[IntakePeriodCoverage] = field(default_factory=list)
+    timing_alerts: list[IntakeTimingAlert] = field(default_factory=list)
+    analysis_basis_sources: list[str] = field(default_factory=list)
+    analysis_start_month: str | None = None
+    analysis_end_month: str | None = None
+    analysis_month_count: int | None = None
+    analysis_summary_message: str | None = None
+    proceed_confirmation_message: str | None = None
     packages: list[OnboardingPackage] = field(default_factory=list)
 
     @property
@@ -118,6 +154,8 @@ class IntakeResult:
         payload["findings"] = [item.to_dict() for item in self.findings]
         payload["fixes"] = [item.to_dict() for item in self.fixes]
         payload["suggestions"] = [item.to_dict() for item in self.suggestions]
+        payload["period_coverages"] = [item.to_dict() for item in self.period_coverages]
+        payload["timing_alerts"] = [item.to_dict() for item in self.timing_alerts]
         payload["packages"] = [item.to_dict() for item in self.packages]
         payload["ready_for_adapter"] = self.ready_for_adapter
         return payload

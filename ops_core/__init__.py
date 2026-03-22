@@ -1,12 +1,12 @@
 """
-Sales Data OS Validation / Orchestration implementation package.
+Legacy-compatible Validation / Orchestration package.
 
-`ops_core` is not the top-level system engine.
-It contains the current package boundary for:
-- Validation Layer (OPS) API endpoints
-- Result Asset evaluation orchestration
-- runtime execution coordination
+`ops_core` is not the top-level system engine and is no longer the
+preferred import root for new code.
 
-Long term, this responsibility is expected to converge toward a
-`modules/validation`-style package after safe refactoring.
+Preferred path:
+- `modules.validation`
+
+Compatibility path kept during migration:
+- `ops_core`
 """

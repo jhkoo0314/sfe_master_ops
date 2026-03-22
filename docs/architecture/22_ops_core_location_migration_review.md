@@ -176,6 +176,10 @@ Step 7의 최종 결론은 아래다.
 
 ### Phase A. bridge 패키지 추가
 
+진행 상태:
+
+- `2026-03-22 완료`
+
 새 패키지를 먼저 만든다.
 
 ```text
@@ -192,7 +196,20 @@ modules/
 
 초기에는 `ops_core`를 그대로 re-export 해도 된다.
 
+현재 반영 상태:
+
+- `modules/validation/__init__.py`
+- `modules/validation/main.py`
+- `modules/validation/api/*`
+- `modules/validation/workflow/*`
+
+위 bridge 패키지가 추가되어, 새 코드가 `modules.validation...` 경로를 먼저 사용할 준비가 된 상태다.
+
 ### Phase B. 새 import를 점진 전환
+
+진행 상태:
+
+- `2026-03-22 시작`
 
 바깥 코드에서 새로 손대는 파일부터:
 
@@ -204,7 +221,25 @@ modules/
 
 이 단계에서는 기존 `ops_core`도 유지한다.
 
+현재 반영 상태:
+
+- `modules/intake/service.py`
+- `modules/intake/scenarios.py`
+- `ui/console/runner.py`
+- `ui/console/sidebar.py`
+- `ui/console/artifacts.py`
+- `ui/console/tabs/pipeline_tab.py`
+- `ui/console/tabs/artifacts_tab.py`
+- `scripts/validate_full_pipeline.py`
+- `common/runtime_helpers/import_cache.py`
+
+위 파일들은 이미 `modules.validation...` bridge import를 사용한다.
+
 ### Phase C. 실행 진입점 이중 지원
+
+진행 상태:
+
+- `2026-03-22 완료`
 
 운영 명령도 바로 바꾸지 말고 잠시 둘 다 허용한다.
 
@@ -215,7 +250,17 @@ modules/
 
 둘 다 잠시 동작하게 만든다.
 
+현재 반영 상태:
+
+- 문서 기준 권장 진입점은 `modules.validation.main:app`
+- 호환용 기존 진입점 `ops_core.main:app`도 계속 유지
+- bridge 테스트로 두 진입점이 같은 FastAPI app을 가리키는 것까지 확인
+
 ### Phase D. 마지막 정리
+
+진행 상태:
+
+- `2026-03-22 완료`
 
 실제 참조가 충분히 줄어든 뒤에만:
 
@@ -225,6 +270,13 @@ modules/
 
 판단한다.
 
+현재 최종 판단:
+
+- 문서 기본 진입점은 `modules.validation.main:app`으로 올린다.
+- 운영 스크립트 기본 import도 `modules.validation...` 기준으로 전환한다.
+- `ops_core`는 지금 제거하지 않고 thin compatibility package로 유지한다.
+- 즉 현재 단계의 마감 상태는 `modules.validation 기본 / ops_core 호환 유지`다.
+
 ---
 
 ## 7. 추천 판단
@@ -233,9 +285,10 @@ modules/
 다음 실제 작업은 아래가 맞다.
 
 1. 지금은 `Step 7 검토 완료`로 종료한다.
-2. 다음 작업으로 `modules/validation bridge 패키지`를 만든다.
-3. 그 다음에만 import 전환을 시작한다.
+2. `modules/validation bridge 패키지`를 만든다.
+3. 운영 코드와 실행 진입점을 `modules.validation` 기준으로 점진 전환한다.
+4. `ops_core`는 당분간 thin compatibility package로 유지한다.
 
 한 줄 요약:
 
-**지금 `ops_core`는 개념상 `modules/validation`으로 가도 맞지만, 운영 안정성을 생각하면 이번 턴에서 바로 옮기지 말고 bridge를 먼저 만드는 것이 최선이다.**
+**현재 기본 경로는 `modules.validation`로 올렸고, `ops_core`는 운영 안정성을 위해 호환용으로 남겨두는 것이 최선이다.**

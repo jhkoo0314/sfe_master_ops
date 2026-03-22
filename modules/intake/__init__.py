@@ -1,10 +1,12 @@
 from .models import (
     IntakeFinding,
     IntakeFix,
+    IntakePeriodCoverage,
     IntakeRequest,
     IntakeResult,
     IntakeSourceInput,
     IntakeSuggestion,
+    IntakeTimingAlert,
     OnboardingPackage,
 )
 from .merge import (
@@ -46,6 +48,7 @@ __all__ = [
     "CommonIntakeEngine",
     "IntakeFinding",
     "IntakeFix",
+    "IntakePeriodCoverage",
     "INTAKE_SOURCE_ROOT_ENV",
     "MERGEABLE_SOURCE_KEYS",
     "MONTHLY_FILE_NAMES",
@@ -53,6 +56,7 @@ __all__ = [
     "IntakeResult",
     "IntakeSourceInput",
     "IntakeSuggestion",
+    "IntakeTimingAlert",
     "IntakeRule",
     "IntakeScenario",
     "MonthlyMergeResult",

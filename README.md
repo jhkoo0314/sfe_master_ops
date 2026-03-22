@@ -298,8 +298,18 @@ Builder 템플릿:
 API:
 
 ```bash
+uv run uvicorn modules.validation.main:app --reload --host 0.0.0.0 --port 8000
+```
+
+호환용 기존 진입점:
+
+```bash
 uv run uvicorn ops_core.main:app --reload --host 0.0.0.0 --port 8000
 ```
+
+참고:
+- 새 기본 경로는 `modules.validation.main:app`입니다.
+- 기존 `ops_core.main:app`는 호환용으로만 함께 지원합니다.
 
 운영 콘솔:
 

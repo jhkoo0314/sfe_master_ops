@@ -19,7 +19,7 @@ from common.company_profile import get_company_ops_profile
 from common.company_runtime import get_active_company_key, get_active_company_name, get_company_root
 from modules.crm.builder_payload import build_chunked_crm_payload
 from modules.crm.service import build_crm_builder_payload, build_crm_result_asset
-from ops_core.api.crm_router import evaluate_crm_asset
+from modules.validation.api.crm_router import evaluate_crm_asset
 
 COMPANY_KEY = get_active_company_key()
 COMPANY_NAME = get_active_company_name(COMPANY_KEY)

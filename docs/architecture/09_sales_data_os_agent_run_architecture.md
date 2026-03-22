@@ -10,13 +10,13 @@
 ## 1. 저장소 조사 결과 요약 (확인된 사실)
 
 ### 1-1. 핵심 폴더/파일 구조
-- 루트 핵심 폴더: `adapters`, `modules`, `ops_core`, `result_assets`, `scripts`, `ui`, `templates`, `data`, `docs`, `migrations`
+- 루트 핵심 폴더: `adapters`, `modules`, `ops_core(compat)`, `result_assets`, `scripts`, `ui`, `templates`, `data`, `docs`, `migrations`
 - Streamlit 콘솔 진입점: `ui/ops_console.py`
-- 실행 모드/파이프라인: `ops_core/workflow/execution_registry.py`, `ops_core/workflow/execution_service.py`
+- 실행 모드/파이프라인: `modules/validation/workflow/execution_registry.py`, `modules/validation/workflow/execution_service.py`
 - Builder 실행/출력: `scripts/validate_builder_with_ops.py`, `modules/builder/service.py`, `modules/builder/schemas.py`
 - Result Asset 스키마: `result_assets/*_result_asset.py`
 - KPI 단일 계산: `modules/kpi/*_engine.py`
-- OPS 평가 로직: `ops_core/api/*_router.py`
+- OPS 평가 로직: `modules/validation/api/*_router.py`
 - Supabase 스키마: `migrations/001_initial_schema.sql`
 
 ### 1-2. 실행/결과 저장 구조
@@ -215,7 +215,7 @@ Data Layer -> Adapter Layer -> Core Engine -> Result Assets -> OPS Validation ->
 ### 코드 수정 대상
 - `scripts/validate_builder_with_ops.py`
 - `modules/builder/service.py`
-- `ops_core/workflow/execution_service.py`
+- `modules/validation/workflow/execution_service.py`
 - `ui/ops_console.py`
 - `ui/console_tabs.py`
 

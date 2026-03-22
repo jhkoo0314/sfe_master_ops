@@ -9,18 +9,18 @@ from pathlib import Path
 
 from common.run_storage.runs import save_pipeline_run_to_supabase
 from modules.intake import inspect_monthly_raw
-from ui.console.analysis_explainer import explain_module_result
-from ops_core.workflow.execution_registry import (
+from modules.validation.workflow.execution_registry import (
     get_execution_mode_label,
     get_execution_mode_modules,
     get_mode_pipeline_steps as workflow_get_mode_pipeline_steps,
     get_mode_required_uploads,
 )
-from ops_core.workflow.execution_service import (
+from modules.validation.workflow.execution_service import (
     build_execution_context,
     inspect_intake_inputs,
     run_execution_mode,
 )
+from ui.console.analysis_explainer import explain_module_result
 import streamlit as st
 from ui.console.paths import (
     get_active_company_key,
@@ -185,6 +185,8 @@ def summarize_intake_result(intake_result: dict | None) -> dict:
             "blocked_count": 0,
             "review_count": 0,
             "fix_count": 0,
+            "timing_alert_count": 0,
+            "analysis_month_count": 0,
         }
     packages = intake_result.get("packages", [])
     return {
@@ -194,6 +196,8 @@ def summarize_intake_result(intake_result: dict | None) -> dict:
         "blocked_count": sum(1 for package in packages if package.get("status") == "blocked"),
         "review_count": sum(1 for package in packages if package.get("status") == "needs_review"),
         "fix_count": len(intake_result.get("fixes", [])),
+        "timing_alert_count": len(intake_result.get("timing_alerts", [])),
+        "analysis_month_count": int(intake_result.get("analysis_month_count") or 0),
     }
 
 

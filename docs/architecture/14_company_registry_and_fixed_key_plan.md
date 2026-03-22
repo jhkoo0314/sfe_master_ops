@@ -206,7 +206,7 @@
 - `ui/console_sidebar.py`
 - `ui/console_paths.py`
 - `ui/console_runner.py`
-- `ops_core/workflow/execution_service.py`
+- `modules/validation/workflow/execution_service.py`
 
 핵심 변경:
 - 현재 세션에서 직접 입력한 문자열 대신

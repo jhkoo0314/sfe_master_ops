@@ -153,6 +153,7 @@ ui upload
 
 - intake 결과를 onboarding-ready 구조로 묶음
 - Adapter에 넘길 정리본 경로와 매핑 정보 포함
+- source별 기간 범위와 공통 분석 구간 정보 포함
 
 예상 파일:
 
@@ -238,7 +239,21 @@ onboarding-ready 상태를 표현
 - `fixes`
 - `suggestions`
 - `resolved_mapping`
+- `period_coverage`
 - `ready_for_adapter`
+
+### 6.5 IntakeResult 추가 정보
+
+운영 콘솔 설명용으로 아래 정보도 함께 필요하다.
+
+- `period_coverages`
+- `timing_alerts`
+- `analysis_basis_sources`
+- `analysis_start_month`
+- `analysis_end_month`
+- `analysis_month_count`
+- `analysis_summary_message`
+- `proceed_confirmation_message`
 
 ---
 
@@ -340,10 +355,13 @@ onboarding-ready 상태를 표현
 2. findings / fixes / suggestions 표시
 3. onboarding-ready 상태 표시
 4. 파이프라인 탭에서 adapter-ready 여부 확인
+5. 기간 차이 감지 시 계속 진행 여부 확인
+6. 분석 인텔리전스 탭에 공통 분석 구간 설명 문구 표시
 
 완료 기준:
 
 - 사용자 입장에서 raw 업로드 후 무슨 일이 일어났는지 보임
+- 기간 차이가 있을 때도 “무엇이 앞서 있고 실제로 몇 개월 기준 분석이 진행되는지” 이해 가능
 
 ### Phase 7. execution service 연결
 
@@ -381,7 +399,7 @@ onboarding-ready 상태를 표현
 - `ui/console/tabs/upload_tab.py`
 - `ui/console/tabs/pipeline_tab.py`
 - `ui/console/state.py`
-- `ops_core/workflow/execution_service.py`
+- `modules/validation/workflow/execution_service.py`
 - `common/company_profile.py`
 
 ### 이유
@@ -490,7 +508,7 @@ data/company_source/{company_key}/_onboarding/
 구현 위치 원칙:
 
 - 실제 intake/onboarding 처리 책임은 `modules/intake` 아래에 둔다.
-- `ops_core/workflow/execution_service.py`는 실행 순서 안에서 이 모듈을 호출하는 orchestration 역할만 가진다.
+- `modules/validation/workflow/execution_service.py`는 실행 순서 안에서 이 모듈을 호출하는 orchestration 역할만 가진다.
 
 핵심 한 줄은 아래다.
 

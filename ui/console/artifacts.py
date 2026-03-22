@@ -7,7 +7,7 @@ from pathlib import Path
 import pandas as pd
 import streamlit as st
 
-from ops_core.workflow.execution_registry import get_execution_mode_modules
+from modules.validation.workflow.execution_registry import get_execution_mode_modules
 from ui.console.paths import get_active_company_key, get_project_root
 
 

@@ -24,7 +24,7 @@ def clear_sales_data_os_script_runtime() -> None:
     This helper belongs to runtime preparation, not to the validation mode
     definition file.
     """
-    from ops_core.workflow import execution_registry
+    from modules.validation.workflow import execution_registry
 
     execution_registry._get_step_registry.cache_clear()
     for name in SCRIPT_RUNTIME_MODULE_NAMES:

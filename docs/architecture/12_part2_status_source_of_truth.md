@@ -61,6 +61,10 @@ Part2의 완료/진행/대기 상태는 이 문서를 기준으로 본다.
   - `scenario + mapping + rules` 구조 연결
   - 기본 자동 수정(컬럼명 trim, 월/날짜 형식 정리, 중복 제거) 반영
   - 제안 문장/컬럼 후보 추천 반영
+  - source별 기간 범위 감지와 기간 차이 경고 반영
+  - 공통 분석 구간(예: 6개월) 자동 계산 반영
+  - 실행 전 “기간 차이가 있어도 계속 진행할지” 확인 UI 반영
+  - 분석 인텔리전스 탭에 “기간 차이는 있지만 공통 구간 기준 검증 완료” 설명 문구 반영
   - `_intake_staging`, `_onboarding` 저장 연결
   - 운영 콘솔 업로드/파이프라인 탭에 intake 결과 표시 연결
   - execution service가 `_intake_staging` 정리본을 실제 Adapter 입력으로 사용하도록 연결
@@ -70,6 +74,19 @@ Part2의 완료/진행/대기 상태는 이 문서를 기준으로 본다.
   - 전체 상태 `WARN`, 전체 점수 `94.7`
   - CRM `PASS` / Prescription `PASS` / Sandbox `PASS` / Territory `WARN` / RADAR `APPROVED` / Builder `PASS`
   - Builder HTML 6종 생성 확인
+- `hangyeol_pharma` 통합 실행 재검증 통과 (`2026-03-22`)
+  - `_intake_staging` 입력 기준으로 `scripts/validate_full_pipeline.py` 재실행
+  - 전체 상태 `PASS`, 전체 점수 `96.7`
+  - CRM `PASS` / Prescription `PASS` / Sandbox `PASS` / Territory `PASS` / RADAR `APPROVED` / Builder `PASS`
+  - Builder HTML 6종 생성 확인
+  - 현재 raw 기간 확인:
+    - `sales`, `target`: `202601 ~ 202606` (6개월)
+    - `prescription`: `202501 ~ 202512` (12개월)
+  - 따라서 `hangyeol_pharma`는 “raw generator 기준 6개월 월별 검증 데이터셋”으로 분류하지 않는다.
+  - source별 기간 구성이 다르다는 점을 기준 문서에 고정한다.
+  - 현재 intake/콘솔은 이 차이를 감지해
+    - 실행 전에는 “기간 차이가 있어도 공통 분석 구간 기준으로 계속 진행할지” 확인하고
+    - 분석 탭에서는 “기간 차이는 있지만 2026-01 ~ 2026-06 기준 6개월 검증은 완료됐다” 식으로 설명한다.
 - `ops_core` 구조 리팩토링 Step 1~7 완료 (`2026-03-22`)
   - `execution_service.py` 내부 책임 분해 완료
   - monthly merge 본체를 `modules/intake/merge.py`로 이동
@@ -78,9 +95,21 @@ Part2의 완료/진행/대기 상태는 이 문서를 기준으로 본다.
   - `orchestrator.py`와 `execution_service.py` 경계를 평가/실행 기준으로 정리
   - 문서/주석/README에서 `ops_core`를 `Validation / Orchestration Layer 구현 패키지`로 재정의
   - 위치 이동 검토 결과: `modules/validation` 방향은 맞지만 `지금 즉시 hard rename`은 보류
+  - `modules/validation` bridge 패키지 추가 완료
+  - 일부 운영 코드가 `modules.validation...` bridge import로 전환 시작
+  - API 실행 진입점 이중 지원 완료
+    - 권장: `modules.validation.main:app`
+    - 호환: `ops_core.main:app`
+  - 기본 경로 정리 완료
+    - 운영 스크립트 기본 import는 `modules.validation...` 기준
+    - `ops_core`는 thin compatibility package로 유지
   - 상세 문서:
     - `docs/architecture/21_ops_core_refactor_plan.md`
     - `docs/architecture/22_ops_core_location_migration_review.md`
+- 현재 기준 레거시 문서/테스트 import 정리 완료 (`2026-03-22`)
+  - 저장소 지도/런북/구조 문서는 `modules.validation`을 기본 경로로 설명
+  - `ops_core`는 호환 경로로만 남김
+  - 테스트는 호환성 확인용 bridge 테스트만 `ops_core` import를 의도적으로 유지
 
 ## 진행중(In Progress)
 
@@ -99,8 +128,9 @@ Part2의 완료/진행/대기 상태는 이 문서를 기준으로 본다.
 - `ops_core -> modules/validation` 점진 전환 준비
   - [x] `ops_core` 책임 분리 및 의미 재정의
   - [x] 위치 이동 검토 문서화
-  - [ ] `modules/validation` bridge 패키지 추가
-  - [ ] 새 import를 `modules.validation...` 기준으로 점진 전환
+  - [x] `modules/validation` bridge 패키지 추가
+  - [x] 운영 핵심 import를 `modules.validation...` 기준으로 전환
+  - [x] 현재 기준 레거시 문서/테스트 import 정리
 
 ## 대기(Next)
 

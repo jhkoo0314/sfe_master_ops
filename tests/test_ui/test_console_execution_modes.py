@@ -5,7 +5,7 @@ ROOT = Path(__file__).resolve().parents[2]
 if str(ROOT) not in sys.path:
     sys.path.insert(0, str(ROOT))
 
-from ops_core.workflow.execution_registry import (
+from modules.validation.workflow.execution_registry import (
     get_execution_mode_description,
     get_execution_mode_label,
     get_execution_mode_modules,

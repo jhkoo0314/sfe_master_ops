@@ -3,13 +3,14 @@ import os
 import pandas as pd
 import streamlit as st
 
-from ops_core.workflow.execution_registry import (
+from modules.validation.workflow.execution_registry import (
     get_execution_mode_label,
     get_execution_mode_modules,
 )
 from ui.console.analysis_explainer import explain_module_result
 from ui.console.artifacts import collect_artifact_files, get_execution_analysis_doc_path, load_artifact_preview
 from ui.console.display import render_page_hero, render_panel_header, render_stage_badge
+from ui.console.runner import ensure_intake_result
 
 
 def render_artifacts_tab() -> None:
@@ -20,8 +21,24 @@ def render_artifacts_tab() -> None:
         return
 
     execution_mode = st.session_state.get("execution_mode", "crm_to_sandbox")
+    intake_result = ensure_intake_result(execution_mode, st.session_state.uploaded_data)
     artifacts = collect_artifact_files(execution_mode)
     analysis_doc_path = get_execution_analysis_doc_path()
+    render_panel_header("기간 차이 해석", "입력 데이터의 월 범위가 서로 다를 때, 실제 검증이 어느 공통 구간 기준으로 진행됐는지 먼저 설명합니다.")
+    if intake_result and intake_result.get("analysis_summary_message"):
+        if intake_result.get("timing_alerts"):
+            st.warning(intake_result["analysis_summary_message"])
+        else:
+            st.info(intake_result["analysis_summary_message"])
+        for coverage in intake_result.get("period_coverages", []):
+            st.markdown(
+                f"- `{coverage.get('source_key')}`: "
+                f"{coverage.get('start_month')} ~ {coverage.get('end_month')} "
+                f"({coverage.get('month_count')}개월)"
+            )
+        for alert in intake_result.get("timing_alerts", []):
+            st.markdown(f"- {alert.get('message')}")
+
     render_panel_header("판정 이유 분석", "각 단계가 왜 PASS, WARN, APPROVED, FAIL로 판정됐는지 reasoning note와 요약 파일 기준으로 확인합니다.")
     if os.path.exists(analysis_doc_path):
         with open(analysis_doc_path, "rb") as f:

@@ -11,8 +11,8 @@ if str(ROOT) not in sys.path:
 from common.company_profile import get_company_ops_profile
 from common.company_runtime import get_active_company_key, get_active_company_name, get_company_root
 from common.run_storage.runs import save_pipeline_run_to_supabase
-from ops_core.workflow.execution_registry import get_execution_mode_modules
-from ops_core.workflow.execution_service import (
+from modules.validation.workflow.execution_registry import get_execution_mode_modules
+from modules.validation.workflow.execution_service import (
     build_execution_context,
     run_execution_mode,
 )

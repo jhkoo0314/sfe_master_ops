@@ -1,7 +1,7 @@
 import pandas as pd
 import streamlit as st
 
-from ops_core.workflow.execution_registry import (
+from modules.validation.workflow.execution_registry import (
     get_execution_mode_label,
     get_execution_mode_modules,
 )
@@ -41,6 +41,7 @@ def render_pipeline_tab() -> None:
           <div class="stat-chip"><div class="label">CRM Required</div><div class="value">{'Ready' if crm_status['required_ready'] else 'Need 2 files'}</div></div>
           <div class="stat-chip"><div class="label">Onboarding Ready</div><div class="value">{'YES' if intake_summary['ready_for_adapter'] else 'NO'}</div></div>
           <div class="stat-chip"><div class="label">Monthly Raw</div><div class="value">{len(monthly_status['months_detected']) if monthly_status['has_data'] else 0} months</div></div>
+          <div class="stat-chip"><div class="label">Timing Alerts</div><div class="value">{intake_summary['timing_alert_count']}</div></div>
         </div>
         """,
         unsafe_allow_html=True,
@@ -65,6 +66,20 @@ def render_pipeline_tab() -> None:
         st.warning(f"사람 확인이 필요한 intake 항목이 {intake_summary['review_count']}개 있습니다. 필요한 경우 업로드 탭의 Intake 제안을 먼저 확인하세요.")
     else:
         st.success("현재 intake 기준으로 Adapter 전달 준비가 완료되었습니다.")
+    if intake_result.get("analysis_summary_message"):
+        if intake_summary["timing_alert_count"]:
+            st.warning(intake_result["analysis_summary_message"])
+        else:
+            st.info(intake_result["analysis_summary_message"])
+    for alert in intake_result.get("timing_alerts", []):
+        st.caption(f"- {alert.get('message')}")
+
+    timing_acknowledged = True
+    if intake_summary["timing_alert_count"]:
+        timing_acknowledged = st.checkbox(
+            intake_result.get("proceed_confirmation_message", "입력 데이터 기간 차이를 확인했고 이 상태로 계속 진행합니다."),
+            key=f"timing_ack_{st.session_state.get('intake_signature', '')}",
+        )
 
     render_panel_header("실행 전 반영 파일 확인", "업로드한 파일은 source 경로에 반영되고, 없는 항목은 기존 파일을 사용합니다.")
     if monthly_status["has_data"]:
@@ -102,6 +117,9 @@ def render_pipeline_tab() -> None:
         st.rerun()
 
     if run_btn:
+        if not timing_acknowledged:
+            st.warning("기간 차이 확인 체크를 먼저 해야 실행을 계속할 수 있습니다.")
+            return
         run_status = st.status("Sales Data OS 실행 중", expanded=True)
         run_status.write(f"실행 모드: {get_execution_mode_label(current_mode)}")
         run_status.write("1. 회사별 source 반영 상태를 확인합니다.")

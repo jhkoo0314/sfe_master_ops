@@ -21,7 +21,7 @@ from modules.prescription.schemas import CompanyPrescriptionStandard
 from modules.prescription.flow_builder import build_hospital_region_index, build_prescription_standard_flow
 from modules.prescription.builder_payload import build_chunked_prescription_payload
 from modules.prescription.service import build_prescription_builder_payload, build_prescription_result_asset
-from ops_core.api.prescription_router import evaluate_prescription_asset
+from modules.validation.api.prescription_router import evaluate_prescription_asset
 
 
 COMPANY_KEY = get_active_company_key()

@@ -10,7 +10,7 @@ if str(ROOT) not in sys.path:
     sys.path.insert(0, str(ROOT))
 
 import scripts.validate_full_pipeline as validate_full_pipeline
-from ops_core.workflow.execution_models import ExecutionContext, ExecutionRunResult, ExecutionStepResult
+from modules.validation.workflow.execution_models import ExecutionContext, ExecutionRunResult, ExecutionStepResult
 
 
 def _make_temp_dir() -> Path:

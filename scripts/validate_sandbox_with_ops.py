@@ -18,7 +18,7 @@ from modules.sandbox.schemas import (
 )
 from modules.sandbox.builder_payload import build_chunked_sandbox_payload
 from modules.sandbox.service import build_sandbox_result_asset
-from ops_core.api.sandbox_router import evaluate_sandbox_asset
+from modules.validation.api.sandbox_router import evaluate_sandbox_asset
 from common.company_runtime import get_active_company_key, get_active_company_name, get_company_root
 
 COMPANY_KEY = get_active_company_key()

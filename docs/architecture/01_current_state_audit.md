@@ -13,7 +13,8 @@
 - `adapters/`: 회사 raw를 표준 스키마로 정규화
 - `modules/`: 모듈별 계산/집계와 payload 조립
 - `modules/kpi/`: 공식 KPI 계산 엔진
-- `ops_core/`: Validation/Orchestration API 및 파이프라인 제어
+- `modules/validation/`: Validation/Orchestration 기본 패키지
+- `ops_core/`: 호환 유지용 Validation/Orchestration 패키지
 - `result_assets/`: 모듈 간 전달 계약 포맷
 - `modules/builder/`, `templates/`: HTML 렌더링
 - `ui/`: Streamlit 운영 콘솔
@@ -37,9 +38,9 @@
 - `modules/*/service.py`는 엔진 호출 + 결과 조립
 
 ### Validation / Orchestration Layer (OPS)
-- `ops_core/api/*_router.py`: Result Asset 품질/매핑 검증
-- `ops_core/workflow/orchestrator.py`: 단계 실행 통제
-- `ops_core/workflow/schemas.py`: 실행 계약 스키마
+- `modules/validation/api/*_router.py`: Result Asset 품질/매핑 검증
+- `modules/validation/workflow/orchestrator.py`: 단계 실행 통제
+- `modules/validation/workflow/schemas.py`: 실행 계약 스키마
 
 ### Intelligence Layer
 - `modules/sandbox`, `modules/territory`, `modules/prescription`
@@ -65,8 +66,8 @@ KPI 계산 소스는 `modules/kpi/*`로 수렴되어 있습니다.
 
 ## 4) Validation 위치
 
-- API 단위 평가: `ops_core/api/crm_router.py`, `prescription_router.py`, `sandbox_router.py`, `territory_router.py`
-- 파이프라인 제어: `ops_core/api/pipeline_router.py`, `ops_core/workflow/orchestrator.py`
+- API 단위 평가: `modules/validation/api/crm_router.py`, `prescription_router.py`, `sandbox_router.py`, `territory_router.py`
+- 파이프라인 제어: `modules/validation/api/pipeline_router.py`, `modules/validation/workflow/orchestrator.py`
 - 실행 스크립트: `scripts/validate_*_with_ops.py`, `scripts/validate_full_pipeline.py`
 
 ## 5) Rendering 위치
@@ -85,7 +86,7 @@ KPI 계산 소스는 `modules/kpi/*`로 수렴되어 있습니다.
 - UI 라벨의 `SFE MASTER OPS`, `Operation System Engine`, `OPS 파이프라인 실행`, `OPS 분석 보고서`
   - `ui/ops_console.py`, `ui/console_display.py`, `ui/console_sidebar.py`, `ui/console_tabs.py`
 - API/주석에서 OPS를 시스템 중심으로 읽히는 문장
-  - `ops_core/main.py`, `ops_core/workflow/*.py`, `ops_core/api/pipeline_router.py`
+  - `modules/validation/main.py`, `modules/validation/workflow/*.py`, `modules/validation/api/pipeline_router.py`
 - Builder 스키마/서비스 설명의 OPS 중심 문구
   - `modules/builder/service.py`, `modules/builder/schemas.py`
 - 템플릿 라벨의 `SFE OPS`, `LIVE OPS`

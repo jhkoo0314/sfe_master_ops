@@ -31,7 +31,7 @@ from modules.prescription.flow_builder import (
     build_prescription_standard_flow,
 )
 from modules.prescription.service import build_prescription_result_asset
-from ops_core.api.prescription_router import evaluate_prescription_asset
+from modules.validation.api.prescription_router import evaluate_prescription_asset
 from common.types import QualityGateStatus
 from common.exceptions import MissingResultAssetError
 

@@ -20,7 +20,7 @@ from modules.sandbox.schemas import (
     SandboxInputStandard, CrmDomainRecord,
 )
 from modules.sandbox.service import build_sandbox_result_asset
-from ops_core.api.sandbox_router import evaluate_sandbox_asset
+from modules.validation.api.sandbox_router import evaluate_sandbox_asset
 from common.types import QualityGateStatus
 from common.exceptions import MissingResultAssetError
 

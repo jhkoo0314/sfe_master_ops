@@ -25,7 +25,7 @@
 sfe_master_ops/
 ├── adapters/
 ├── modules/
-├── ops_core/
+├── ops_core/                  # 호환 유지용 경로
 ├── result_assets/
 ├── ui/
 ├── templates/
@@ -97,9 +97,9 @@ sfe_master_ops/
 - Territory KPI 엔진(`territory_engine.py`) 운영 중
 - Prescription KPI 엔진(`prescription_engine.py`) 운영 중
 
-### `ops_core/`
+### `modules/validation/`
 
-현재 `Validation / Orchestration Layer (OPS)` 구현 패키지입니다.
+현재 Validation / Orchestration Layer의 기본 패키지입니다.
 
 여기서 OPS는:
 - 직접 계산하는 분석 엔진이 아니라
@@ -114,15 +114,23 @@ sfe_master_ops/
 - 실제 실행 흐름 조정
 
 주요 위치:
-- `ops_core/main.py`
-- `ops_core/api/`
-- `ops_core/workflow/`
+- `modules/validation/main.py`
+- `modules/validation/api/`
+- `modules/validation/workflow/`
 
 현재 메모:
-- `ops_core/api/`는 Result Asset 평가 API에 가깝습니다.
-- `ops_core/workflow/orchestrator.py`는 평가 오케스트레이션입니다.
-- `ops_core/workflow/execution_service.py`는 실제 실행 조정기입니다.
-- raw 정리, staging 준비, monthly merge 본체는 점진적으로 `modules/intake` 쪽으로 이동 중입니다.
+- `modules/validation/api/`는 Result Asset 평가 API에 가깝습니다.
+- `modules/validation/workflow/orchestrator.py`는 평가 오케스트레이션입니다.
+- `modules/validation/workflow/execution_service.py`는 실제 실행 조정기입니다.
+- raw 정리, staging 준비, monthly merge 본체는 점진적으로 `modules/intake` 쪽으로 이동 완료 상태입니다.
+
+### `ops_core/`
+
+현재는 `modules/validation/`의 호환 유지용 패키지입니다.
+
+쉽게 말하면:
+- 새 기본 경로는 `modules/validation/*`
+- `ops_core/*`는 예전 import가 갑자기 깨지지 않게 남겨둔 경로입니다.
 
 ### `result_assets/`
 

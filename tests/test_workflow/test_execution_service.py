@@ -8,10 +8,11 @@ ROOT = Path(__file__).resolve().parents[2]
 if str(ROOT) not in sys.path:
     sys.path.insert(0, str(ROOT))
 
-import ops_core.workflow.execution_service as execution_service
+import modules.validation.workflow.execution_service as execution_service
 import ui.console.runner as console_runner
-from ops_core.workflow.execution_models import (
+from modules.validation.workflow.execution_models import (
     ExecutionContext,
+    ExecutionPreparationResult,
     ExecutionRunResult,
     ExecutionStepDefinition,
 )
@@ -58,9 +59,20 @@ def test_run_execution_mode_reads_shared_summaries(monkeypatch):
             ExecutionStepDefinition(module="crm", label="CRM 정규화 및 검증", runner=lambda: None),
             ExecutionStepDefinition(module="builder", label="Builder HTML 생성", runner=lambda: None),
         ]
-        monkeypatch.setattr(execution_service, "get_mode_required_uploads", lambda mode: ["crm_activity"])
-        monkeypatch.setattr(execution_service, "get_mode_pipeline_steps", lambda mode: steps)
-        monkeypatch.setattr(execution_service, "get_execution_mode_label", lambda mode: "통합 실행")
+        service_globals = execution_service.run_execution_mode.__globals__
+        monkeypatch.setitem(service_globals, "get_mode_pipeline_steps", lambda mode: steps)
+        monkeypatch.setitem(service_globals, "get_execution_mode_label", lambda mode: "통합 실행")
+        monkeypatch.setitem(
+            service_globals,
+            "prepare_execution_inputs",
+            lambda **kwargs: ExecutionPreparationResult(
+                staged_paths=[str(raw_path)],
+                staged_source_root=str(tmp_path / "data" / "company_source" / company_key),
+                recommended_actions=["테스트 준비 완료"],
+            ),
+        )
+        monkeypatch.setitem(service_globals, "activate_execution_runtime", lambda preparation: None)
+        monkeypatch.setitem(service_globals, "cleanup_execution_runtime", lambda: None)
 
         context = ExecutionContext(
             project_root=str(tmp_path),

@@ -37,7 +37,7 @@ from adapters.crm.company_master_adapter import (
 )
 from adapters.crm.crm_activity_adapter import load_crm_activity_from_records
 from modules.crm.service import build_crm_result_asset
-from ops_core.api.crm_router import evaluate_crm_asset
+from modules.validation.api.crm_router import evaluate_crm_asset
 from common.types import QualityGateStatus
 from common.exceptions import MissingResultAssetError
 

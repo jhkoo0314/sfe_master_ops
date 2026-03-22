@@ -37,8 +37,18 @@ uv sync
 API 실행:
 
 ```bash
+uv run uvicorn modules.validation.main:app --reload --host 0.0.0.0 --port 8000
+```
+
+호환용 기존 진입점:
+
+```bash
 uv run uvicorn ops_core.main:app --reload --host 0.0.0.0 --port 8000
 ```
+
+참고:
+- 현재 권장 진입점은 `modules.validation.main:app`입니다.
+- 기존 `ops_core.main:app`는 호환용으로 계속 동작합니다.
 
 운영 콘솔 실행:
 
