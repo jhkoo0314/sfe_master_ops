@@ -8,6 +8,8 @@ from datetime import datetime
 from pathlib import Path
 
 from common.run_storage.runs import save_pipeline_run_to_supabase
+from ops_core.workflow.monthly_source_merge import inspect_monthly_raw
+from ui.console.analysis_explainer import explain_module_result
 from ops_core.workflow.execution_registry import (
     get_execution_mode_label,
     get_execution_mode_modules,
@@ -21,6 +23,57 @@ from ui.console.paths import (
     get_project_root,
     get_source_target_map,
 )
+
+
+def _build_execution_analysis_markdown(result: dict, uploaded: dict) -> str:
+    lines: list[str] = []
+    lines.append(f"# Execution Analysis")
+    lines.append("")
+    lines.append(f"- company_key: `{get_active_company_key()}`")
+    lines.append(f"- company_name: `{get_active_company_name()}`")
+    lines.append(f"- execution_mode: `{result.get('execution_mode')}`")
+    lines.append(f"- execution_mode_label: `{result.get('execution_mode_label')}`")
+    lines.append(f"- overall_status: `{result.get('overall_status')}`")
+    lines.append(f"- overall_score: `{result.get('overall_score')}`")
+    lines.append(f"- total_duration_ms: `{result.get('total_duration_ms')}`")
+    lines.append("")
+    lines.append("## Steps")
+    lines.append("")
+    for step in result.get("steps", []):
+        explanation = explain_module_result(str(step.get("module", "")), step)
+        lines.append(f"### STEP {step.get('step')} - {str(step.get('module', '')).upper()}")
+        lines.append(f"- status: `{step.get('status')}`")
+        lines.append(f"- score: `{step.get('score')}`")
+        lines.append(f"- duration_ms: `{step.get('duration_ms')}`")
+        lines.append(f"- reasoning_note: {step.get('reasoning_note', '')}")
+        lines.append(f"- interpreted_reason: {explanation.get('summary', '')}")
+        if step.get("summary_path"):
+            lines.append(f"- summary_path: `{step.get('summary_path')}`")
+        if step.get("next_modules"):
+            lines.append(f"- next_modules: `{', '.join(step.get('next_modules', []))}`")
+        if step.get("error"):
+            lines.append(f"- error: `{step.get('error')}`")
+        evidence = explanation.get("evidence", [])
+        if evidence:
+            lines.append("- evidence:")
+            for item in evidence:
+                lines.append(f"  - {item}")
+        lines.append("")
+    if result.get("recommended_actions"):
+        lines.append("## Recommended Actions")
+        lines.append("")
+        for action in result["recommended_actions"]:
+            lines.append(f"- {action}")
+        lines.append("")
+    if uploaded:
+        lines.append("## Uploaded Inputs")
+        lines.append("")
+        for key, value in uploaded.items():
+            if value is None:
+                continue
+            lines.append(f"- `{key}`: `{value.get('name')}` / rows={value.get('row_count')}")
+        lines.append("")
+    return "\n".join(lines)
 
 
 def get_crm_package_status(uploaded: dict) -> dict:
@@ -69,6 +122,16 @@ def get_source_target_rows(execution_mode: str, uploaded: dict) -> list[dict]:
     return rows
 
 
+def get_monthly_raw_status() -> dict:
+    inspected = inspect_monthly_raw(get_source_target_map())
+    return {
+        "monthly_root": inspected.monthly_root,
+        "months_detected": inspected.months_detected,
+        "merged_sources": inspected.merged_sources,
+        "has_data": inspected.has_data,
+    }
+
+
 def save_pipeline_run_history(result: dict, uploaded: dict) -> str:
     root = get_project_root()
     history_dir = Path(root) / "data" / "ops_validation" / get_active_company_key() / "pipeline"
@@ -98,6 +161,13 @@ def save_pipeline_run_history(result: dict, uploaded: dict) -> str:
     }
     with open(history_path, "a", encoding="utf-8") as f:
         f.write(json.dumps(record, ensure_ascii=False) + "\n")
+
+    analysis_markdown = _build_execution_analysis_markdown(result, uploaded)
+    analysis_latest_path = history_dir / "latest_execution_analysis.md"
+    analysis_latest_path.write_text(analysis_markdown, encoding="utf-8")
+    run_id = str(result.get("run_id", "")).strip()
+    if run_id:
+        (history_dir / f"execution_analysis_{run_id}.md").write_text(analysis_markdown, encoding="utf-8")
 
     supabase_run_db_id = save_pipeline_run_to_supabase(
         company_key=get_active_company_key(),

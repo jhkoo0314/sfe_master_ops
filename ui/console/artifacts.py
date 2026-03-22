@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import json
 import os
+from pathlib import Path
 
 import pandas as pd
 import streamlit as st
@@ -46,6 +47,12 @@ def get_artifact_stage(source_label: str, module: str) -> tuple[str, str]:
     if source_label == "Builder 결과":
         return "Builder", "BUILDER"
     return source_label, module.upper()
+
+
+def get_execution_analysis_doc_path() -> str:
+    root = get_project_root()
+    company = get_active_company_key()
+    return str(Path(root) / "data" / "ops_validation" / company / "pipeline" / "latest_execution_analysis.md")
 
 
 def collect_artifact_files(execution_mode: str) -> list[dict]:

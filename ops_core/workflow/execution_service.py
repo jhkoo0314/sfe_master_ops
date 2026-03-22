@@ -18,6 +18,7 @@ from ops_core.workflow.execution_models import (
     ExecutionStepDefinition,
     ExecutionStepResult,
 )
+from ops_core.workflow.monthly_source_merge import merge_monthly_raw_sources
 from ops_core.workflow.execution_registry import (
     get_execution_mode_label,
     get_mode_pipeline_steps,
@@ -168,6 +169,11 @@ def run_execution_mode(
     os.environ["OPS_COMPANY_KEY"] = context.company_key
     os.environ["OPS_COMPANY_NAME"] = context.company_name
 
+    uploaded_keys = {key for key, value in (uploaded or {}).items() if value is not None}
+    monthly_merge_result = merge_monthly_raw_sources(
+        source_targets=context.source_targets,
+        skip_keys=uploaded_keys,
+    )
     _validate_required_inputs(context=context, execution_mode=execution_mode, uploaded=uploaded)
 
     staged_paths = stage_uploaded_sources(context=context, uploaded=uploaded)
@@ -181,6 +187,14 @@ def run_execution_mode(
         recommended_actions.append(f"업로드 파일 {len(staged_paths)}건을 실제 소스 경로에 반영했습니다.")
     else:
         recommended_actions.append("새로 업로드한 파일이 없어 기존 company_source 데이터를 사용했습니다.")
+    if monthly_merge_result.merged_sources:
+        merged_labels = ", ".join(
+            f"{source_key}({count}개월)"
+            for source_key, count in monthly_merge_result.merged_sources.items()
+        )
+        recommended_actions.append(
+            f"monthly_raw를 감지해 자동 병합했습니다: {merged_labels}."
+        )
 
     for index, step_definition in enumerate(get_mode_pipeline_steps(execution_mode), start=1):
         started = time.time()

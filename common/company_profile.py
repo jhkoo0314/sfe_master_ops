@@ -79,6 +79,10 @@ _PROFILE_MAP = {
         "daon_pharma",
         raw_generator_module="scripts.raw_generators.generate_daon_source_raw",
     ),
+    "monthly_merge_pharma": _build_standard_profile(
+        "monthly_merge_pharma",
+        raw_generator_module="scripts.raw_generators.generate_monthly_merge_source_raw",
+    ),
 }
 
 

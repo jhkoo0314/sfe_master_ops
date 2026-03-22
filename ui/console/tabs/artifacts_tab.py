@@ -1,3 +1,5 @@
+import os
+
 import pandas as pd
 import streamlit as st
 
@@ -5,7 +7,8 @@ from ops_core.workflow.execution_registry import (
     get_execution_mode_label,
     get_execution_mode_modules,
 )
-from ui.console.artifacts import collect_artifact_files, load_artifact_preview
+from ui.console.analysis_explainer import explain_module_result
+from ui.console.artifacts import collect_artifact_files, get_execution_analysis_doc_path, load_artifact_preview
 from ui.console.display import render_page_hero, render_panel_header, render_stage_badge
 
 
@@ -18,6 +21,49 @@ def render_artifacts_tab() -> None:
 
     execution_mode = st.session_state.get("execution_mode", "crm_to_sandbox")
     artifacts = collect_artifact_files(execution_mode)
+    analysis_doc_path = get_execution_analysis_doc_path()
+    render_panel_header("판정 이유 분석", "각 단계가 왜 PASS, WARN, APPROVED, FAIL로 판정됐는지 reasoning note와 요약 파일 기준으로 확인합니다.")
+    if os.path.exists(analysis_doc_path):
+        with open(analysis_doc_path, "rb") as f:
+            st.download_button(
+                label="실행 분석 문서 다운로드",
+                data=f.read(),
+                file_name="latest_execution_analysis.md",
+                mime="text/markdown",
+                use_container_width=True,
+            )
+    for step in result.get("steps", []):
+        status = str(step.get("status", ""))
+        icon = {"PASS": "PASS", "WARN": "WARN", "FAIL": "FAIL", "APPROVED": "APPROVED", "SKIP": "SKIP"}.get(status, status)
+        explanation = explain_module_result(str(step.get("module", "")), step)
+        with st.expander(f"STEP {step.get('step')} · {str(step.get('module', '')).upper()} · {icon}", expanded=False):
+            st.markdown(f"**판정 이유**: {step.get('reasoning_note', '-')}")
+            st.markdown(f"**해석**: {explanation.get('summary', '-')}")
+            st.markdown(f"**점수**: `{step.get('score')}` / **실행시간**: `{step.get('duration_ms')}ms`")
+            if step.get("next_modules"):
+                st.markdown(f"**다음 가능 모듈**: `{', '.join(step.get('next_modules', []))}`")
+            if step.get("error"):
+                st.error(step.get("error"))
+            evidence = explanation.get("evidence", [])
+            if evidence:
+                st.markdown("**근거 수치**")
+                for item in evidence:
+                    st.markdown(f"- {item}")
+            summary_path = step.get("summary_path")
+            if summary_path and os.path.exists(summary_path):
+                st.caption(summary_path)
+                preview_df, preview_mode = load_artifact_preview(summary_path, os.path.splitext(summary_path)[1].lower(), max_rows=10)
+                if preview_mode == "table" and preview_df is not None:
+                    st.dataframe(preview_df, use_container_width=True, hide_index=True)
+                with open(summary_path, "rb") as f:
+                    st.download_button(
+                        label=f"요약 파일 다운로드: {os.path.basename(summary_path)}",
+                        data=f.read(),
+                        file_name=os.path.basename(summary_path),
+                        mime="application/octet-stream",
+                        key=f"summary_download_{step.get('step')}",
+                    )
+
     render_panel_header("산출물 브라우저", f"선택한 흐름은 {get_execution_mode_label(execution_mode)} 입니다. 아래 파일은 해당 흐름에서 생성된 정규화 파일, 검증 산출물, Builder 결과입니다.")
     st.markdown(f"""<div class="action-note"><b>현재 선택 흐름</b>: {' -> '.join(get_execution_mode_modules(execution_mode)).upper()}<br>표로 읽을 수 있는 파일은 최대 10행까지 미리보기 합니다. HTML 파일은 다운로드 중심으로 확인합니다.</div>""", unsafe_allow_html=True)
 

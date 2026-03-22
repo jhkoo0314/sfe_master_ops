@@ -2,12 +2,15 @@ import pandas as pd
 import streamlit as st
 
 from ui.console.display import render_page_hero, render_panel_header, render_upload_row
-from ui.console.paths import get_active_company_name, get_source_target_display_path
-from ui.console.runner import get_crm_package_status
+from ui.console.paths import get_active_company_name, get_source_target_display_path, get_source_target_map
+from ui.console.runner import get_crm_package_status, get_monthly_raw_status
+from ui.console.state import save_monthly_upload_batch
+from ops_core.workflow.monthly_source_merge import get_monthly_raw_root
 
 
 def render_upload_tab() -> None:
     company_name = get_active_company_name()
+    monthly_status = get_monthly_raw_status()
     render_page_hero(
         "RAW 데이터 투입",
         f"{company_name} 원천 데이터를 회사별 폴더에 연결합니다. 검증 단계에서는 항목명, 짧은 설명, 업로드창을 한 줄에 두고 필요한 예시만 펼쳐서 봅니다.",
@@ -40,6 +43,73 @@ def render_upload_tab() -> None:
 
     render_panel_header("Prescription 입력")
     render_upload_row("prescription", "rx_up", "Prescription 데이터", "선택", "도매 -> 약국 흐름을 추적하는 출고 파일", get_source_target_display_path("prescription"), ["출고일, 도매상명, 약국명", "품목명 또는 SKU", "수량, 출고금액, 공급금액"], ["PDF 흐름 추적이 필요할 때만 사용합니다."], "Prescription 파일 업로드")
+
+    render_panel_header("월별 Raw 일괄 업로드", "브라우저에서 월별 파일 여러 개를 올리면 monthly_raw 폴더에 자동 저장됩니다. 실행 버튼을 누르면 병합 후 검증이 진행됩니다.")
+    monthly_root = get_monthly_raw_root(get_source_target_map())
+    st.markdown(
+        f"""
+        <div class="action-note">
+        저장 위치: <code>{monthly_root}</code><br>
+        파일명에 <code>202501</code> 또는 <code>2025-01</code> 같은 월 정보가 들어 있어야 합니다.
+        </div>
+        """,
+        unsafe_allow_html=True,
+    )
+    c1, c2 = st.columns(2)
+    with c1:
+        monthly_crm_files = st.file_uploader("월별 CRM 활동", type=["csv", "xlsx"], accept_multiple_files=True, key="monthly_crm_activity_up")
+        monthly_sales_files = st.file_uploader("월별 실적", type=["csv", "xlsx"], accept_multiple_files=True, key="monthly_sales_up")
+    with c2:
+        monthly_target_files = st.file_uploader("월별 목표", type=["csv", "xlsx"], accept_multiple_files=True, key="monthly_target_up")
+        monthly_rx_files = st.file_uploader("월별 Prescription", type=["csv", "xlsx"], accept_multiple_files=True, key="monthly_rx_up")
+
+    pending_count = sum(
+        len(files)
+        for files in [monthly_crm_files, monthly_sales_files, monthly_target_files, monthly_rx_files]
+        if files
+    )
+    save_monthly_btn = st.button("월별 raw 저장", use_container_width=True, type="secondary")
+    if save_monthly_btn:
+        batch_results = {}
+        try:
+            batch_results["crm_activity"] = save_monthly_upload_batch("crm_activity", monthly_crm_files, monthly_root)
+            batch_results["sales"] = save_monthly_upload_batch("sales", monthly_sales_files, monthly_root)
+            batch_results["target"] = save_monthly_upload_batch("target", monthly_target_files, monthly_root)
+            batch_results["prescription"] = save_monthly_upload_batch("prescription", monthly_rx_files, monthly_root)
+            st.session_state.monthly_upload_summary = batch_results
+            saved_total = sum(item["saved_count"] for item in batch_results.values())
+            st.success(f"월별 raw 저장 완료: {saved_total}개 파일")
+            st.rerun()
+        except Exception as exc:
+            st.error(f"월별 raw 저장 실패: {exc}")
+
+    if pending_count:
+        st.info(f"저장 대기 파일: {pending_count}개")
+    if monthly_status["has_data"]:
+        merged_labels = ", ".join(
+            f"{source_key}({count}개월)"
+            for source_key, count in monthly_status["merged_sources"].items()
+        )
+        st.success(
+            "현재 monthly_raw 감지 상태: "
+            f"{', '.join(monthly_status['months_detected'])} "
+            f"/ {merged_labels}"
+        )
+    if st.session_state.get("monthly_upload_summary"):
+        summary_rows = []
+        for source_key, result in st.session_state.monthly_upload_summary.items():
+            if result["saved_count"] <= 0:
+                continue
+            summary_rows.append(
+                {
+                    "입력 묶음": source_key,
+                    "저장 파일 수": result["saved_count"],
+                    "월": ", ".join(result["months"]),
+                    "행 수": result["rows"],
+                }
+            )
+        if summary_rows:
+            st.dataframe(pd.DataFrame(summary_rows), use_container_width=True, hide_index=True)
 
     render_panel_header("고급 설정", "기본적으로는 어댑터가 자동 정규화를 시도합니다. 이 영역은 정말 예외적인 컬럼명 차이가 있을 때만 사용합니다.")
     with st.expander("고급 설정: 컬럼 매핑", expanded=False):

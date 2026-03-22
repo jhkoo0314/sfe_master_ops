@@ -59,6 +59,13 @@ _DEFAULT_COMPANIES: tuple[CompanyRegistryEntry, ...] = (
         company_code_external="hangyeol_pharma",
         aliases=("hangyeol-pharma", "Hangyeol Pharma", "한결파마"),
     ),
+    CompanyRegistryEntry(
+        company_key="monthly_merge_pharma",
+        company_name="월별검증제약",
+        company_name_normalized="월별검증제약",
+        company_code_external="monthly_merge_pharma",
+        aliases=("monthly-merge-pharma", "Monthly Merge Pharma"),
+    ),
 )
 
 
@@ -159,16 +166,33 @@ def _sync_local_registry_from_entries(project_root: str | Path, companies: list[
     _write_registry_store(get_registry_store_path(project_root), companies)
 
 
-def list_registered_companies(project_root: str | Path, active_only: bool = True) -> list[CompanyRegistryEntry]:
-    companies = _load_companies_from_supabase(active_only=active_only)
-    if companies is not None:
-        _sync_local_registry_from_entries(project_root, companies)
-        return sorted(companies, key=lambda item: (item.company_name_normalized, item.company_key))
-
+def _load_local_companies(project_root: str | Path) -> list[CompanyRegistryEntry]:
     ensure_registry_seeded(project_root)
     path = get_registry_store_path(project_root)
     payload = json.loads(path.read_text(encoding="utf-8"))
-    local_companies = [CompanyRegistryEntry.from_dict(item) for item in payload.get("companies", [])]
+    return [CompanyRegistryEntry.from_dict(item) for item in payload.get("companies", [])]
+
+
+def _merge_company_entries(
+    primary: list[CompanyRegistryEntry],
+    secondary: list[CompanyRegistryEntry],
+) -> list[CompanyRegistryEntry]:
+    merged: dict[str, CompanyRegistryEntry] = {item.company_key: item for item in secondary}
+    for item in primary:
+        merged[item.company_key] = item
+    return list(merged.values())
+
+
+def list_registered_companies(project_root: str | Path, active_only: bool = True) -> list[CompanyRegistryEntry]:
+    local_companies = _load_local_companies(project_root)
+    companies = _load_companies_from_supabase(active_only=False)
+    if companies is not None:
+        merged_companies = _merge_company_entries(primary=companies, secondary=local_companies)
+        _sync_local_registry_from_entries(project_root, merged_companies)
+        if active_only:
+            merged_companies = [item for item in merged_companies if item.status == "active"]
+        return sorted(merged_companies, key=lambda item: (item.company_name_normalized, item.company_key))
+
     if active_only:
         local_companies = [item for item in local_companies if item.status == "active"]
     return sorted(local_companies, key=lambda item: (item.company_name_normalized, item.company_key))

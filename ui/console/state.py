@@ -2,10 +2,13 @@ from __future__ import annotations
 
 import io
 import os
+import re
 from datetime import datetime
+from pathlib import Path
 
 import pandas as pd
 import streamlit as st
+from ops_core.workflow.monthly_source_merge import MONTHLY_FILE_NAMES
 
 UPLOADED_DATA_KEYS = (
     "crm_activity",
@@ -57,6 +60,8 @@ def init_console_state() -> None:
         st.session_state.agent_history = []
     if "current_answer_scope" not in st.session_state:
         st.session_state.current_answer_scope = "final_report_only"
+    if "monthly_upload_summary" not in st.session_state:
+        st.session_state.monthly_upload_summary = None
 
 
 def add_log(msg: str) -> None:
@@ -99,3 +104,56 @@ def load_file_once(module_key: str, uploaded_file, label: str) -> dict:
     st.session_state.uploaded_tokens[module_key] = token
     add_log(f"{label} 데이터 {len(df)}건 업로드")
     return info
+
+
+def extract_month_token(file_name: str) -> str:
+    name = str(file_name)
+    patterns = [
+        r"(20\d{2})[-_]?([01]\d)",
+        r"(20\d{2})\.([01]\d)",
+    ]
+    for pattern in patterns:
+        match = re.search(pattern, name)
+        if not match:
+            continue
+        year, month = match.group(1), match.group(2)
+        if 1 <= int(month) <= 12:
+            return f"{year}{month}"
+    raise ValueError(f"파일명에서 월을 찾지 못했습니다: {file_name}")
+
+
+def save_monthly_upload_batch(source_key: str, uploaded_files, monthly_root: str | Path) -> dict:
+    if not uploaded_files:
+        return {"saved_count": 0, "months": [], "rows": 0}
+
+    target_file_name = MONTHLY_FILE_NAMES[source_key]
+    root = Path(monthly_root)
+    root.mkdir(parents=True, exist_ok=True)
+
+    saved_months: list[str] = []
+    total_rows = 0
+    for uploaded_file in uploaded_files:
+        file_bytes = uploaded_file.getvalue()
+        month_token = extract_month_token(uploaded_file.name)
+        month_dir = root / month_token
+        month_dir.mkdir(parents=True, exist_ok=True)
+        target_path = month_dir / target_file_name
+
+        df = load_uploaded_dataframe(uploaded_file.name, file_bytes)
+        total_rows += int(len(df))
+        if target_path.suffix.lower() == ".csv":
+            if str(uploaded_file.name).lower().endswith(".csv"):
+                target_path.write_bytes(file_bytes)
+            else:
+                df.to_csv(target_path, index=False, encoding="utf-8-sig")
+        else:
+            df.to_excel(target_path, index=False)
+        saved_months.append(month_token)
+
+    unique_months = sorted(set(saved_months))
+    add_log(f"{source_key} 월별 파일 {len(uploaded_files)}건 저장 ({', '.join(unique_months)})")
+    return {
+        "saved_count": len(uploaded_files),
+        "months": unique_months,
+        "rows": total_rows,
+    }

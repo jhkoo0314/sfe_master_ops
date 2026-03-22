@@ -10,6 +10,7 @@ from ui.console.paths import get_active_company_name
 from ui.console.state import add_log
 from ui.console.runner import (
     get_crm_package_status,
+    get_monthly_raw_status,
     get_source_target_rows,
     run_actual_pipeline,
     save_pipeline_run_history,
@@ -25,6 +26,7 @@ def render_pipeline_tab() -> None:
     )
     uploaded = st.session_state.uploaded_data
     crm_status = get_crm_package_status(uploaded)
+    monthly_status = get_monthly_raw_status()
     ready = [k for k, v in uploaded.items() if v is not None]
     current_mode = st.session_state.get("execution_mode", "crm_to_sandbox")
     st.markdown(
@@ -33,6 +35,7 @@ def render_pipeline_tab() -> None:
           <div class="stat-chip"><div class="label">Execution Mode</div><div class="value">{get_execution_mode_label(current_mode)}</div></div>
           <div class="stat-chip"><div class="label">Loaded Files</div><div class="value">{len(ready)} active</div></div>
           <div class="stat-chip"><div class="label">CRM Required</div><div class="value">{'Ready' if crm_status['required_ready'] else 'Need 2 files'}</div></div>
+          <div class="stat-chip"><div class="label">Monthly Raw</div><div class="value">{len(monthly_status['months_detected']) if monthly_status['has_data'] else 0} months</div></div>
         </div>
         """,
         unsafe_allow_html=True,
@@ -51,6 +54,16 @@ def render_pipeline_tab() -> None:
         )
 
     render_panel_header("실행 전 반영 파일 확인", "업로드한 파일은 source 경로에 반영되고, 없는 항목은 기존 파일을 사용합니다.")
+    if monthly_status["has_data"]:
+        merged_labels = ", ".join(
+            f"{source_key}({count}개월)"
+            for source_key, count in monthly_status["merged_sources"].items()
+        )
+        st.info(
+            "monthly_raw 감지: "
+            f"{', '.join(monthly_status['months_detected'])} "
+            f"-> 실행 전에 자동 병합 예정 ({merged_labels})"
+        )
     target_rows = get_source_target_rows(current_mode, uploaded)
     if target_rows:
         st.dataframe(pd.DataFrame(target_rows), use_container_width=True, hide_index=True)
