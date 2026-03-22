@@ -43,13 +43,10 @@
 따라서 Part 2는 새 기능을 억지로 많이 붙이는 단계보다,
 `Validation Layer(OPS)를 안정화하고 Intelligence Layer를 확장하는 단계`로 가는 것이 맞습니다.
 
-권장 우선순위:
+우선순위 기준:
 
-1. `Intake Gate`
-2. `Daily Watch`
-3. `배치 자동화 / 실패 알림`
-4. `Action Queue`
-5. `규칙 / 임계치 외부화`
+- 우선순위와 상태(Completed / In Progress / Next)는 `docs/architecture/12_part2_status_source_of_truth.md`만 기준으로 본다.
+- README의 설명 텍스트보다 단일 기준 문서가 항상 우선한다.
 
 Part2 문서 운영 기준:
 - 활성 상태/실행 문서: `docs/architecture/12_part2_status_source_of_truth.md`
