@@ -298,9 +298,9 @@
 - `docs/ai/05_crm_rules.md`
 - `docs/ai/04_module_map.md`
 - `docs/ai/06_builder_and_outputs.md`
-- `docs/_root/README.md`
-- `docs/_root/RUNBOOK.md`
-- `docs/_root/STRUCTURE.md`
+- `README.md`
+- `RUNBOOK.md`
+- `STRUCTURE.md`
 
 ---
 

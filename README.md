@@ -5,12 +5,14 @@
 지금 상태의 핵심은 이것입니다.
 
 - 회사별 raw를 같은 틀로 흡수하고 어디까지 연결되는지 검증
-- CRM, Prescription, Sandbox, Territory, Builder를 실제로 실행 가능
+- CRM, Prescription, Sandbox, Territory, RADAR, Builder를 실제로 실행 가능
 - 회사 코드별로 결과 폴더를 분리
 - run 기준 저장(`runs`, `run_steps`, `run_artifacts`, `run_report_context`)이 로컬/DB에 연결됨
 - Agent 탭은 `run_report_context`와 `run_artifacts`를 실제로 읽는 구조로 동작
 - CRM Builder preview는 생성 전에 `crm_builder_payload.json`을 최신 결과자산 기준으로 다시 써서 필터/범위가 stale 되지 않게 동작
 - RADAR `Layer 03 : Decision Options`는 현재 판단 규칙 확정 전이라 임시 고정 문구로 운영 중
+- 운영 콘솔은 월별 raw 업로드 후 자동 병합 실행을 지원
+- 분석 인텔리전스 탭은 점수뿐 아니라 판정 해석과 근거 수치까지 표시
 - 코드 기준으로 HTML 보고서 6종과 통합 허브까지 생성 가능
 - 실제 저장된 보고서 수는 회사별 마지막 실행 상태에 따라 다를 수 있음
 
@@ -20,8 +22,9 @@
 
 쉽게 말하면:
 
-- CRM / Prescription / Sandbox / Territory / Builder가 한 흐름으로 실제 실행됩니다.
+- CRM / Prescription / Sandbox / Territory / RADAR / Builder가 한 흐름으로 실제 실행됩니다.
 - 운영 콘솔에서 등록된 회사 선택 기준으로 실행과 산출물 확인이 가능합니다.
+- 월별 raw 파일을 `monthly_raw/YYYYMM` 구조로 저장한 뒤 바로 실행 검증할 수 있습니다.
 - 콘솔 상단 메뉴는 선택한 화면만 렌더하도록 동작해, 한 화면 오류가 전체 화면을 같이 멈추게 하지 않습니다.
 - 핵심 JSON에는 버전이 붙어 있어 파일 규격 추적이 가능합니다.
 - CRM / Prescription / Sandbox / Territory는 무거운 상세를 필요할 때만 읽는 구조로 정리됐습니다.
@@ -70,7 +73,8 @@ Part2 문서 운영 기준:
 - Territory Builder payload는 KPI 계산 없이 엔진 결과를 조립/분할만 수행
 - Prescription Builder payload는 KPI 계산 없이 엔진 결과를 조립/분할만 수행
 - `hangyeol_pharma`, `daon_pharma` 기준 CRM->Builder->Sandbox KPI 전달 불일치 0건 확인
-- Sandbox + Builder 최종 HTML 6종 검증도 2개 회사 모두 통과
+- `hangyeol_pharma`, `daon_pharma` 기준 Sandbox + Builder 최종 HTML 6종 생성 검증 통과
+- `monthly_merge_pharma`는 6개월 월별 raw 생성/병합 검증과 실행모드별 점검 완료
 
 ## 2026-03-16 동기화 상태 (Sandbox Block Renderer Stage 4)
 
@@ -127,8 +131,10 @@ Part2 문서 운영 기준:
 운영 콘솔:
 - Streamlit 기반
 - 회사 등록/선택 기반
+- 회사 목록은 Supabase 등록 목록과 로컬 registry를 함께 반영
 - 실행모드 선택
 - 업로드 파일 반영
+- 월별 raw 일괄 업로드 지원
 - 실제 파이프라인 실행
 - 산출물 미리보기/다운로드
 - 대시보드 / 데이터 어댑터 / 파이프라인 / 분석 인텔리전스 / 결과물 빌더 / Agent 6개 탭 사용
@@ -196,6 +202,7 @@ run 저장 예:
 현재 확인된 회사 예시:
 - `daon_pharma`: Builder 보고서 6종 저장 확인
 - `hangyeol_pharma`: Builder 보고서 6종 저장 확인
+- `monthly_merge_pharma`: 6개월 월별 raw 생성/병합 + 실행모드별 점검 완료
 
 즉:
 - 코드 구조는 6종 보고서를 지원
@@ -233,6 +240,7 @@ run 저장 예:
 참고:
 - raw 샘플 생성도 이제 [generate_source_raw.py](/C:/sfe_master_ops/scripts/generate_source_raw.py)를 먼저 보고, 실제 회사별 생성 로직은 profile에 등록된 스크립트가 맡습니다.
 - 회사별 raw 생성 구현은 [raw_generators](/C:/sfe_master_ops/scripts/raw_generators) 아래에 둡니다.
+- 현재 raw generator 구조는 회사별 파일 기반이며, 공통 엔진 + 설정 기반 구조로 정리하는 설계 문서는 [17_raw_generator_refactor_plan.md](/C:/sfe_master_ops/docs/architecture/17_raw_generator_refactor_plan.md)입니다.
 
 ## 주요 파일
 
@@ -335,11 +343,12 @@ uv run streamlit run ui/ops_console.py --server.port 8501
 
 - `hangyeol_pharma`
 - `daon_pharma`
+- `monthly_merge_pharma`
 
 ## 문서
 
 - 문서 허브: [docs/README.md](/C:/sfe_master_ops/docs/README.md)
-- 실행 방법: [RUNBOOK.md](/C:/sfe_master_ops/docs/_root/RUNBOOK.md)
-- 구조 설명: [STRUCTURE.md](/C:/sfe_master_ops/docs/_root/STRUCTURE.md)
+- 실행 방법: [RUNBOOK.md](/C:/sfe_master_ops/RUNBOOK.md)
+- 구조 설명: [STRUCTURE.md](/C:/sfe_master_ops/STRUCTURE.md)
 - Sandbox 리팩토링 요약: [06_sandbox_refactor_summary.md](/C:/sfe_master_ops/docs/architecture/06_sandbox_refactor_summary.md)
 

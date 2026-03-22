@@ -27,7 +27,7 @@
 
 ## 문서 위치
 
-- `docs/_root/`: 루트 운영 문서 원본 세트
+- 루트 문서: 전역 문서이자 운영 문서 원본 세트
   - `AGENTS.md`
   - `SKILL.md`
   - `README.md`
@@ -50,14 +50,19 @@
 
 - 운영 기준 문서(항상 최신 유지)
   - `docs/README.md`
-  - `docs/_root/README.md`
-  - `docs/_root/RUNBOOK.md`
-  - `docs/_root/STRUCTURE.md`
+  - 루트 `README.md`
+  - 루트 `RUNBOOK.md`
+  - 루트 `STRUCTURE.md`
   - `docs/ai/*` (요약/안내 문서)
   - `docs/runbook/*`
 - 아카이브 성격 문서(이력 보존 우선)
   - `docs/part1/*`
   - `docs/part2/*`
+
+정리:
+
+- 루트 = 전역 원본
+- 수정은 항상 루트 문서에서 먼저 한다
 
 ## 2026-03-16 Sandbox 동기화 요약
 
@@ -70,7 +75,7 @@
 
 ## 권장 읽기 순서
 
-1. `docs/_root/AGENTS.md`
+1. `AGENTS.md`
 2. `docs/ai/00_start_here.md`
 3. `docs/ai/01_worldview.md`
 4. `docs/ai/03_execution_rules.md`
@@ -79,7 +84,7 @@
 7. `docs/ai/06_builder_and_outputs.md`
 8. `docs/ai/02_repo_map.md`
 9. `docs/ai/07_current_phase.md`
-10. `docs/_root/README.md`
-11. `docs/_root/RUNBOOK.md`
-12. `docs/_root/STRUCTURE.md`
+10. `README.md`
+11. `RUNBOOK.md`
+12. `STRUCTURE.md`
 

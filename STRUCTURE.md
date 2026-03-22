@@ -141,16 +141,25 @@ OPS 판단과 파이프라인 실행을 담당합니다.
   - 콘솔 앱 조립
 - [sidebar.py](/C:/sfe_master_ops/ui/console/sidebar.py)
   - 회사 선택/등록, 실행모드 선택
+  - 회사 목록은 Supabase + 로컬 registry 병합 방식 사용
 - [state.py](/C:/sfe_master_ops/ui/console/state.py)
   - 세션 상태, 업로드 캐시, 실행 로그
+  - 월별 raw 업로드 저장 보조 포함
 - [paths.py](/C:/sfe_master_ops/ui/console/paths.py)
   - 회사 기준 경로와 source target 계산
 - [runner.py](/C:/sfe_master_ops/ui/console/runner.py)
   - 실행 준비 판단, 실행 호출, 실행 이력 저장
+  - 실행 분석 문서 저장
 - [pipeline_tab.py](/C:/sfe_master_ops/ui/console/tabs/pipeline_tab.py)
   - 실행 중 본문 상태 박스와 완료/실패 표시
+  - 월별 raw 감지/자동 병합 안내
+- `ui/console/tabs/upload_tab.py`
+  - 일반 raw 업로드
+  - 월별 raw 일괄 업로드
 - [artifacts.py](/C:/sfe_master_ops/ui/console/artifacts.py)
   - 산출물 경로, 미리보기, 보고서 파일 탐색
+- `ui/console/analysis_explainer.py`
+  - `PASS/WARN/APPROVED`를 사람이 읽는 해석 문장으로 변환
 - [display.py](/C:/sfe_master_ops/ui/console/display.py)
   - 공통 화면 블록, 업로드 행 표시
 - [shared.py](/C:/sfe_master_ops/ui/console/shared.py)
@@ -211,6 +220,8 @@ OPS 판단과 파이프라인 실행을 담당합니다.
 - 현재 기준 진입점 이름은 위 공통 이름만 사용합니다.
 - 실제 경로와 입력 파일 선택은 계속 `company_runtime.py`가 회사 코드 기준으로 처리합니다.
 - raw 샘플 생성은 `generate_source_raw.py`가 공통 진입점이고, 실제 회사별 생성 로직은 `company_profile.py`에 연결된 생성 스크립트가 담당합니다.
+- 현재 raw generator는 아직 회사별 파일 기반입니다.
+- 이 구조를 공통 엔진 + 설정 기반으로 정리하는 설계 문서는 `docs/architecture/17_raw_generator_refactor_plan.md`입니다.
 
 현재 중요한 점:
 - CRM 검증 스크립트가 `crm_builder_payload.json` 생성
@@ -227,6 +238,7 @@ OPS 판단과 파이프라인 실행을 담당합니다.
 - 코드상으로는 CRM / Sandbox / Territory / Prescription / RADAR / Total Valid 6종 생성 가능
 - 실제 저장된 HTML은 회사별 마지막 실행 시점에 따라 일부만 있을 수 있음
 - RADAR 결과 자산은 `data/ops_validation/{company_key}/radar/radar_result_asset.json`에 저장됨
+- 실행 중 `monthly_raw/YYYYMM/`가 감지되면 실행 전에 자동 병합 후 기존 파이프라인이 계속 동작함
 
 ### `common/`
 
@@ -238,6 +250,7 @@ OPS 판단과 파이프라인 실행을 담당합니다.
   - 회사별 raw 파일 위치와 adapter 설정을 묶어서 관리
 - [company_registry.py](/C:/sfe_master_ops/common/company_registry.py)
   - 회사 등록/선택과 고정 `company_key` 관리
+  - Supabase + 로컬 registry 병합 조회
 - [run_registry.py](/C:/sfe_master_ops/common/run_registry.py)
   - 기존 호환용 facade 유지
 - `ui/console/`
@@ -332,12 +345,15 @@ Builder는 직접 raw를 읽지 않습니다.
 - raw 파일 업로드
 - 같은 파일 중복 업로드 허용
 - 고급 설정은 접힘 상태
+- 월별 raw 다중 업로드 지원
+- 파일명에서 월 정보를 읽어 `monthly_raw/YYYYMM/`에 저장 가능
 
 ### 파이프라인 탭
 
 - 실행모드 선택
 - 실행 전 반영 파일 확인
 - 실제 파이프라인 실행
+- `monthly_raw` 감지 시 자동 병합 안내
 
 이 단계에서 OPS는 `무엇을 계산하느냐`보다
 `지금 상태에서 다음으로 넘길 수 있느냐`를 보는 역할입니다.
@@ -348,6 +364,10 @@ Builder는 직접 raw를 읽지 않습니다.
 - xlsx/csv/json 미리보기
 - 단계 배지 표시
 - 파일 다운로드
+- `판정 이유`
+- `해석`
+- `근거 수치`
+- 실행 분석 문서 다운로드
 
 ### 결과물 빌더 탭
 

@@ -49,17 +49,19 @@ uv run streamlit run ui/ops_console.py --server.port 8501
 참고:
 - 운영 콘솔은 현재 `ui/console/` 패키지 기준으로 동작합니다.
 - 상단 메뉴는 `대시보드 / 데이터 어댑터 / 파이프라인 / 분석 인텔리전스 / 결과물 빌더 / Agent` 6개 화면 중 선택한 화면만 렌더합니다.
+- 회사 목록은 Supabase 등록 목록을 기본으로 읽고, 로컬 registry 항목도 함께 병합해 표시합니다.
 
 ## 3. 운영 콘솔 사용 순서
 
 1. 사이드바에서 등록된 회사 선택 또는 신규 회사 등록
 2. `실행모드` 선택
 3. 데이터 어댑터 탭에서 raw 파일 업로드
-4. 파이프라인 탭에서 `실행 전 반영 파일 확인`
-5. `파이프라인 실행`
-6. 분석 인텔리전스 탭에서 정규화/검증 산출물 확인
-7. 결과물 빌더 탭에서 HTML 열기/다운로드
-8. Agent 탭에서 run 선택 후 질문/응답/근거/대화이력 확인
+4. 필요 시 월별 raw 일괄 업로드 영역에 월별 파일들을 저장
+5. 파이프라인 탭에서 `실행 전 반영 파일 확인`
+6. `파이프라인 실행`
+7. 분석 인텔리전스 탭에서 정규화/검증 산출물과 판정 해석 확인
+8. 결과물 빌더 탭에서 HTML 열기/다운로드
+9. Agent 탭에서 run 선택 후 질문/응답/근거/대화이력 확인
 
 ## 4. 실행모드 설명
 
@@ -120,6 +122,11 @@ CRM 패키지:
 - 업로드하지 않았더라도 해당 회사 폴더에 기존 source 파일이 있으면 그 파일을 그대로 사용합니다.
 - 화면에서 `권장`으로 보이는 파일도 회사 폴더에 기존 파일이 없으면 실제 실행에는 필요할 수 있습니다.
 
+월별 raw 업로드:
+- 업로드 탭에서 `CRM 활동`, `실적`, `목표`, `Prescription`를 월별 파일 여러 개로 올릴 수 있습니다.
+- 파일명에 `202501` 또는 `2025-01` 같은 월 정보가 있으면 자동으로 `monthly_raw/YYYYMM/` 아래에 저장됩니다.
+- 파이프라인 실행 시 `monthly_raw`가 감지되면 자동 병합 후 기존 실행 흐름으로 넘어갑니다.
+
 ## 6. 회사별 저장 구조
 
 모든 결과는 회사 코드 기준으로 분리됩니다.
@@ -177,6 +184,7 @@ data/ops_validation/daon_pharma/
 참고:
 - raw 샘플 데이터가 필요할 때는 `scripts/generate_source_raw.py`를 먼저 보고, 실제 회사별 생성은 profile에 등록된 스크립트가 실행됩니다.
 - 회사별 raw 생성 구현 파일은 `scripts/raw_generators/` 아래에 둡니다.
+- 현재 raw generator 구조는 회사별 파일 기반이며, 공통 엔진 + 설정 기반 구조로 정리하는 설계 문서는 `docs/architecture/17_raw_generator_refactor_plan.md`를 기준으로 봅니다.
 
 ## 7. 주요 산출물
 
@@ -308,6 +316,20 @@ data/ops_validation/{company_key}/pipeline/console_run_history.jsonl
 현재 확인된 예시:
 - `daon_pharma`는 Builder 보고서 6종 저장이 확인됩니다.
 - `hangyeol_pharma`는 현재 Builder 보고서 6종 저장이 확인됩니다.
+- `monthly_merge_pharma`는 6개월 월별 raw 생성/병합 후 실행모드별 점검이 완료됐습니다.
+
+추가로 같이 저장되는 실행 분석 문서:
+
+```text
+data/ops_validation/{company_key}/pipeline/latest_execution_analysis.md
+```
+
+이 문서에는 들어갑니다.
+
+- 각 단계의 `PASS/WARN/APPROVED`
+- 원래 판정 메모(`reasoning_note`)
+- 사람이 읽는 해석 문장(`interpreted_reason`)
+- 근거 수치(`evidence`)
 
 ## 11. 문제 해결
 
@@ -325,6 +347,8 @@ Territory가 WARN일 때:
 - 현실 raw 데이터에서 일부 연결 누락이나 좌표 품질 이슈가 있을 수 있습니다.
 - 전체 파이프라인 실패와는 별도로 해석해야 합니다.
 - 현재 Territory는 `Sandbox result asset`을 중심으로 돌고, CRM 날짜 동선은 `ops_territory_activity.xlsx` 표준 파일로 붙는 흐름입니다.
+- `monthly_merge_pharma` 기준으로 확인된 실제 WARN 사례는 `데이터 부족`이 아니라 `담당자 배치 불균형`입니다.
+- 즉 WARN은 “실행 실패”가 아니라 “운영 점검 필요”로 읽어야 합니다.
 
 Territory 지도가 다시 무거워졌을 때:
 - `territory_builder_payload.json`이 최신인지 먼저 확인합니다.

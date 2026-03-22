@@ -209,8 +209,8 @@ Data Layer -> Adapter Layer -> Core Engine -> Result Assets -> OPS Validation ->
 - `docs/architecture/11_run_based_storage.md`
 
 ### 수정 문서
-- `docs/_root/STRUCTURE.md`
-- `docs/_root/RUNBOOK.md`
+- `STRUCTURE.md`
+- `RUNBOOK.md`
 
 ### 코드 수정 대상
 - `scripts/validate_builder_with_ops.py`
