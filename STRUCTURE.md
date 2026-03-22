@@ -234,9 +234,11 @@ sfe_master_ops/
 운영 메모:
 - 현재 기준 진입점 이름은 위 공통 이름만 사용합니다.
 - 실제 경로와 입력 파일 선택은 계속 `company_runtime.py`가 회사 코드 기준으로 처리합니다.
-- raw 샘플 생성은 `generate_source_raw.py`가 공통 진입점이고, 실제 테스트용 생성 로직은 `company_profile.py`에 연결된 생성 스크립트가 담당합니다.
-- 현재 raw generator는 아직 회사별 파일 기반입니다.
-- 다만 실제 운영에서 더 중요한 것은 생성기 공통화보다 `raw -> intake/onboarding -> adapter` 공통 입구를 만드는 것입니다.
+- raw 샘플 생성은 `generate_source_raw.py`가 공통 진입점입니다.
+- 현재 테스트용 raw generator는 `config -> engine -> template -> writer` 구조로 정리되기 시작한 상태입니다.
+- 현재 템플릿은 `daon_like`, `hangyeol_like` 2개이고, `monthly_merge_pharma`는 `daon_like + monthly_and_merged` 옵션으로 처리됩니다.
+- 기존 회사별 생성 함수 본체는 template helper로 이동했고, 공통 진입점은 wrapper 없이 config를 직접 읽습니다.
+- 실제 운영에서 더 중요한 공통 입구는 이미 `raw -> intake/onboarding -> adapter` 구조로 정리돼 있습니다.
 - 그래서 테스트용 생성기 정리 설계는 `docs/architecture/17_raw_generator_refactor_plan.md`, 실제 운영용 공통 입력 설계는 `docs/architecture/18_real_company_raw_input_flow.md`, `docs/architecture/19_intake_gate_and_onboarding_plan.md`, `docs/architecture/20_common_intake_engine_implementation_plan.md`를 함께 봅니다.
 
 현재 중요한 점:

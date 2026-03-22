@@ -7,11 +7,17 @@
 중요:
 
 - 이 문서는 **테스트용 raw 생성기** 기준 문서다.
-- 실제 운영의 다음 우선순위는 이 문서보다 `공통 intake/onboarding engine` 구현이 더 높다.
+- 실제 운영의 공통 입구는 이제 `modules/intake`의 `공통 intake/onboarding engine`이 맡는다.
 - 즉 생성기는 테스트 데이터를 만들고, 실제 운영과 테스트의 공통 입구는 별도 intake/onboarding engine이 맡는 방향을 전제로 한다.
 - 현재 전략에서는 raw 생성기를 **일단 유지**한다.
 - 따라서 이 문서의 항목은 **지금 당장 구현해야 하는 필수 작업이 아니다.**
 - 이 문서는 향후 테스트용 생성기가 과도하게 늘어나거나 정리가 필요할 때 참고하는 **후순위 보조 설계 문서**로만 본다.
+
+현재 상태 기준 해석:
+
+- 운영 쪽의 intake/onboarding 공통화는 이미 완료된 상태다.
+- 따라서 지금 이 문서가 다루는 실제 정리 대상은 `테스트용 raw generator 공통화`로 좁혀진다.
+- 즉 현재 남은 질문은 운영 입구가 아니라, 회사별 raw 생성기를 공통 생성 엔진으로 어떻게 줄일지다.
 
 현재 구조는 회사별 raw 생성기 파일이 늘어나는 방향으로 가고 있다.  
 이 방식은 단기적으로는 빠르지만, 회사가 늘수록 유지보수 비용이 커진다.
@@ -29,6 +35,9 @@
 
 - `17번 문서 미구현`은 현재 상태에서 진행 차질이나 운영 미완성을 뜻하지 않는다.
 - 현재 운영 가능성 판단은 `18`, `19`, `20` 문서 기준의 공통 intake/onboarding engine 준비 상태를 우선 본다.
+- 현재 기준에서 이 문서는 `운영 필수 문서`가 아니라 `테스트 데이터 생성기 정리 문서`다.
+- 2026-03-22 기준으로 1차/2차 정리는 실제로 완료됐다.
+- 따라서 이 문서는 이제 “향후 방향 제안”보다는 “현재 raw generator 구조 기록 + 추가 회사 생성 기준” 문서로 읽는 것이 맞다.
 
 ---
 
@@ -37,18 +46,23 @@
 ### 1.1 현재 확인된 관련 파일
 
 - `scripts/generate_source_raw.py`
-- `scripts/raw_generators/generate_daon_source_raw.py`
-- `scripts/raw_generators/generate_hangyeol_source_raw.py`
-- `scripts/raw_generators/generate_monthly_merge_source_raw.py`
+- `scripts/raw_generators/templates/daon_like_helpers.py`
+- `scripts/raw_generators/templates/hangyeol_like_helpers.py`
 - `common/company_profile.py`
+
+현재 확인된 구조 해석:
+
+- 실제 raw generator 구현 본체는 템플릿 helper로 이동했다.
+- `generate_source_raw.py`는 공통 진입점이고, 실제 본체는 `config -> engine -> template -> helper` 구조를 따른다.
+- 운영용 공통 입구(`modules/intake`)와 테스트 raw generator는 이제 역할이 더 분리된 상태다.
 
 ### 1.2 현재 구조의 동작 방식
 
-현재는 `generate_source_raw.py`가 공통 진입점처럼 보이지만, 실제로는 `company_profile.py`에 등록된 회사별 생성 모듈을 다시 호출한다.
+현재는 `generate_source_raw.py`가 실제 공통 진입점이고, `company_profile.py`를 거치지 않는다.
 
 즉 구조는 아래와 같다.
 
-`공통 진입점 -> 회사별 생성기 파일 -> 회사별 raw 저장`
+`공통 진입점 -> config -> engine -> template -> helper -> writer -> company_source 저장`
 
 ### 1.3 현재 구조의 문제
 
@@ -75,7 +89,7 @@
 
 #### 문제 3. 설정값이 코드 안에 박혀 있다
 
-현재 생성기들에는 아래 값들이 코드 상수로 들어가 있다.
+현재 생성기들에는 아래 값들이 config 또는 template helper 상수로 들어가 있다.
 
 - 회사 키
 - 회사명
@@ -88,15 +102,36 @@
 
 이 값들은 코드가 아니라 설정으로 관리하는 편이 맞다.
 
-#### 문제 4. 저장 방식도 생성기 안에 섞여 있다
+#### 문제 4. 포트폴리오 기준표가 왜 필요한지 설명이 약했다
 
-현재 생성기마다 직접 파일 저장과 summary 저장을 처리하고 있다.
+현재 생성기는 `docs/part1/hangyeol-pharma-portfolio-draft.csv`를 공통 제품 기준표로 사용한다.
+
+이 파일을 보는 이유는 단순히 제품명을 고정하기 위해서만이 아니다.
+
+- CRM에서 어떤 브랜드를 언급할지 맞추기 위해
+- Sales / Target에서 같은 브랜드 체계를 쓰기 위해
+- Prescription에서 SKU / 제형 / 포장단위를 같은 체계로 맞추기 위해
+- 제품별 전략 비중(`strategic_weight`)과 채널 적합성(`care_setting`)을 반영하기 위해
+
+즉 이 CSV는 “제품명 목록”이라기보다 raw generator용 공통 제품 기준표로 보는 것이 맞다.
 
 이 방식은 아래 문제를 만든다.
 
 - 파일명/경로 규칙이 생성기마다 달라질 위험
 - 월별 저장 로직이 반복됨
 - 병합 summary 형식이 일관되지 않을 수 있음
+
+#### 현재 시점의 냉정한 판단
+
+지금은 운영 입구 공통화가 이미 끝난 상태이므로, raw generator는 아래 정도로만 정리하면 충분하다.
+
+- 공통 generation engine 1개
+- config
+- template
+- writer
+- 생성 함수 본체는 helper로 이동
+
+즉 현재는 운영 전체 구조 재설계가 아니라, 테스트 데이터 생성기만 공통 엔진으로 수렴시키는 작업으로 보는 것이 맞다.
 
 ---
 
@@ -111,6 +146,11 @@
 3. 월별 생성 여부도 설정으로 관리한다.
 4. 최종 저장 형식은 공통 writer가 책임진다.
 5. 기존 파이프라인과 파일 경로는 최대한 유지한다.
+
+추가 원칙:
+
+6. 운영 공통 입구는 이미 `modules/intake`가 맡고 있으므로, raw generator는 테스트 데이터 생성 책임만 가진다.
+7. raw generator 리팩토링이 intake/onboarding 구조를 다시 흔들면 안 된다.
 
 ### 2.2 목표 구조
 
@@ -142,6 +182,10 @@ scripts/
 - 현재 활성 회사 키를 읽음
 - 회사별 generation config를 로드함
 - 공통 엔진을 실행함
+
+현재 상태 기준 메모:
+
+- 장기적으로는 `company_profile.py`의 회사별 generator 모듈 경유를 줄이고, config 기반으로 직접 공통 engine을 부르는 방향이 맞다.
 
 #### `scripts/raw_generators/configs.py`
 
@@ -267,6 +311,15 @@ RawGenerationConfig(
 
 - 공통 엔진에서 받아야 할 입력값 목록 확정
 - 월별 생성이 “옵션”이라는 기준 확정
+- 현재 상태 기준으로 “운영 입구 공통화는 제외, raw generator 공통화만 대상”이라는 범위 확정
+
+현재 진행 메모 (`2026-03-22`):
+
+- `scripts/raw_generators/configs.py` 추가
+- `RawGenerationConfig` dataclass 추가
+- 현재 회사 3개(`daon_pharma`, `hangyeol_pharma`, `monthly_merge_pharma`) 설정 등록
+- `generate_source_raw.py`는 이제 공통 config를 먼저 읽고, 기존 회사별 generator wrapper를 호출할 준비가 된 상태
+- 즉 Phase 1은 “공통 설정 모델 + 공통 진입 준비”까지 완료된 것으로 본다
 
 ### Phase 2. 저장 로직 공통화
 
@@ -284,6 +337,16 @@ RawGenerationConfig(
 
 - 어떤 템플릿을 써도 writer는 동일 모듈을 사용
 
+현재 진행 메모 (`2026-03-22`):
+
+- `scripts/raw_generators/writers.py` 추가
+- 공통 writer가 아래 책임을 먼저 가져갔다
+  - 최종 source raw 저장
+  - `monthly_raw/YYYYMM` 저장
+  - json summary 저장
+  - csv breakdown 저장
+- 기존 `daon`, `hangyeol`, `monthly_merge` 생성기는 이제 직접 파일을 쓰지 않고 공통 writer를 호출한다
+
 ### Phase 3. 다온형 공통 엔진 추출
 
 #### 목표
@@ -300,11 +363,18 @@ RawGenerationConfig(
 
 - `daon_pharma`가 공통 엔진으로도 동일 출력 생성
 
+현재 진행 메모 (`2026-03-22`):
+
+- `scripts/raw_generators/engine.py` 추가
+- `scripts/raw_generators/templates/daon_like.py` 추가
+- 다온 생성 본체는 `templates/daon_like_helpers.py`로 이동
+- 즉 다온 생성기는 공통 템플릿/helper 경로로 정리됐다
+
 ### Phase 4. 월별검증제약을 설정형으로 전환
 
 #### 목표
 
-`generate_monthly_merge_source_raw.py`를 독립 생성기에서 설정 케이스로 바꾼다.
+월별검증제약을 독립 생성기에서 설정 케이스로 바꾼다.
 
 #### 작업
 
@@ -315,6 +385,12 @@ RawGenerationConfig(
 #### 완료 기준
 
 - 별도 월별 회사 생성기 없이 6개월 월별 생성 가능
+
+현재 진행 메모 (`2026-03-22`):
+
+- `monthly_merge_pharma`는 이제 공통 engine이 `output_mode="monthly_and_merged"`를 보고 처리한다
+- 월별 생성/병합 본체는 `templates/daon_like.py` 안의 월별 경로로 이동
+- 별도 월별 wrapper 없이 설정 옵션으로 해석하는 구조로 정리됐다
 
 ### Phase 5. 한결형 템플릿 흡수
 
@@ -332,6 +408,12 @@ RawGenerationConfig(
 
 - `hangyeol_pharma`도 공통 엔진으로 생성 가능
 
+현재 진행 메모 (`2026-03-22`):
+
+- `scripts/raw_generators/templates/hangyeol_like.py` 추가
+- 한결 생성 본체는 `templates/hangyeol_like_helpers.py`로 이동
+- 즉 한결 생성기도 공통 템플릿/helper 경로로 정리됐다
+
 ### Phase 6. profile 연결 단순화
 
 #### 목표
@@ -340,13 +422,26 @@ RawGenerationConfig(
 
 #### 작업
 
-1. `raw_generator_module` 유지 여부 검토
-2. 필요 시 `generation_profile_key` 또는 config 조회 구조 도입
-3. `generate_source_raw.py`가 설정 기반으로 직접 실행하도록 단순화
+1. raw generator를 `company_profile.py`와 분리할지 검토
+2. 필요 시 config 조회 구조만으로 실행 가능하게 단순화
+3. `generate_source_raw.py`가 설정 기반으로 직접 실행하도록 정리
 
 #### 완료 기준
 
 - 회사 등록 시 “모듈 경로”보다 “설정 키” 중심으로 관리 가능
+
+현재 진행 메모 (`2026-03-22`):
+
+- 1차에서는 `generation_profile_key`를 거쳤지만
+- 2차에서는 raw generator 실행이 `company_profile.py`와 분리됐다
+- 즉 이제 raw generator는 profile 정보 없이도 `config -> engine`만으로 실행된다
+
+2차 정리 메모 (`2026-03-22`):
+
+- raw generator는 운영 핵심이 아니라 실험용이므로, 2차에서는 더 보수적으로 유지하지 않기로 했다.
+- `generate_source_raw.py`는 이제 `company_profile.py`를 거치지 않고 바로 generation config를 읽어 공통 engine을 실행한다.
+- `company_profile.py`에서는 raw generator 전용 필드를 제거했다.
+- 즉 raw generator 실행 경로는 이제 `config -> engine -> template -> writer` 한 줄로 보는 것이 맞다.
 
 ### Phase 7. 안정화 및 정리
 
@@ -363,6 +458,27 @@ RawGenerationConfig(
 #### 완료 기준
 
 - 실행 경로 혼동이 줄고 문서 설명도 새 구조와 일치
+- legacy generator 파일 정리까지 끝나면 완료
+
+현재 진행 메모 (`2026-03-22`):
+
+- `README.md`, `RUNBOOK.md`, `STRUCTURE.md` 설명을 현재 구조 기준으로 정리
+- 현재 공개 설명 기준은 아래로 통일
+  - `generate_source_raw.py` = 공통 진입점
+  - `configs.py` = 생성 설정
+  - `engine.py` = 공통 실행
+  - `templates/daon_like.py`, `templates/hangyeol_like.py` = 템플릿
+  - `writers.py` = 공통 저장
+  - template helper = 실제 함수 본체
+- legacy generator 파일 삭제 완료
+  - `generate_daon_source_raw.py`
+  - `generate_hangyeol_source_raw.py`
+  - `generate_monthly_merge_source_raw.py`
+- `tera_pharma` 테스트 회사 추가 및 실제 raw 생성 완료
+  - 기간 `2025-01 ~ 2025-12`
+  - 지점 `6개`
+  - 담당자: 의원 `30명`, 종합병원 `30명`
+- 즉 Phase 7은 문서 정렬뿐 아니라 실제 legacy generator 제거와 새 테스트 회사 생성 검증까지 마무리된 상태로 본다
 
 ---
 
@@ -443,7 +559,7 @@ RawGenerationConfig(
 
 현재:
 
-- 회사 profile에서 `raw_generator_module`을 읽어 import 후 실행
+- generation config를 읽어 공통 engine 실행
 
 변경:
 
@@ -454,18 +570,17 @@ RawGenerationConfig(
 
 현재:
 
-- 회사별 `raw_generator_module` 연결
+- 운영용 source target과 adapter 설정만 관리
 
 변경:
 
-- 1차 단계에서는 그대로 둘 수 있음
-- 2차 단계에서 `generation_profile_key` 같은 더 단순한 구조 검토
+- raw generator 전용 연결 정보 제거 완료
 
 주의:
 
-- 기존 실행 경로 안정성을 위해 한 번에 크게 바꾸지 않는다.
+- 운영용 profile 책임과 테스트용 raw generator 책임을 다시 섞지 않는다.
 
-#### `scripts/raw_generators/generate_daon_source_raw.py`
+#### `scripts/raw_generators/templates/daon_like_helpers.py`
 
 현재:
 
@@ -473,10 +588,10 @@ RawGenerationConfig(
 
 변경:
 
-- 공통 엔진 호출용 thin wrapper로 축소
-- 또는 템플릿 함수 보관용으로 쪼개기
+- 다온형 실제 생성 함수 보관
+- `templates/daon_like.py`가 직접 사용
 
-#### `scripts/raw_generators/generate_hangyeol_source_raw.py`
+#### `scripts/raw_generators/templates/hangyeol_like_helpers.py`
 
 현재:
 
@@ -484,19 +599,19 @@ RawGenerationConfig(
 
 변경:
 
-- 공통 엔진 호출용 thin wrapper로 축소
-- 한결 고유 로직은 `templates/hangyeol_like.py`로 이동
+- 한결형 실제 생성 함수 보관
+- `templates/hangyeol_like.py`가 직접 사용
 
-#### `scripts/raw_generators/generate_monthly_merge_source_raw.py`
+#### `monthly_merge_pharma` 설정 케이스
 
 현재:
 
-- 다온 생성기를 가져와서 월별 생성/병합 처리
+- 별도 generator 파일이 아니라 `daon_like + monthly_and_merged` 옵션으로 처리
 
 변경:
 
-- 독립 엔진 역할 제거
-- config 기반 공통 엔진 호출용 thin wrapper 또는 제거 대상
+- 독립 엔진 역할 제거 완료
+- config 기반 공통 엔진 경로로 수렴
 
 ### 5.3 유지할 파일
 
@@ -564,13 +679,20 @@ raw 생성기 리팩토링과는 연결되지만, 바로 제거 대상은 아니
 현재 raw 생성 구조는 동작은 하지만 확장성이 약하다.  
 특히 `monthly_merge_pharma` 사례는 “회사별 생성기 추가”보다 “공통 엔진 + 설정 기반 구조”로 가야 한다는 점을 분명하게 보여준다.
 
+현재 상태 기준 최종 판단은 더 단순하다.
+
+- 운영 공통화는 이미 intake/onboarding이 맡고 있다.
+- 따라서 지금 정리 대상은 raw generator뿐이다.
+- 즉 “raw 생성기만 공통 생성기로 남기면 되는가?”라는 질문에는 그렇다고 답하는 것이 맞다.
+- 다만 실제 구현 순서는 여전히 `공통 engine -> wrapper 유지 -> 마지막에 profile 단순화`가 안전하다.
+
 따라서 다음 원칙으로 정리하는 것이 맞다.
 
 1. raw 생성기는 회사별 파일 추가 방식에서 벗어난다.
 2. 공통 생성 엔진을 중심으로 재구성한다.
 3. 회사별 차이는 설정으로 분리한다.
 4. 월별 생성/병합은 생성기 종류가 아니라 옵션으로 처리한다.
-5. 기존 실행 경로는 thin wrapper로 잠시 유지하며 안전하게 전환한다.
+5. 기존 실행 경로는 정리 완료됐고, 새 테스트 회사는 config 추가 중심으로 확장한다.
 
 이 문서를 기준으로 실제 구현은 아래 순서로 들어간다.
 

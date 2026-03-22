@@ -66,6 +66,13 @@ _DEFAULT_COMPANIES: tuple[CompanyRegistryEntry, ...] = (
         company_code_external="monthly_merge_pharma",
         aliases=("monthly-merge-pharma", "Monthly Merge Pharma"),
     ),
+    CompanyRegistryEntry(
+        company_key="tera_pharma",
+        company_name="테라제약",
+        company_name_normalized="테라제약",
+        company_code_external="tera_pharma",
+        aliases=("tera-pharma", "Tera Pharma", "테라파마"),
+    ),
 )
 
 

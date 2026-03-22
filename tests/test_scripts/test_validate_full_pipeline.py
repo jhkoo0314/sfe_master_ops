@@ -2,7 +2,6 @@ import json
 from pathlib import Path
 import shutil
 import sys
-from types import SimpleNamespace
 from uuid import uuid4
 
 ROOT = Path(__file__).resolve().parents[2]
@@ -62,11 +61,6 @@ def test_validate_full_pipeline_uses_shared_execution_service(monkeypatch):
 
         monkeypatch.setattr(validate_full_pipeline, "get_active_company_key", lambda: "demo_company")
         monkeypatch.setattr(validate_full_pipeline, "get_active_company_name", lambda company_key: "Demo Company")
-        monkeypatch.setattr(
-            validate_full_pipeline,
-            "get_company_ops_profile",
-            lambda company_key: SimpleNamespace(raw_generator_module=None),
-        )
         monkeypatch.setattr(
             validate_full_pipeline,
             "get_company_root",

@@ -118,6 +118,26 @@ Part2의 완료/진행/대기 상태는 이 문서를 기준으로 본다.
   - 저장소 지도/런북/구조 문서는 `modules.validation`을 기본 경로로 설명
   - `ops_core`는 호환 경로로만 남김
   - 테스트는 호환성 확인용 bridge 테스트만 `ops_core` import를 의도적으로 유지
+- raw generator 공통화 2차 정리 완료 (`2026-03-22`)
+  - 실제 실행 경로는 `config -> engine -> template -> helper -> writer` 기준으로 정리
+  - 회사별 legacy generator 파일 3개 삭제 완료
+    - `generate_daon_source_raw.py`
+    - `generate_hangyeol_source_raw.py`
+    - `generate_monthly_merge_source_raw.py`
+  - raw generator는 이제 `company_profile.py`와 분리되어 동작
+  - 즉 테스트용 raw 생성기는 운영 profile과 분리된 공통 생성기 구조로 정리됨
+- `tera_pharma` 테스트 회사 생성 및 raw 생성 완료 (`2026-03-22`)
+  - 회사명: `테라제약`
+  - 템플릿: `daon_like`
+  - 생성 기간: `2025-01-01 ~ 2025-12-31`
+  - 지점 수: `6개`
+  - 담당자 수: 의원 `30명`, 종합병원 `30명`
+  - 생성 결과 확인:
+    - 매출 월 범위 `202501 ~ 202512`
+    - 목표 월 범위 `202501 ~ 202512`
+    - CRM 활동일 범위 `2025-01-01 ~ 2025-12-31`
+  - 생성 산출물은 `data/company_source/tera_pharma/` 아래에 저장
+  - 현재 raw generator는 제품명/SKU/제형/포장단위/채널 적합성/전략 비중을 맞추기 위해 `docs/part1/hangyeol-pharma-portfolio-draft.csv`를 공통 제품 기준표로 사용
 
 ## 진행중(In Progress)
 
@@ -133,8 +153,8 @@ Part2의 완료/진행/대기 상태는 이 문서를 기준으로 본다.
   - [x] 다온제약 실제 컬럼 인식 보강
 - raw generator 구조 단순화 설계 고정
   - [x] 공통 생성기 구조 설계 문서 초안 작성
-  - [ ] 설정 기반 공통 generation engine 구현 (후순위, 현재 필수 구현 아님)
-  - [ ] 회사별 generator thin wrapper 전환 (후순위, 현재 필수 구현 아님)
+  - [x] 설정 기반 공통 generation engine 구현
+  - [x] 회사별 generator thin wrapper 전환 후 legacy 파일 정리 완료
 - `ops_core -> modules/validation` 점진 전환 준비
   - [x] `ops_core` 책임 분리 및 의미 재정의
   - [x] 위치 이동 검토 문서화
@@ -146,7 +166,7 @@ Part2의 완료/진행/대기 상태는 이 문서를 기준으로 본다.
 
 - Part2 다음 우선순위 모듈 착수 준비
 - run 중심 저장 구조 및 report context 반영 설계의 구현 전환
-- raw generator 공통화 구현 착수 (후순위, 필요 시)
+- 새 테스트 회사 추가 시 raw generation config만 추가하는 운영 규칙 유지
 - `modules/validation` bridge 추가 후 실제 import 전환 검토
 
 ## 운영 고정 원칙

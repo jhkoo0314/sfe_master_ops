@@ -10,17 +10,18 @@ import numpy as np
 import pandas as pd
 
 
-ROOT = Path(__file__).resolve().parents[2]
+ROOT = Path(__file__).resolve().parents[3]
 if str(ROOT) not in sys.path:
     sys.path.insert(0, str(ROOT))
 
 from common.company_profile import get_company_ops_profile
+from scripts.raw_generators.writers import write_json_summary, write_source_outputs
 
 PUBLIC_ROOT = ROOT / "data" / "public"
 COMPANY_KEY = "daon_pharma"
 PROFILE = get_company_ops_profile(COMPANY_KEY)
 OUTPUT_ROOT = ROOT / "data" / "company_source" / COMPANY_KEY
-PORTFOLIO_PATH = ROOT / "docs" / "hangyeol-pharma-portfolio-draft.csv"
+PORTFOLIO_PATH = ROOT / "docs" / "part1" / "hangyeol-pharma-portfolio-draft.csv"
 
 COMPANY_NAME = "다온제약"
 SEED = 20260310
@@ -57,6 +58,7 @@ BRANCH_DEFS = [
     {"branch_id": "B09", "branch_name": "강원지점", "regions": ["강원"]},
     {"branch_id": "B10", "branch_name": "제주지점", "regions": ["제주"]},
 ]
+ALL_BRANCH_DEFS = [dict(branch) for branch in BRANCH_DEFS]
 SURNAMES = ["김", "이", "박", "최", "정", "강", "조", "윤", "장", "임", "한", "오", "서", "신", "권", "황", "안", "송", "류", "전"]
 GIVEN_NAMES = [
     "민준", "서연", "도윤", "하린", "지민", "예린", "우진", "서준", "수아", "지후",
@@ -549,49 +551,15 @@ def write_outputs(rep_df: pd.DataFrame, account_master: pd.DataFrame, assignment
         "sales": PROFILE.source_path(OUTPUT_ROOT, "sales"),
         "prescription": PROFILE.source_path(OUTPUT_ROOT, "prescription"),
     }
-    for path in output_paths.values():
-        path.parent.mkdir(parents=True, exist_ok=True)
-
-    rep_df.to_excel(output_paths["rep_master"], index=False)
-    account_master.to_excel(output_paths["crm_account_assignment"], index=False)
-    assignment_raw.to_excel(output_paths["crm_rep_master"], index=False)
-    crm_raw.to_excel(output_paths["crm_activity"], index=False)
-    target_raw.to_excel(output_paths["target"], index=False)
-    sales_raw.to_excel(output_paths["sales"], index=False)
-    ship_raw.to_csv(output_paths["prescription"], index=False, encoding="utf-8-sig")
-
-
-def main() -> None:
-    portfolio = load_portfolio()
-    hospital_pool = load_hospital_pool()
-    clinic_df, hospital_df = select_accounts(hospital_pool)
-    rep_df = build_rep_master(clinic_df, hospital_df)
-    account_master = build_account_master(rep_df, clinic_df, hospital_df)
-    assignment_raw = build_company_assignment(account_master, rep_df)
-    crm_raw = generate_crm_raw(account_master, portfolio)
-    target_raw, sales_raw = generate_target_and_sales(account_master, portfolio)
-    ship_raw = generate_fact_ship(account_master, sales_raw, portfolio)
-    write_outputs(rep_df, account_master, assignment_raw, crm_raw, target_raw, sales_raw, ship_raw)
-
-    summary = {
-        "company_key": COMPANY_KEY,
-        "company_name": COMPANY_NAME,
-        "rep_count": int(len(rep_df)),
-        "clinic_rep_count": int((rep_df["rep_role"] == "의원").sum()),
-        "hospital_rep_count": int((rep_df["rep_role"] == "종합병원").sum()),
-        "account_count": int(len(account_master)),
-        "clinic_account_count": int((account_master["account_type"] == "의원").sum()),
-        "hospital_account_count": int((account_master["account_type"] != "의원").sum()),
-        "crm_rows": int(len(crm_raw)),
-        "target_rows": int(len(target_raw)),
-        "sales_rows": int(len(sales_raw)),
-        "fact_ship_rows": int(len(ship_raw)),
-        "date_range": [START_DATE, END_DATE],
-        "output_root": str(OUTPUT_ROOT),
-    }
-    (OUTPUT_ROOT / "generation_summary.json").write_text(pd.Series(summary).to_json(force_ascii=False, indent=2), encoding="utf-8")
-    print(summary)
-
-
-if __name__ == "__main__":
-    main()
+    write_source_outputs(
+        {
+            "rep_master": rep_df,
+            "crm_account_assignment": account_master,
+            "crm_rep_master": assignment_raw,
+            "crm_activity": crm_raw,
+            "target": target_raw,
+            "sales": sales_raw,
+            "prescription": ship_raw,
+        },
+        output_paths,
+    )

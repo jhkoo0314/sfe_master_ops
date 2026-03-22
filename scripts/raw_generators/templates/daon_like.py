@@ -1,29 +1,82 @@
 from __future__ import annotations
 
-from pathlib import Path
 import random
-import sys
+from pathlib import Path
 
 import numpy as np
 import pandas as pd
 
-
-ROOT = Path(__file__).resolve().parents[2]
-if str(ROOT) not in sys.path:
-    sys.path.insert(0, str(ROOT))
-
-from common.company_runtime import get_active_company_key, get_active_company_name
 from common.company_profile import get_company_ops_profile
-from scripts.raw_generators import generate_daon_source_raw as daon
+from scripts.raw_generators.configs import RawGenerationConfig
+from scripts.raw_generators.writers import write_csv_table, write_json_summary, write_monthly_outputs
 
 
-COMPANY_KEY = get_active_company_key("monthly_merge_pharma")
-COMPANY_NAME = get_active_company_name("월별검증제약")
-START_MONTH = "2025-01"
-END_MONTH = "2025-06"
-CLINIC_REP_COUNT = 50
-HOSPITAL_REP_COUNT = 25
-SEED = 20260322
+def _month_start(month_token: str) -> str:
+    return f"{month_token}-01"
+
+
+def _month_end(month_token: str) -> str:
+    month = pd.Period(month_token, freq="M")
+    return month.end_time.normalize().strftime("%Y-%m-%d")
+
+
+def _configure_daon_module(config: RawGenerationConfig, *, seed: int | None = None) -> object:
+    from scripts.raw_generators.templates import daon_like_helpers as daon
+
+    daon.COMPANY_KEY = config.company_key
+    daon.COMPANY_NAME = config.company_name
+    daon.PROFILE = get_company_ops_profile(config.company_key)
+    daon.OUTPUT_ROOT = daon.ROOT / "data" / "company_source" / config.company_key
+    daon.CLINIC_REP_COUNT = config.clinic_rep_count
+    daon.HOSPITAL_REP_COUNT = config.hospital_rep_count
+    daon.BRANCH_DEFS = [dict(branch) for branch in daon.ALL_BRANCH_DEFS[: config.branch_count]]
+    daon.START_DATE = _month_start(config.start_month)
+    daon.END_DATE = _month_end(config.end_month)
+
+    if config.portfolio_source == "hangyeol_portfolio":
+        daon.PORTFOLIO_PATH = daon.ROOT / "docs" / "part1" / "hangyeol-pharma-portfolio-draft.csv"
+
+    resolved_seed = seed if seed is not None else getattr(daon, "SEED", 20260310)
+    daon.SEED = resolved_seed
+    random.seed(resolved_seed)
+    np.random.seed(resolved_seed)
+    return daon
+
+
+def run_template(config: RawGenerationConfig) -> None:
+    daon = _configure_daon_module(config)
+
+    portfolio = daon.load_portfolio()
+    hospital_pool = daon.load_hospital_pool()
+    clinic_df, hospital_df = daon.select_accounts(hospital_pool)
+    rep_df = daon.build_rep_master(clinic_df, hospital_df)
+    account_master = daon.build_account_master(rep_df, clinic_df, hospital_df)
+    assignment_raw = daon.build_company_assignment(account_master, rep_df)
+    crm_raw = daon.generate_crm_raw(account_master, portfolio)
+    target_raw, sales_raw = daon.generate_target_and_sales(account_master, portfolio)
+    ship_raw = daon.generate_fact_ship(account_master, sales_raw, portfolio)
+    daon.write_outputs(rep_df, account_master, assignment_raw, crm_raw, target_raw, sales_raw, ship_raw)
+
+    summary = {
+        "company_key": config.company_key,
+        "company_name": config.company_name,
+        "template_type": config.template_type,
+        "output_mode": config.output_mode,
+        "rep_count": int(len(rep_df)),
+        "clinic_rep_count": int((rep_df["rep_role"] == "의원").sum()),
+        "hospital_rep_count": int((rep_df["rep_role"] == "종합병원").sum()),
+        "account_count": int(len(account_master)),
+        "clinic_account_count": int((account_master["account_type"] == "의원").sum()),
+        "hospital_account_count": int((account_master["account_type"] != "의원").sum()),
+        "crm_rows": int(len(crm_raw)),
+        "target_rows": int(len(target_raw)),
+        "sales_rows": int(len(sales_raw)),
+        "fact_ship_rows": int(len(ship_raw)),
+        "date_range": [daon.START_DATE, daon.END_DATE],
+        "output_root": str(Path(daon.OUTPUT_ROOT)),
+    }
+    daon.write_json_summary(Path(daon.OUTPUT_ROOT) / "generation_summary.json", summary)
+    print(summary)
 
 
 def _fill_missing_rep_assignments(account_master: pd.DataFrame, rep_df: pd.DataFrame) -> pd.DataFrame:
@@ -39,8 +92,7 @@ def _fill_missing_rep_assignments(account_master: pd.DataFrame, rep_df: pd.DataF
     clinic_idx = 0
     hospital_idx = 0
 
-    missing_indices = list(result.index[missing_mask])
-    for row_idx in missing_indices:
+    for row_idx in list(result.index[missing_mask]):
         account_type = str(result.at[row_idx, "account_type"])
         role_reps = clinic_reps if account_type == "의원" else hospital_reps
         if role_reps.empty:
@@ -64,49 +116,17 @@ def _fill_missing_rep_assignments(account_master: pd.DataFrame, rep_df: pd.DataF
     return result
 
 
-def _configure_base() -> Path:
-    daon.COMPANY_KEY = COMPANY_KEY
-    daon.COMPANY_NAME = COMPANY_NAME
-    daon.PROFILE = get_company_ops_profile(COMPANY_KEY)
-    daon.OUTPUT_ROOT = ROOT / "data" / "company_source" / COMPANY_KEY
-    daon.CLINIC_REP_COUNT = CLINIC_REP_COUNT
-    daon.HOSPITAL_REP_COUNT = HOSPITAL_REP_COUNT
-    daon.SEED = SEED
-    preferred = ROOT / "docs" / "part1" / "hangyeol-pharma-portfolio-draft.csv"
-    fallback = ROOT / "docs" / "hangyeol-pharma-portfolio-draft.csv"
-    daon.PORTFOLIO_PATH = preferred if preferred.exists() else fallback
-    random.seed(SEED)
-    np.random.seed(SEED)
-    monthly_root = daon.OUTPUT_ROOT / "monthly_raw"
-    monthly_root.mkdir(parents=True, exist_ok=True)
-    return monthly_root
-
-
-def _save_monthly_files(
-    monthly_root: Path,
-    yyyymm: str,
-    crm_raw: pd.DataFrame,
-    target_raw: pd.DataFrame,
-    sales_raw: pd.DataFrame,
-    ship_raw: pd.DataFrame,
-) -> None:
-    month_dir = monthly_root / yyyymm
-    month_dir.mkdir(parents=True, exist_ok=True)
-    crm_raw.to_excel(month_dir / "crm_activity_raw.xlsx", index=False)
-    target_raw.to_excel(month_dir / "target_raw.xlsx", index=False)
-    sales_raw.to_excel(month_dir / "sales_raw.xlsx", index=False)
-    ship_raw.to_csv(month_dir / "fact_ship_raw.csv", index=False, encoding="utf-8-sig")
-
-
 def _month_bounds(month: pd.Period) -> tuple[str, str]:
     start = month.to_timestamp(how="start")
     end = month.to_timestamp(how="end").normalize()
     return start.strftime("%Y-%m-%d"), end.strftime("%Y-%m-%d")
 
 
-def main() -> None:
-    monthly_root = _configure_base()
-    months = pd.period_range(START_MONTH, END_MONTH, freq="M")
+def run_monthly_and_merged_template(config: RawGenerationConfig) -> None:
+    daon = _configure_daon_module(config, seed=20260322)
+    monthly_root = Path(daon.OUTPUT_ROOT) / "monthly_raw"
+    monthly_root.mkdir(parents=True, exist_ok=True)
+    months = pd.period_range(config.start_month, config.end_month, freq="M")
 
     portfolio = daon.load_portfolio()
     hospital_pool = daon.load_hospital_pool()
@@ -123,7 +143,7 @@ def main() -> None:
     monthly_rows: list[dict[str, int | str]] = []
 
     for idx, month in enumerate(months, start=1):
-        month_seed = SEED + idx
+        month_seed = daon.SEED + idx
         random.seed(month_seed)
         np.random.seed(month_seed)
 
@@ -142,8 +162,16 @@ def main() -> None:
         monthly_target.append(target_raw)
         monthly_sales.append(sales_raw)
         monthly_ship.append(ship_raw)
-        _save_monthly_files(monthly_root, yyyymm, crm_raw, target_raw, sales_raw, ship_raw)
-
+        write_monthly_outputs(
+            monthly_root,
+            yyyymm,
+            {
+                "crm_activity": crm_raw,
+                "target": target_raw,
+                "sales": sales_raw,
+                "prescription": ship_raw,
+            },
+        )
         monthly_rows.append(
             {
                 "yyyymm": yyyymm,
@@ -182,13 +210,13 @@ def main() -> None:
         "sales_rows": int(len(merged_sales)),
         "fact_ship_rows": int(len(merged_ship)),
     }
-
-    validation = {k: monthly_sum[k] == merged_sum[k] for k in monthly_sum}
     summary = {
-        "company_key": COMPANY_KEY,
-        "company_name": COMPANY_NAME,
+        "company_key": config.company_key,
+        "company_name": config.company_name,
         "scenario": "monthly_raw_generation_and_merge_validation",
-        "month_range": [START_MONTH, END_MONTH],
+        "template_type": config.template_type,
+        "output_mode": config.output_mode,
+        "month_range": [config.start_month, config.end_month],
         "month_count": int(len(months)),
         "branch_count": int(len(daon.BRANCH_DEFS)),
         "rep_count": int(len(rep_df)),
@@ -196,17 +224,10 @@ def main() -> None:
         "hospital_rep_count": int((rep_df["rep_role"] == "종합병원").sum()),
         "monthly_sum_rows": monthly_sum,
         "merged_rows": merged_sum,
-        "row_count_validation": validation,
-        "output_root": str(daon.OUTPUT_ROOT),
+        "row_count_validation": {k: monthly_sum[k] == merged_sum[k] for k in monthly_sum},
+        "output_root": str(Path(daon.OUTPUT_ROOT)),
     }
 
-    (daon.OUTPUT_ROOT / "monthly_generation_plan_summary.json").write_text(
-        pd.Series(summary).to_json(force_ascii=False, indent=2),
-        encoding="utf-8",
-    )
-    month_summary_df.to_csv(daon.OUTPUT_ROOT / "monthly_generation_breakdown.csv", index=False, encoding="utf-8-sig")
+    write_json_summary(Path(daon.OUTPUT_ROOT) / "monthly_generation_plan_summary.json", summary)
+    write_csv_table(Path(daon.OUTPUT_ROOT) / "monthly_generation_breakdown.csv", month_summary_df)
     print(summary)
-
-
-if __name__ == "__main__":
-    main()

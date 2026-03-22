@@ -18,7 +18,6 @@ from adapters.territory.adapter_config import TerritoryActivityAdapterConfig
 class CompanyOpsProfile:
     company_key: str
     source_targets: dict[str, tuple[str, str]]
-    raw_generator_module: str | None
     hospital_adapter_factory: Callable[[], HospitalAdapterConfig]
     company_master_adapter_factory: Callable[[], CompanyMasterAdapterConfig]
     crm_activity_adapter_factory: Callable[[], CrmActivityAdapterConfig]
@@ -54,12 +53,10 @@ _STANDARD_SOURCE_TARGETS = {
 
 def _build_standard_profile(
     company_key: str,
-    raw_generator_module: str | None = None,
 ) -> CompanyOpsProfile:
     return CompanyOpsProfile(
         company_key=company_key,
         source_targets=dict(_STANDARD_SOURCE_TARGETS),
-        raw_generator_module=raw_generator_module,
         hospital_adapter_factory=HospitalAdapterConfig.hangyeol_account_example,
         company_master_adapter_factory=CompanyMasterAdapterConfig.hangyeol_company_source_example,
         crm_activity_adapter_factory=CrmActivityAdapterConfig.hangyeol_crm_source_example,
@@ -71,18 +68,10 @@ def _build_standard_profile(
 
 
 _PROFILE_MAP = {
-    "hangyeol_pharma": _build_standard_profile(
-        "hangyeol_pharma",
-        raw_generator_module="scripts.raw_generators.generate_hangyeol_source_raw",
-    ),
-    "daon_pharma": _build_standard_profile(
-        "daon_pharma",
-        raw_generator_module="scripts.raw_generators.generate_daon_source_raw",
-    ),
-    "monthly_merge_pharma": _build_standard_profile(
-        "monthly_merge_pharma",
-        raw_generator_module="scripts.raw_generators.generate_monthly_merge_source_raw",
-    ),
+    "hangyeol_pharma": _build_standard_profile("hangyeol_pharma"),
+    "daon_pharma": _build_standard_profile("daon_pharma"),
+    "monthly_merge_pharma": _build_standard_profile("monthly_merge_pharma"),
+    "tera_pharma": _build_standard_profile("tera_pharma"),
 }
 
 

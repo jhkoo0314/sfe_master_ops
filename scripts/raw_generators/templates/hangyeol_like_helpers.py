@@ -10,11 +10,12 @@ import numpy as np
 import pandas as pd
 
 
-ROOT = Path(__file__).resolve().parents[2]
+ROOT = Path(__file__).resolve().parents[3]
 if str(ROOT) not in sys.path:
     sys.path.insert(0, str(ROOT))
 
 from common.company_profile import get_company_ops_profile
+from scripts.raw_generators.writers import write_source_outputs
 
 RAW_ROOT = ROOT / "data" / "sample_data"
 PUBLIC_ROOT = ROOT / "data" / "public"
@@ -327,7 +328,7 @@ def build_company_assignment(account_master: pd.DataFrame, rep_df: pd.DataFrame)
 
 
 def portfolio_frame() -> pd.DataFrame:
-    return pd.read_csv(ROOT / "docs" / "hangyeol-pharma-portfolio-draft.csv")
+    return pd.read_csv(ROOT / "docs" / "part1" / "hangyeol-pharma-portfolio-draft.csv")
 
 
 def product_pool(portfolio: pd.DataFrame, account_type: str) -> pd.DataFrame:
@@ -501,36 +502,15 @@ def write_outputs(rep_df: pd.DataFrame, account_master: pd.DataFrame, assignment
         "sales": PROFILE.source_path(OUTPUT_ROOT, "sales"),
         "prescription": PROFILE.source_path(OUTPUT_ROOT, "prescription"),
     }
-    for path in output_paths.values():
-        path.parent.mkdir(parents=True, exist_ok=True)
-
-    rep_df.to_excel(output_paths["rep_master"], index=False)
-    account_master.to_excel(output_paths["crm_account_assignment"], index=False)
-    assignment_raw.to_excel(output_paths["crm_rep_master"], index=False)
-    crm_raw.to_excel(output_paths["crm_activity"], index=False)
-    target_raw.to_excel(output_paths["target"], index=False)
-    sales_raw.to_excel(output_paths["sales"], index=False)
-    ship_raw.to_csv(output_paths["prescription"], index=False, encoding="utf-8-sig")
-
-
-def main() -> None:
-    portfolio = portfolio_frame()
-    rep_df, account_master = build_account_master()
-    assignment_raw = build_company_assignment(account_master, rep_df)
-    crm_raw = generate_crm_raw(account_master, portfolio)
-    target_raw, sales_raw = generate_target_and_sales(account_master, portfolio)
-    ship_raw = transform_fact_ship(portfolio)
-    write_outputs(rep_df, account_master, assignment_raw, crm_raw, target_raw, sales_raw, ship_raw)
-
-    print(f"Generated {COMPANY_NAME} source raw files:")
-    print(f"  reps={len(rep_df)}")
-    print(f"  accounts={len(account_master)}")
-    print(f"  crm_rows={len(crm_raw)}")
-    print(f"  target_rows={len(target_raw)}")
-    print(f"  sales_rows={len(sales_raw)}")
-    print(f"  ship_rows={len(ship_raw)}")
-    print(f"  output={OUTPUT_ROOT}")
-
-
-if __name__ == "__main__":
-    main()
+    write_source_outputs(
+        {
+            "rep_master": rep_df,
+            "crm_account_assignment": account_master,
+            "crm_rep_master": assignment_raw,
+            "crm_activity": crm_raw,
+            "target": target_raw,
+            "sales": sales_raw,
+            "prescription": ship_raw,
+        },
+        output_paths,
+    )
