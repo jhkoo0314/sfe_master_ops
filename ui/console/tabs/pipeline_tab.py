@@ -9,11 +9,13 @@ from ui.console.display import render_block_card, render_page_hero, render_panel
 from ui.console.paths import get_active_company_name
 from ui.console.state import add_log
 from ui.console.runner import (
+    ensure_intake_result,
     get_crm_package_status,
     get_monthly_raw_status,
     get_source_target_rows,
     run_actual_pipeline,
     save_pipeline_run_history,
+    summarize_intake_result,
 )
 
 
@@ -25,16 +27,19 @@ def render_pipeline_tab() -> None:
         "ORCHESTRATION",
     )
     uploaded = st.session_state.uploaded_data
+    current_mode = st.session_state.get("execution_mode", "crm_to_sandbox")
     crm_status = get_crm_package_status(uploaded)
     monthly_status = get_monthly_raw_status()
+    intake_result = ensure_intake_result(current_mode, uploaded)
+    intake_summary = summarize_intake_result(intake_result)
     ready = [k for k, v in uploaded.items() if v is not None]
-    current_mode = st.session_state.get("execution_mode", "crm_to_sandbox")
     st.markdown(
         f"""
         <div class="stat-strip">
           <div class="stat-chip"><div class="label">Execution Mode</div><div class="value">{get_execution_mode_label(current_mode)}</div></div>
           <div class="stat-chip"><div class="label">Loaded Files</div><div class="value">{len(ready)} active</div></div>
           <div class="stat-chip"><div class="label">CRM Required</div><div class="value">{'Ready' if crm_status['required_ready'] else 'Need 2 files'}</div></div>
+          <div class="stat-chip"><div class="label">Onboarding Ready</div><div class="value">{'YES' if intake_summary['ready_for_adapter'] else 'NO'}</div></div>
           <div class="stat-chip"><div class="label">Monthly Raw</div><div class="value">{len(monthly_status['months_detected']) if monthly_status['has_data'] else 0} months</div></div>
         </div>
         """,
@@ -49,9 +54,17 @@ def render_pipeline_tab() -> None:
     with col_run:
         render_block_card(
             "실행 준비 상태",
-            f"현재 실행 모드: {get_execution_mode_label(current_mode)} · 단계: {' -> '.join(get_execution_mode_modules(current_mode)).upper()} · CRM 필수 패키지: {'준비 완료' if crm_status['required_ready'] else '미완성'}",
+            f"현재 실행 모드: {get_execution_mode_label(current_mode)} · 단계: {' -> '.join(get_execution_mode_modules(current_mode)).upper()} · CRM 필수 패키지: {'준비 완료' if crm_status['required_ready'] else '미완성'} · Intake 상태: {str(intake_summary['status']).upper()}",
             "Run Context",
         )
+
+    render_panel_header("Onboarding Ready 상태", "파이프라인 실행 전, intake가 정리한 입력이 Adapter로 넘어갈 준비가 되었는지 먼저 확인합니다.")
+    if intake_summary["blocked_count"]:
+        st.error(f"필수 입력 부족으로 막힌 intake 항목이 {intake_summary['blocked_count']}개 있습니다.")
+    elif intake_summary["review_count"]:
+        st.warning(f"사람 확인이 필요한 intake 항목이 {intake_summary['review_count']}개 있습니다. 필요한 경우 업로드 탭의 Intake 제안을 먼저 확인하세요.")
+    else:
+        st.success("현재 intake 기준으로 Adapter 전달 준비가 완료되었습니다.")
 
     render_panel_header("실행 전 반영 파일 확인", "업로드한 파일은 source 경로에 반영되고, 없는 항목은 기존 파일을 사용합니다.")
     if monthly_status["has_data"]:
@@ -78,6 +91,8 @@ def render_pipeline_tab() -> None:
 
     if reset_btn:
         st.session_state.pipeline_result = None
+        st.session_state.intake_result = None
+        st.session_state.intake_signature = ""
         st.session_state.run_log = []
         for key in st.session_state.module_status:
             st.session_state.module_status[key] = "미실행"
@@ -90,7 +105,7 @@ def render_pipeline_tab() -> None:
         run_status = st.status("Sales Data OS 실행 중", expanded=True)
         run_status.write(f"실행 모드: {get_execution_mode_label(current_mode)}")
         run_status.write("1. 회사별 source 반영 상태를 확인합니다.")
-        run_status.write("2. Adapter → Core Engine → Validation Layer 순서로 실행합니다.")
+        run_status.write(f"2. Intake 상태({str(intake_summary['status']).upper()})를 기준으로 Adapter → Core Engine → Validation Layer 순서로 실행합니다.")
         run_status.write("3. 완료 후 run 저장과 결과 화면 갱신을 수행합니다.")
         try:
             with st.spinner("Sales Data OS 실행 중... (Adapter → Core Engine → Validation Layer)"):

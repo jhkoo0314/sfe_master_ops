@@ -3,7 +3,12 @@ import streamlit as st
 
 from ui.console.display import render_page_hero, render_panel_header, render_upload_row
 from ui.console.paths import get_active_company_name, get_source_target_display_path, get_source_target_map
-from ui.console.runner import get_crm_package_status, get_monthly_raw_status
+from ui.console.runner import (
+    ensure_intake_result,
+    get_crm_package_status,
+    get_monthly_raw_status,
+    summarize_intake_result,
+)
 from ui.console.state import save_monthly_upload_batch
 from ops_core.workflow.monthly_source_merge import get_monthly_raw_root
 
@@ -11,6 +16,9 @@ from ops_core.workflow.monthly_source_merge import get_monthly_raw_root
 def render_upload_tab() -> None:
     company_name = get_active_company_name()
     monthly_status = get_monthly_raw_status()
+    current_mode = st.session_state.get("execution_mode", "crm_to_sandbox")
+    intake_result = ensure_intake_result(current_mode, st.session_state.uploaded_data)
+    intake_summary = summarize_intake_result(intake_result)
     render_page_hero(
         "RAW 데이터 투입",
         f"{company_name} 원천 데이터를 회사별 폴더에 연결합니다. 검증 단계에서는 항목명, 짧은 설명, 업로드창을 한 줄에 두고 필요한 예시만 펼쳐서 봅니다.",
@@ -25,11 +33,63 @@ def render_upload_tab() -> None:
           <div class="stat-chip"><div class="label">Loaded Files</div><div class="value">{loaded_count} / 7</div></div>
           <div class="stat-chip"><div class="label">Adapter Mode</div><div class="value">Standard Normalize</div></div>
           <div class="stat-chip"><div class="label">CRM Package</div><div class="value">{crm_status['package_count']} / 4</div></div>
+          <div class="stat-chip"><div class="label">Intake</div><div class="value">{str(intake_summary['status']).upper()}</div></div>
         </div>
         """,
         unsafe_allow_html=True,
     )
     st.markdown('<div class="action-note">원본 추출 파일 우선 · 중복 업로드 허용 · 자세한 설명은 각 항목의 예시에서 확인</div>', unsafe_allow_html=True)
+
+    render_panel_header("Intake Gate 결과", "업로드 직후 공통 intake engine이 자동 수정, 제안, onboarding 가능 여부를 먼저 점검합니다.")
+    st.markdown(
+        f"""
+        <div class="stat-strip">
+          <div class="stat-chip"><div class="label">Scenario</div><div class="value">{intake_result.get('scenario_label', '-')}</div></div>
+          <div class="stat-chip"><div class="label">Ready For Adapter</div><div class="value">{'YES' if intake_summary['ready_for_adapter'] else 'NO'}</div></div>
+          <div class="stat-chip"><div class="label">Auto Fixes</div><div class="value">{intake_summary['fix_count']}</div></div>
+          <div class="stat-chip"><div class="label">Needs Review</div><div class="value">{intake_summary['review_count']}</div></div>
+        </div>
+        """,
+        unsafe_allow_html=True,
+    )
+    if intake_summary["blocked_count"]:
+        st.error(f"필수 입력 부족으로 막힌 항목이 {intake_summary['blocked_count']}개 있습니다.")
+    elif intake_summary["review_count"]:
+        st.warning(f"사람 확인이 필요한 intake 항목이 {intake_summary['review_count']}개 있습니다.")
+    else:
+        st.success("현재 업로드 기준으로 onboarding-ready 상태입니다.")
+
+    package_rows = []
+    for package in intake_result.get("packages", []):
+        if package.get("source_key") == "rep_master":
+            continue
+        package_rows.append(
+            {
+                "입력 묶음": package.get("source_key"),
+                "상태": package.get("status"),
+                "자동수정": len(package.get("fixes", [])),
+                "제안": len(package.get("suggestions", [])),
+                "Adapter 전달": "가능" if package.get("ready_for_adapter") else "보류",
+                "Staging 경로": package.get("staged_path"),
+            }
+        )
+    if package_rows:
+        st.dataframe(pd.DataFrame(package_rows), use_container_width=True, hide_index=True)
+
+    important_suggestions = []
+    for package in intake_result.get("packages", []):
+        for suggestion in package.get("suggestions", [])[:2]:
+            important_suggestions.append(
+                {
+                    "입력 묶음": package.get("source_key"),
+                    "제안 유형": suggestion.get("suggestion_type"),
+                    "설명": suggestion.get("message"),
+                    "후보 컬럼": ", ".join(suggestion.get("candidate_columns", [])),
+                }
+            )
+    if important_suggestions:
+        with st.expander("Intake 제안 보기", expanded=False):
+            st.dataframe(pd.DataFrame(important_suggestions), use_container_width=True, hide_index=True)
 
     render_panel_header("CRM 패키지", f"필수 2개, 권장 1개, 선택 1개 구조입니다. 현재 상태: {'필수 준비 완료' if crm_status['required_ready'] else '필수 미완성'}")
     render_upload_row("crm_activity", "crm_activity_up", "CRM 활동 원본", "필수", "방문, 디테일, 통화 같은 활동 로그", get_source_target_display_path("crm_activity"), ["방문일, 담당자명 또는 담당자ID", "방문기관명, 기관코드, 주소 중 하나 이상", "활동유형(방문, 디테일, 미팅 등)"], ["월별 합계보다 활동 한 줄 한 줄이 남아 있는 원본이 좋습니다.", "가공 요약표보다 시스템 추출 원본이 더 적합합니다."], "CRM 활동 업로드")

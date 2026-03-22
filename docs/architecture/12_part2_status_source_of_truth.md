@@ -56,6 +56,20 @@ Part2의 완료/진행/대기 상태는 이 문서를 기준으로 본다.
   - 실행 분석 문서(`latest_execution_analysis.md`) 저장
 - 회사 등록 목록을 Supabase + 로컬 registry 병합 방식으로 보강
   - Supabase에 없는 테스트 회사도 로컬 목록에서 유지 가능
+- 공통 intake/onboarding engine Phase 1~7 연결 완료
+  - `modules/intake/` 공통엔진 뼈대 추가
+  - `scenario + mapping + rules` 구조 연결
+  - 기본 자동 수정(컬럼명 trim, 월/날짜 형식 정리, 중복 제거) 반영
+  - 제안 문장/컬럼 후보 추천 반영
+  - `_intake_staging`, `_onboarding` 저장 연결
+  - 운영 콘솔 업로드/파이프라인 탭에 intake 결과 표시 연결
+  - execution service가 `_intake_staging` 정리본을 실제 Adapter 입력으로 사용하도록 연결
+- `monthly_merge_pharma` 통합 실행 재검증 통과 (`2026-03-22`)
+  - 실행 엔진 입력이 `company_source` 원본이 아니라 `_intake_staging` 기준으로 전환된 상태에서 재검증
+  - `scripts/validate_full_pipeline.py` 기준 전체 파이프라인 완료
+  - 전체 상태 `WARN`, 전체 점수 `94.7`
+  - CRM `PASS` / Prescription `PASS` / Sandbox `PASS` / Territory `WARN` / RADAR `APPROVED` / Builder `PASS`
+  - Builder HTML 6종 생성 확인
 
 ## 진행중(In Progress)
 
@@ -66,7 +80,7 @@ Part2의 완료/진행/대기 상태는 이 문서를 기준으로 본다.
   - [x] intake gate 운영 설계 문서 작성
   - [x] 공통 intake engine 구현 계획 문서 작성
   - [x] 공통엔진 1개 + `scenario + mapping + rules` 업데이트 구조로 방향 고정
-  - [ ] intake/onboarding 공통엔진 구현
+  - [x] intake/onboarding 공통엔진 구현
 - raw generator 구조 단순화 설계 고정
   - [x] 공통 생성기 구조 설계 문서 초안 작성
   - [ ] 설정 기반 공통 generation engine 구현 (후순위, 현재 필수 구현 아님)
@@ -74,7 +88,6 @@ Part2의 완료/진행/대기 상태는 이 문서를 기준으로 본다.
 
 ## 대기(Next)
 
-- 공통 intake/onboarding engine 구현 착수
 - Part2 다음 우선순위 모듈 착수 준비
 - run 중심 저장 구조 및 report context 반영 설계의 구현 전환
 - raw generator 공통화 구현 착수 (후순위, 필요 시)

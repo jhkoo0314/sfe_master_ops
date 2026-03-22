@@ -16,7 +16,12 @@ from ops_core.workflow.execution_registry import (
     get_mode_pipeline_steps as workflow_get_mode_pipeline_steps,
     get_mode_required_uploads,
 )
-from ops_core.workflow.execution_service import build_execution_context, run_execution_mode
+from ops_core.workflow.execution_service import (
+    build_execution_context,
+    inspect_intake_inputs,
+    run_execution_mode,
+)
+import streamlit as st
 from ui.console.paths import (
     get_active_company_key,
     get_active_company_name,
@@ -129,6 +134,66 @@ def get_monthly_raw_status() -> dict:
         "months_detected": inspected.months_detected,
         "merged_sources": inspected.merged_sources,
         "has_data": inspected.has_data,
+    }
+
+
+def _build_intake_signature(execution_mode: str, uploaded: dict) -> str:
+    parts = [get_active_company_key(), execution_mode]
+    for key in sorted(uploaded):
+        value = uploaded.get(key)
+        if value is None:
+            parts.append(f"{key}:none")
+            continue
+        parts.append(
+            f"{key}:{value.get('name','')}:{value.get('row_count','')}:{len(value.get('columns', []))}"
+        )
+    return "|".join(parts)
+
+
+def run_intake_inspection(execution_mode: str, uploaded: dict) -> dict:
+    context = build_execution_context(
+        project_root=get_project_root(),
+        company_key=get_active_company_key(),
+        company_name=get_active_company_name(),
+        source_targets=get_source_target_map(),
+    )
+    return inspect_intake_inputs(
+        context=context,
+        execution_mode=execution_mode,
+        uploaded=uploaded,
+    ).to_dict()
+
+
+def ensure_intake_result(execution_mode: str, uploaded: dict) -> dict | None:
+    signature = _build_intake_signature(execution_mode, uploaded)
+    cached_signature = st.session_state.get("intake_signature", "")
+    cached_result = st.session_state.get("intake_result")
+    if cached_result is not None and cached_signature == signature:
+        return cached_result
+    result = run_intake_inspection(execution_mode, uploaded)
+    st.session_state.intake_signature = signature
+    st.session_state.intake_result = result
+    return result
+
+
+def summarize_intake_result(intake_result: dict | None) -> dict:
+    if not intake_result:
+        return {
+            "status": "not_run",
+            "ready_for_adapter": False,
+            "package_count": 0,
+            "blocked_count": 0,
+            "review_count": 0,
+            "fix_count": 0,
+        }
+    packages = intake_result.get("packages", [])
+    return {
+        "status": intake_result.get("status", "unknown"),
+        "ready_for_adapter": bool(intake_result.get("ready_for_adapter")),
+        "package_count": len(packages),
+        "blocked_count": sum(1 for package in packages if package.get("status") == "blocked"),
+        "review_count": sum(1 for package in packages if package.get("status") == "needs_review"),
+        "fix_count": len(intake_result.get("fixes", [])),
     }
 
 

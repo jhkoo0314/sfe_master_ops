@@ -62,6 +62,10 @@ def init_console_state() -> None:
         st.session_state.current_answer_scope = "final_report_only"
     if "monthly_upload_summary" not in st.session_state:
         st.session_state.monthly_upload_summary = None
+    if "intake_result" not in st.session_state:
+        st.session_state.intake_result = None
+    if "intake_signature" not in st.session_state:
+        st.session_state.intake_signature = ""
 
 
 def add_log(msg: str) -> None:
