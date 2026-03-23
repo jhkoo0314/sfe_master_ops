@@ -522,8 +522,21 @@ def prepare_prescription_chunk_assets(
         if not source_asset_dir.exists():
             payload["asset_base"] = target_asset_dir.name
             return
-        for chunk_file in source_asset_dir.glob("*.js"):
-            shutil.copy2(chunk_file, target_asset_dir / chunk_file.name)
+        manifest_files: set[str] = set()
+        for bucket_manifest in (payload.get("detail_asset_manifest") or {}).values():
+            if not isinstance(bucket_manifest, dict):
+                continue
+            for file_name in bucket_manifest.values():
+                clean_name = str(file_name or "").strip()
+                if clean_name:
+                    manifest_files.add(clean_name)
+        if not manifest_files:
+            manifest_files = {path.name for path in source_asset_dir.glob("*.js")}
+
+        for file_name in sorted(manifest_files):
+            chunk_file = source_asset_dir / file_name
+            if chunk_file.exists() and chunk_file.is_file():
+                shutil.copy2(chunk_file, target_asset_dir / chunk_file.name)
         payload["asset_base"] = target_asset_dir.name
         return
 

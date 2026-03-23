@@ -10,7 +10,7 @@ from modules.validation.workflow.execution_registry import (
 from ui.console.analysis_explainer import explain_module_result
 from ui.console.artifacts import collect_artifact_files, get_execution_analysis_doc_path, load_artifact_preview
 from ui.console.display import render_page_hero, render_panel_header, render_stage_badge
-from ui.console.runner import ensure_intake_result
+from ui.console.runner import ensure_intake_result, has_session_intake_inputs
 
 
 def render_artifacts_tab() -> None:
@@ -22,10 +22,13 @@ def render_artifacts_tab() -> None:
 
     execution_mode = st.session_state.get("execution_mode", "crm_to_sandbox")
     intake_result = ensure_intake_result(execution_mode, st.session_state.uploaded_data)
+    intake_inputs_ready = has_session_intake_inputs(st.session_state.uploaded_data)
     artifacts = collect_artifact_files(execution_mode)
     analysis_doc_path = get_execution_analysis_doc_path()
     render_panel_header("기간 차이 해석", "입력 데이터의 월 범위가 서로 다를 때, 실제 검증이 어느 공통 구간 기준으로 진행됐는지 먼저 설명합니다.")
-    if intake_result and intake_result.get("analysis_summary_message"):
+    if not intake_inputs_ready:
+        st.info("이번 세션 업로드 기준 intake 정보는 아직 없습니다. 업로드 후 실행하면 여기서 intake 해석도 함께 보여줍니다.")
+    elif intake_result and intake_result.get("analysis_summary_message"):
         if intake_result.get("timing_alerts"):
             st.warning(intake_result["analysis_summary_message"])
         else:

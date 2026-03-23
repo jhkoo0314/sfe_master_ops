@@ -126,6 +126,43 @@ def extract_month_token(file_name: str) -> str:
     raise ValueError(f"파일명에서 월을 찾지 못했습니다: {file_name}")
 
 
+def _extract_month_from_series(series: pd.Series) -> str | None:
+    parsed = pd.to_datetime(series, errors="coerce")
+    parsed = parsed.dropna()
+    if parsed.empty:
+        return None
+    months = sorted({value.strftime("%Y%m") for value in parsed})
+    if len(months) == 1:
+        return months[0]
+    raise ValueError(f"날짜 컬럼에 여러 달이 섞여 있습니다: {', '.join(months)}")
+
+
+def infer_month_token_from_dataframe(source_key: str, df: pd.DataFrame) -> str:
+    candidate_columns_by_source = {
+        "crm_activity": ["실행일", "활동일", "방문일", "일자", "date", "activity_date", "visit_date"],
+        "sales": ["매출월", "매출일", "년월", "일자", "date", "sale_date", "sales_date", "yyyymm"],
+        "target": ["목표월", "년월", "일자", "date", "target_month", "yyyymm"],
+        "prescription": ["출고일", "처방월", "년월", "일자", "date", "ship_date", "prescription_date", "yyyymm"],
+    }
+    normalized_map = {str(column).strip().lower(): column for column in df.columns}
+    candidates = candidate_columns_by_source.get(source_key, [])
+
+    for candidate in candidates:
+        matched_column = normalized_map.get(candidate.strip().lower())
+        if matched_column is None:
+            continue
+        month_token = _extract_month_from_series(df[matched_column])
+        if month_token:
+            return month_token
+
+    for column in df.columns:
+        month_token = _extract_month_from_series(df[column])
+        if month_token:
+            return month_token
+
+    raise ValueError("파일명과 데이터 내용에서 월 정보를 찾지 못했습니다.")
+
+
 def save_monthly_upload_batch(source_key: str, uploaded_files, monthly_root: str | Path) -> dict:
     if not uploaded_files:
         return {"saved_count": 0, "months": [], "rows": 0}
@@ -138,12 +175,15 @@ def save_monthly_upload_batch(source_key: str, uploaded_files, monthly_root: str
     total_rows = 0
     for uploaded_file in uploaded_files:
         file_bytes = uploaded_file.getvalue()
-        month_token = extract_month_token(uploaded_file.name)
+        df = load_uploaded_dataframe(uploaded_file.name, file_bytes)
+        try:
+            month_token = extract_month_token(uploaded_file.name)
+        except ValueError:
+            month_token = infer_month_token_from_dataframe(source_key, df)
         month_dir = root / month_token
         month_dir.mkdir(parents=True, exist_ok=True)
         target_path = month_dir / target_file_name
 
-        df = load_uploaded_dataframe(uploaded_file.name, file_bytes)
         total_rows += int(len(df))
         if target_path.suffix.lower() == ".csv":
             if str(uploaded_file.name).lower().endswith(".csv"):

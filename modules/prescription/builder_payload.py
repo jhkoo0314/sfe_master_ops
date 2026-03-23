@@ -33,10 +33,13 @@ def _group_detail_rows(bucket: str, rows: list[dict]) -> dict[str, list[dict]]:
         return groups
 
     for row in rows:
-        period_key = str(row.get("year_quarter") or "").strip()
-        if not period_key:
-            continue
-        groups.setdefault(period_key, []).append(row)
+        period_type = str(row.get("period_type") or "").strip().lower()
+        month_key = str(row.get("year_month") or "").strip()
+        quarter_key = str(row.get("year_quarter") or "").strip()
+        if period_type == "month" and month_key:
+            groups.setdefault(month_key, []).append(row)
+        if quarter_key:
+            groups.setdefault(quarter_key, []).append(row)
     return groups
 
 

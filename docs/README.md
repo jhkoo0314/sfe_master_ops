@@ -2,6 +2,24 @@
 
 이 폴더는 Sales Data OS 문서 허브다.
 
+## 문서 폴더 원칙
+
+- `docs/architecture/`
+  - 현재 기준 문서
+  - 단일 기준 문서(source of truth)
+  - 구조, 책임, 상태, 운영 방향을 여기서 고정한다
+- `docs/ai/`
+  - Codex/작업용 축약 안내 문서
+  - 실행 순서, 현재 단계, 저장소 해석 가이드를 짧게 유지한다
+- `docs/runbook/`
+  - 실제 운영 절차 문서
+- `docs/part1/`, `docs/part2/`
+  - 과거 단계의 보관용 문서
+  - 새 기준 문서를 여기 추가하지 않는다
+- `docs/workstreams/`
+  - 앞으로 Part3 이상에서 생기는 단계별 작업 메모/초안/세부 진행 문서 보관 위치
+  - 즉 앞으로는 `docs/part3/`, `docs/part4/` 같은 새 단계 폴더를 만들지 않는다
+
 ## 용어 기준
 
 - 시스템 전체 명칭: `Sales Data OS`
@@ -38,6 +56,7 @@
 - `docs/ai/`: Codex 작업용 축약 문서 세트
 - `docs/architecture/`: Sales Data OS 아키텍처 감사/목표/리팩토링 계획
   - `docs/architecture/12_part2_status_source_of_truth.md` (Part2 진행 상태 단일 기준)
+  - `docs/architecture/23_part2_completion_declaration.md` (Part2 완료 선언)
   - `docs/architecture/18_real_company_raw_input_flow.md` (실제 회사 raw 입력 운영 흐름 기준)
   - `docs/architecture/19_intake_gate_and_onboarding_plan.md` (실제 회사 raw intake/onboarding 운영 설계)
   - `docs/architecture/20_common_intake_engine_implementation_plan.md` (공통 intake engine 구현 계획)
@@ -49,6 +68,8 @@
   - `docs/architecture/06_sandbox_refactor_summary.md`
 - `docs/part2/`: 레거시/이력 허브 (활성 기준 문서는 `docs/architecture` 사용)
   - `docs/part2/README.md`
+- `docs/workstreams/`: 앞으로의 단계별 작업 메모/초안 허브
+  - `docs/workstreams/README.md`
 - `docs/runbook/`: Sales Data OS 기준 운영 런북
 
 ## 문서 동기화 기준
@@ -63,11 +84,15 @@
 - 아카이브 성격 문서(이력 보존 우선)
   - `docs/part1/*`
   - `docs/part2/*`
+- 작업 메모/초안 문서(단계별 누적 가능)
+  - `docs/workstreams/*`
 
 정리:
 
-- 루트 = 전역 원본
-- 수정은 항상 루트 문서에서 먼저 한다
+- 활성 기준은 `docs/architecture`
+- 과거 단계 보관은 `docs/part1`, `docs/part2`
+- 앞으로의 단계별 진행 메모는 `docs/workstreams`
+- 수정은 항상 활성 기준 문서에서 먼저 한다
 
 ## 2026-03-16 Sandbox 동기화 요약
 

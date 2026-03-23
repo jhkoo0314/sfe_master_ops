@@ -8,7 +8,7 @@ from datetime import datetime
 from pathlib import Path
 
 from common.run_storage.runs import save_pipeline_run_to_supabase
-from modules.intake import inspect_monthly_raw, load_intake_result_snapshot
+from modules.intake import inspect_monthly_raw
 from modules.validation.workflow.execution_registry import (
     get_execution_mode_label,
     get_execution_mode_modules,
@@ -137,6 +137,12 @@ def get_monthly_raw_status() -> dict:
     }
 
 
+def has_session_intake_inputs(uploaded: dict) -> bool:
+    has_direct_upload = any(value is not None for value in uploaded.values())
+    has_monthly_upload = bool(st.session_state.get("monthly_upload_summary"))
+    return has_direct_upload or has_monthly_upload
+
+
 def _build_intake_signature(execution_mode: str, uploaded: dict) -> str:
     parts = [get_active_company_key(), execution_mode]
     source_targets = get_source_target_map()
@@ -173,17 +179,15 @@ def run_intake_inspection(execution_mode: str, uploaded: dict) -> dict:
 
 
 def ensure_intake_result(execution_mode: str, uploaded: dict) -> dict | None:
+    if not has_session_intake_inputs(uploaded):
+        st.session_state.intake_signature = ""
+        st.session_state.intake_result = None
+        return None
     signature = _build_intake_signature(execution_mode, uploaded)
     cached_signature = st.session_state.get("intake_signature", "")
     cached_result = st.session_state.get("intake_result")
     if cached_result is not None and cached_signature == signature:
         return cached_result
-    if not any(value is not None for value in uploaded.values()):
-        snapshot = load_intake_result_snapshot(get_project_root(), get_active_company_key())
-        if snapshot is not None and snapshot.get("cache_signature") == signature:
-            st.session_state.intake_signature = signature
-            st.session_state.intake_result = snapshot
-            return snapshot
     result = run_intake_inspection(execution_mode, uploaded)
     st.session_state.intake_signature = signature
     st.session_state.intake_result = result

@@ -9,7 +9,7 @@ import pandas as pd
 
 from common.company_onboarding_registry import load_company_onboarding_registry
 from modules.validation.workflow.execution_registry import get_mode_required_uploads
-from .fixers import apply_basic_intake_fixes
+from .fixers import apply_basic_intake_fixes, apply_basic_intake_fixes_to_dataframe
 from .models import (
     IntakeFinding,
     IntakeFix,
@@ -49,9 +49,89 @@ _SOURCE_LABELS = {
     "prescription": "처방",
 }
 
+_ADAPTER_CANONICAL_COLUMN_MAP: dict[str, dict[str, str]] = {
+    "crm_activity": {
+        "병원명": "방문기관",
+        "병원코드": "거래처코드",
+        "활동내용": "활동메모",
+    },
+    "crm_rep_master": {
+        "병원코드": "거래처코드",
+        "병원명": "거래처명",
+        "담당자id": "영업사원코드",
+        "담당자명": "영업사원명",
+        "지점": "본부명",
+    },
+    "crm_account_assignment": {
+        "병원코드": "account_id",
+        "병원명": "account_name",
+        "지점": "branch_name",
+        "담당자명": "rep_name",
+    },
+    "sales": {
+        "병원코드": "거래처코드",
+        "병원명": "거래처명",
+        "매출월": "기준년월",
+        "제품명": "브랜드명",
+    },
+    "target": {
+        "병원코드": "거래처코드",
+        "병원명": "거래처명",
+        "목표월": "기준년월",
+        "제품명": "브랜드명",
+        "목표금액": "계획금액",
+    },
+    "prescription": {
+        "출고일": "ship_date (출고일)",
+        "약국명": "pharmacy_name (약국명)",
+        "brand": "brand (브랜드)",
+        "sku": "sku (SKU)",
+        "출고수량": "qty (수량)",
+        "공급가액": "amount_ship (출고금액)",
+    },
+}
+
 
 def _normalize_column_name(name: str) -> str:
     return "".join(ch for ch in str(name).strip().lower() if ch.isalnum())
+
+
+def _apply_adapter_canonical_columns(
+    source_key: str,
+    dataframe: pd.DataFrame | None,
+) -> tuple[pd.DataFrame | None, list[IntakeFix]]:
+    if dataframe is None:
+        return None, []
+
+    canonical_map = _ADAPTER_CANONICAL_COLUMN_MAP.get(source_key, {})
+    if not canonical_map:
+        return dataframe, []
+
+    df = dataframe.copy()
+    normalized_columns = {
+        _normalize_column_name(column): str(column)
+        for column in df.columns
+    }
+    rename_map: dict[str, str] = {}
+    for alias, canonical in canonical_map.items():
+        matched_column = normalized_columns.get(_normalize_column_name(alias))
+        if matched_column is None or matched_column == canonical or canonical in df.columns:
+            continue
+        rename_map[matched_column] = canonical
+
+    if not rename_map:
+        return df, []
+
+    df = df.rename(columns=rename_map)
+    fixes = [
+        IntakeFix(
+            source_key=source_key,
+            fix_type="canonicalize_adapter_columns",
+            message="파이프라인 표준 컬럼명으로 자동 정렬했습니다.",
+            affected_count=len(rename_map),
+        )
+    ]
+    return df, fixes
 
 
 def _format_month_token(month_token: str) -> str:
@@ -295,6 +375,32 @@ def _resolve_mapping(columns: list[str], source_key: str) -> tuple[dict[str, str
     return resolved_mapping, missing_required, missing_review
 
 
+def _build_source_input_from_dataframe(
+    *,
+    source_key: str,
+    target_path: str,
+    dataframe: pd.DataFrame,
+    fixes: list[IntakeFix],
+    is_required: bool,
+    upload_present: bool,
+) -> IntakeSourceInput:
+    preview_rows = dataframe.head(3).where(pd.notna(dataframe), None).to_dict("records")
+    target = Path(target_path)
+    return IntakeSourceInput(
+        source_key=source_key,
+        original_path=str(target_path),
+        target_path=str(target_path),
+        file_name=target.name,
+        file_ext=target.suffix.lower(),
+        row_count=int(len(dataframe)),
+        columns=[str(column) for column in dataframe.columns],
+        preview_rows=preview_rows,
+        fixes=fixes,
+        is_required=is_required,
+        upload_present=upload_present,
+    )
+
+
 class CommonIntakeEngine:
     """
     Common intake entry point for Sales Data OS.
@@ -492,46 +598,53 @@ def build_intake_result(
     required_source_keys = set(get_mode_required_uploads(execution_mode)) if execution_mode else set()
     for source_key, (target_path, _target_format) in source_targets.items():
         info = (uploaded or {}).get(source_key)
-        file_name = None
-        file_ext = None
-        row_count = None
-        columns: list[str] = []
-        preview_rows: list[dict[str, Any]] = []
-        upload_present = False
-        package_fixes = []
         if info is not None:
-            file_name = str(info.get("name") or "")
-            file_ext = str(info.get("file_ext") or "")
             fixer_result = apply_basic_intake_fixes(source_key, info)
-            source_frames[source_key] = fixer_result.dataframe
-            row_count = fixer_result.row_count
-            columns = fixer_result.columns
-            preview_rows = fixer_result.preview_rows
-            package_fixes = fixer_result.fixes
-            upload_present = True
-        else:
-            existing_frame = _read_source_frame(target_path)
-            if existing_frame is not None:
-                source_frames[source_key] = existing_frame
-                row_count = int(len(existing_frame))
-                columns = [str(column) for column in existing_frame.columns]
-                preview_rows = existing_frame.head(3).to_dict("records")
-                file_name = Path(target_path).name
-                file_ext = Path(target_path).suffix.lower()
+            canonical_df, canonical_fixes = _apply_adapter_canonical_columns(source_key, fixer_result.dataframe)
+            source_frames[source_key] = canonical_df
+            sources.append(
+                _build_source_input_from_dataframe(
+                    source_key=source_key,
+                    target_path=str(target_path),
+                    dataframe=canonical_df if canonical_df is not None else pd.DataFrame(),
+                    fixes=[*fixer_result.fixes, *canonical_fixes],
+                    is_required=(source_key in required_source_keys),
+                    upload_present=True,
+                )
+            )
+            continue
 
+        existing_frame = _read_source_frame(target_path)
+        if existing_frame is not None:
+            fixer_result = apply_basic_intake_fixes_to_dataframe(source_key, existing_frame)
+            canonical_df, canonical_fixes = _apply_adapter_canonical_columns(source_key, fixer_result.dataframe)
+            source_frames[source_key] = canonical_df
+            sources.append(
+                _build_source_input_from_dataframe(
+                    source_key=source_key,
+                    target_path=str(target_path),
+                    dataframe=canonical_df if canonical_df is not None else pd.DataFrame(),
+                    fixes=[*fixer_result.fixes, *canonical_fixes],
+                    is_required=(source_key in required_source_keys),
+                    upload_present=False,
+                )
+            )
+            continue
+
+        target = Path(target_path)
         sources.append(
             IntakeSourceInput(
                 source_key=source_key,
                 original_path=str(target_path),
                 target_path=str(target_path),
-                file_name=file_name,
-                file_ext=file_ext,
-                row_count=row_count,
-                columns=columns,
-                preview_rows=preview_rows,
-                fixes=package_fixes,
+                file_name=target.name,
+                file_ext=target.suffix.lower(),
+                row_count=None,
+                columns=[],
+                preview_rows=[],
+                fixes=[],
                 is_required=(source_key in required_source_keys),
-                upload_present=upload_present,
+                upload_present=False,
             )
         )
 
@@ -564,15 +677,14 @@ def build_intake_result(
             coverages[package.source_key] = period_coverage
 
         if dataframe is not None:
-            if (uploaded or {}).get(package.source_key) is not None:
-                staged_path = stage_intake_dataframe(
-                    project_root=project_root,
-                    company_key=company_key,
-                    source_key=package.source_key,
-                    source_target_path=package.original_path,
-                    dataframe=dataframe,
-                )
-                package.staged_path = str(staged_path)
+            staged_path = stage_intake_dataframe(
+                project_root=project_root,
+                company_key=company_key,
+                source_key=package.source_key,
+                source_target_path=package.original_path,
+                dataframe=dataframe,
+            )
+            package.staged_path = str(staged_path)
         save_onboarding_package(project_root, company_key, package.to_dict())
 
     (

@@ -7,6 +7,7 @@ from ui.console.runner import (
     ensure_intake_result,
     get_crm_package_status,
     get_monthly_raw_status,
+    has_session_intake_inputs,
     summarize_intake_result,
 )
 from ui.console.state import save_monthly_upload_batch
@@ -17,6 +18,7 @@ def render_upload_tab() -> None:
     company_name = get_active_company_name()
     monthly_status = get_monthly_raw_status()
     current_mode = st.session_state.get("execution_mode", "crm_to_sandbox")
+    intake_inputs_ready = has_session_intake_inputs(st.session_state.uploaded_data)
     intake_result = ensure_intake_result(current_mode, st.session_state.uploaded_data)
     intake_summary = summarize_intake_result(intake_result)
     render_page_hero(
@@ -41,72 +43,75 @@ def render_upload_tab() -> None:
     st.markdown('<div class="action-note">원본 추출 파일 우선 · 중복 업로드 허용 · 자세한 설명은 각 항목의 예시에서 확인</div>', unsafe_allow_html=True)
 
     render_panel_header("Intake Gate 결과", "업로드 직후 공통 intake engine이 자동 수정, 제안, onboarding 가능 여부를 먼저 점검합니다.")
-    st.markdown(
-        f"""
-        <div class="stat-strip">
-          <div class="stat-chip"><div class="label">Scenario</div><div class="value">{intake_result.get('scenario_label', '-')}</div></div>
-          <div class="stat-chip"><div class="label">Ready For Adapter</div><div class="value">{'YES' if intake_summary['ready_for_adapter'] else 'NO'}</div></div>
-          <div class="stat-chip"><div class="label">Auto Fixes</div><div class="value">{intake_summary['fix_count']}</div></div>
-          <div class="stat-chip"><div class="label">Needs Review</div><div class="value">{intake_summary['review_count']}</div></div>
-          <div class="stat-chip"><div class="label">Advisory</div><div class="value">{intake_summary['advisory_count']}</div></div>
-          <div class="stat-chip"><div class="label">Timing Alerts</div><div class="value">{intake_summary['timing_alert_count']}</div></div>
-        </div>
-        """,
-        unsafe_allow_html=True,
-    )
-    if intake_summary["blocked_count"]:
-        st.error(f"필수 입력 부족으로 막힌 항목이 {intake_summary['blocked_count']}개 있습니다.")
-    elif intake_summary["review_count"]:
-        st.warning(f"실행 전에 꼭 확인해야 하는 intake 항목이 {intake_summary['review_count']}개 있습니다.")
-    elif intake_summary["advisory_count"]:
-        st.info(f"치명적이지 않은 intake 주의 항목이 {intake_summary['advisory_count']}개 있습니다. 실행은 가능하며 분석 화면에서 다시 설명됩니다.")
+    if not intake_inputs_ready:
+        st.info("아직 이번 세션에서 업로드하거나 월별 raw 저장을 하지 않았습니다. 파일을 넣은 뒤 Intake Gate가 시작됩니다.")
     else:
-        st.success("현재 업로드 기준으로 onboarding-ready 상태입니다.")
-    if intake_result.get("analysis_summary_message"):
-        if intake_summary["timing_alert_count"]:
-            st.warning(intake_result["analysis_summary_message"])
-        else:
-            st.info(intake_result["analysis_summary_message"])
-    for alert in intake_result.get("timing_alerts", []):
-        st.caption(f"- {alert.get('message')}")
-
-    package_rows = []
-    for package in intake_result.get("packages", []):
-        if package.get("source_key") == "rep_master":
-            continue
-        package_rows.append(
-            {
-                "입력 묶음": package.get("source_key"),
-                "상태": package.get("status"),
-                "자동수정": len(package.get("fixes", [])),
-                "제안": len(package.get("suggestions", [])),
-                "Adapter 전달": "가능" if package.get("ready_for_adapter") else "보류",
-                "기간": (
-                    f"{package['period_coverage']['start_month']} ~ {package['period_coverage']['end_month']} "
-                    f"({package['period_coverage']['month_count']}개월)"
-                    if package.get("period_coverage")
-                    else "-"
-                ),
-                "Staging 경로": package.get("staged_path"),
-            }
+        st.markdown(
+            f"""
+            <div class="stat-strip">
+              <div class="stat-chip"><div class="label">Scenario</div><div class="value">{intake_result.get('scenario_label', '-')}</div></div>
+              <div class="stat-chip"><div class="label">Ready For Adapter</div><div class="value">{'YES' if intake_summary['ready_for_adapter'] else 'NO'}</div></div>
+              <div class="stat-chip"><div class="label">Auto Fixes</div><div class="value">{intake_summary['fix_count']}</div></div>
+              <div class="stat-chip"><div class="label">Needs Review</div><div class="value">{intake_summary['review_count']}</div></div>
+              <div class="stat-chip"><div class="label">Advisory</div><div class="value">{intake_summary['advisory_count']}</div></div>
+              <div class="stat-chip"><div class="label">Timing Alerts</div><div class="value">{intake_summary['timing_alert_count']}</div></div>
+            </div>
+            """,
+            unsafe_allow_html=True,
         )
-    if package_rows:
-        st.dataframe(pd.DataFrame(package_rows), use_container_width=True, hide_index=True)
+        if intake_summary["blocked_count"]:
+            st.error(f"필수 입력 부족으로 막힌 항목이 {intake_summary['blocked_count']}개 있습니다.")
+        elif intake_summary["review_count"]:
+            st.warning(f"실행 전에 꼭 확인해야 하는 intake 항목이 {intake_summary['review_count']}개 있습니다.")
+        elif intake_summary["advisory_count"]:
+            st.info(f"치명적이지 않은 intake 주의 항목이 {intake_summary['advisory_count']}개 있습니다. 실행은 가능하며 분석 화면에서 다시 설명됩니다.")
+        else:
+            st.success("현재 업로드 기준으로 onboarding-ready 상태입니다.")
+        if intake_result.get("analysis_summary_message"):
+            if intake_summary["timing_alert_count"]:
+                st.warning(intake_result["analysis_summary_message"])
+            else:
+                st.info(intake_result["analysis_summary_message"])
+        for alert in intake_result.get("timing_alerts", []):
+            st.caption(f"- {alert.get('message')}")
 
-    important_suggestions = []
-    for package in intake_result.get("packages", []):
-        for suggestion in package.get("suggestions", [])[:2]:
-            important_suggestions.append(
+        package_rows = []
+        for package in intake_result.get("packages", []):
+            if package.get("source_key") == "rep_master":
+                continue
+            package_rows.append(
                 {
                     "입력 묶음": package.get("source_key"),
-                    "제안 유형": suggestion.get("suggestion_type"),
-                    "설명": suggestion.get("message"),
-                    "후보 컬럼": ", ".join(suggestion.get("candidate_columns", [])),
+                    "상태": package.get("status"),
+                    "자동수정": len(package.get("fixes", [])),
+                    "제안": len(package.get("suggestions", [])),
+                    "Adapter 전달": "가능" if package.get("ready_for_adapter") else "보류",
+                    "기간": (
+                        f"{package['period_coverage']['start_month']} ~ {package['period_coverage']['end_month']} "
+                        f"({package['period_coverage']['month_count']}개월)"
+                        if package.get("period_coverage")
+                        else "-"
+                    ),
+                    "Staging 경로": package.get("staged_path"),
                 }
             )
-    if important_suggestions:
-        with st.expander("Intake 제안 보기", expanded=False):
-            st.dataframe(pd.DataFrame(important_suggestions), use_container_width=True, hide_index=True)
+        if package_rows:
+            st.dataframe(pd.DataFrame(package_rows), use_container_width=True, hide_index=True)
+
+        important_suggestions = []
+        for package in intake_result.get("packages", []):
+            for suggestion in package.get("suggestions", [])[:2]:
+                important_suggestions.append(
+                    {
+                        "입력 묶음": package.get("source_key"),
+                        "제안 유형": suggestion.get("suggestion_type"),
+                        "설명": suggestion.get("message"),
+                        "후보 컬럼": ", ".join(suggestion.get("candidate_columns", [])),
+                    }
+                )
+        if important_suggestions:
+            with st.expander("Intake 제안 보기", expanded=False):
+                st.dataframe(pd.DataFrame(important_suggestions), use_container_width=True, hide_index=True)
 
     render_panel_header("CRM 패키지", f"필수 2개, 권장 1개, 선택 1개 구조입니다. 현재 상태: {'필수 준비 완료' if crm_status['required_ready'] else '필수 미완성'}")
     render_upload_row("crm_activity", "crm_activity_up", "CRM 활동 원본", "필수", "방문, 디테일, 통화 같은 활동 로그", get_source_target_display_path("crm_activity"), ["방문일, 담당자명 또는 담당자ID", "방문기관명, 기관코드, 주소 중 하나 이상", "활동유형(방문, 디테일, 미팅 등)"], ["월별 합계보다 활동 한 줄 한 줄이 남아 있는 원본이 좋습니다.", "가공 요약표보다 시스템 추출 원본이 더 적합합니다."], "CRM 활동 업로드")

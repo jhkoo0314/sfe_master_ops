@@ -122,6 +122,7 @@ td {
       </div>
       <div class="flex gap-2 flex-wrap justify-end">
         <select id="quarterSel" class="bg-slate-900 border border-slate-700 text-[11px] font-bold px-3 py-1.5 focus:border-blue-500 outline-none"></select>
+        <select id="monthSel" class="bg-slate-900 border border-slate-700 text-[11px] font-bold px-3 py-1.5 focus:border-blue-500 outline-none"></select>
         <select id="territorySel" class="bg-slate-900 border border-slate-700 text-[11px] font-bold px-3 py-1.5 focus:border-blue-500 outline-none"></select>
       </div>
     </div>
@@ -272,6 +273,7 @@ td {
     const data = window.__PRESCRIPTION_DATA__ || {};
     const detailData = window.__PRESCRIPTION_DETAIL_DATA__ || {};
     const quarterSel = document.getElementById('quarterSel');
+    const monthSel = document.getElementById('monthSel');
     const territorySel = document.getElementById('territorySel');
     const repTableBody = document.getElementById('repTableBody');
     const traceLog = document.getElementById('traceLog');
@@ -394,17 +396,37 @@ td {
     }
 
     function currentFilters() {
+      const month = monthSel.value || '';
+      const quarter = month ? '' : (quarterSel.value || '');
       return {
-        quarter: quarterSel.value || '',
+        quarter,
+        month,
         territory: territorySel.value || '',
       };
+    }
+
+    function getQuarterMonths(quarter) {
+      if (!quarter) return [];
+      const year = quarter.slice(0, 4);
+      const quarterCode = quarter.slice(-2);
+      const quarterMonths = {
+        Q1: [`${year}-01`, `${year}-02`, `${year}-03`],
+        Q2: [`${year}-04`, `${year}-05`, `${year}-06`],
+        Q3: [`${year}-07`, `${year}-08`, `${year}-09`],
+        Q4: [`${year}-10`, `${year}-11`, `${year}-12`],
+      };
+      return quarterMonths[quarterCode] || [];
     }
 
     function getFilteredRows() {
       const filters = currentFilters();
       const rows = data.console_rows || [];
       return rows.filter((row) => {
-        if (filters.quarter && row.year_quarter !== filters.quarter) return false;
+        if (filters.month) {
+          if (row.period_type !== 'month' || row.year_month !== filters.month) return false;
+        } else if (filters.quarter) {
+          if (row.period_type !== 'quarter' || row.year_quarter !== filters.quarter) return false;
+        }
         if (filters.territory && row.territory_group !== filters.territory) return false;
         return true;
       });
@@ -419,18 +441,28 @@ td {
     }
 
     function getFilteredSeries() {
-      const quarter = quarterSel.value || '';
+      const { quarter, month } = currentFilters();
       const series = getBaseSeries();
+      if (month) return series.filter((item) => item.label === month);
       if (!quarter) return series;
-      const quarterMatch = `${quarter.slice(0, 4)}-${String(((Number(quarter.slice(-1)) - 1) * 3) + 1).padStart(2, '0')}`;
-      const quarterMonths = {
-        'Q1': [`${quarter.slice(0, 4)}-01`, `${quarter.slice(0, 4)}-02`, `${quarter.slice(0, 4)}-03`],
-        'Q2': [`${quarter.slice(0, 4)}-04`, `${quarter.slice(0, 4)}-05`, `${quarter.slice(0, 4)}-06`],
-        'Q3': [`${quarter.slice(0, 4)}-07`, `${quarter.slice(0, 4)}-08`, `${quarter.slice(0, 4)}-09`],
-        'Q4': [`${quarter.slice(0, 4)}-10`, `${quarter.slice(0, 4)}-11`, `${quarter.slice(0, 4)}-12`],
-      };
-      const months = quarterMonths[quarter.slice(-2)] || [quarterMatch];
+      const months = getQuarterMonths(quarter);
       return series.filter((item) => months.includes(item.label));
+    }
+
+    function getFilteredLogs() {
+      const { quarter, month } = currentFilters();
+      const logs = data.trace_logs || [];
+      if (month) {
+        return logs.filter((log) => String(log.time || '').includes(month));
+      }
+      if (quarter) {
+        const quarterMonths = getQuarterMonths(quarter);
+        return logs.filter((log) => {
+          const time = String(log.time || '');
+          return time === quarter || quarterMonths.some((monthKey) => time.includes(monthKey));
+        });
+      }
+      return logs;
     }
 
     function summarizeSeries(series) {
@@ -583,7 +615,7 @@ td {
     }
 
     function renderLogs() {
-      const logs = data.trace_logs || [];
+      const logs = getFilteredLogs();
       if (!logs.length) {
         traceLog.innerHTML = `<div class="text-slate-500">표시할 로그가 없습니다.</div>`;
         return;
@@ -607,9 +639,13 @@ td {
 
     function resolveDetailKey(bucket) {
       const manifest = getDetailManifest(bucket);
+      const selectedMonth = monthSel.value || '';
       const selectedQuarter = quarterSel.value || '';
+      if (selectedMonth && manifest[selectedMonth]) return selectedMonth;
       if (selectedQuarter && manifest[selectedQuarter]) return selectedQuarter;
       if (manifest.ALL) return 'ALL';
+      const defaultMonth = (data.filters || {}).default_month || '';
+      if (defaultMonth && manifest[defaultMonth]) return defaultMonth;
       const defaultQuarter = (data.filters || {}).default_quarter || '';
       if (defaultQuarter && manifest[defaultQuarter]) return defaultQuarter;
       return Object.keys(manifest)[0] || '';
@@ -728,20 +764,32 @@ td {
     function initFilters() {
       const filterConfig = data.filters || {};
       const quarters = filterConfig.quarters || [];
+      const months = filterConfig.months || [];
       const territories = filterConfig.territories || [];
       quarterSel.innerHTML = ['<option value="">전체 기간</option>']
         .concat(quarters.map((value) => `<option value="${escapeHtml(value)}">${escapeHtml(value)}</option>`))
         .join('');
+      monthSel.innerHTML = ['<option value="">전체 월</option>']
+        .concat(months.map((value) => `<option value="${escapeHtml(value)}">${escapeHtml(value)}</option>`))
+        .join('');
       territorySel.innerHTML = ['<option value="">전체 영업권역</option>']
         .concat(territories.map((value) => `<option value="${escapeHtml(value)}">${escapeHtml(value)}</option>`))
         .join('');
-      if (filterConfig.default_quarter) quarterSel.value = filterConfig.default_quarter;
+      if (filterConfig.default_month) {
+        monthSel.value = filterConfig.default_month;
+        quarterSel.value = '';
+      } else if (filterConfig.default_quarter) {
+        quarterSel.value = filterConfig.default_quarter;
+      }
       if (filterConfig.default_territory) territorySel.value = filterConfig.default_territory;
-      quarterSel.addEventListener('change', update);
-      territorySel.addEventListener('change', update);
     }
 
     function update() {
+      if (monthSel.value) {
+        quarterSel.value = '';
+      } else if (quarterSel.value) {
+        monthSel.value = '';
+      }
       renderSummaryCards();
       renderChart();
       renderTable();
@@ -764,10 +812,23 @@ td {
     });
     quarterSel.addEventListener('change', () => {
       repPage = 1;
+      if (quarterSel.value) {
+        monthSel.value = '';
+      }
       updateDetailSummary();
+      update();
+    });
+    monthSel.addEventListener('change', () => {
+      repPage = 1;
+      if (monthSel.value) {
+        quarterSel.value = '';
+      }
+      updateDetailSummary();
+      update();
     });
     territorySel.addEventListener('change', () => {
       repPage = 1;
+      update();
     });
     update();
   </script>

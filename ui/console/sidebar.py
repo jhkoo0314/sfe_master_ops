@@ -37,21 +37,23 @@ def render_sidebar() -> None:
         companies = list_registered_companies(project_root)
         company_keys = [item.company_key for item in companies]
         current_key = st.session_state.get("company_key", get_active_company_key()).strip()
-        default_index = company_keys.index(current_key) if current_key in company_keys else 0
+        company_options = [""] + company_keys
+        default_index = company_options.index(current_key) if current_key in company_options else 0
 
         def _company_label(company_key: str) -> str:
+            if not company_key:
+                return "회사 선택 안 함"
             for item in companies:
                 if item.company_key == company_key:
                     return f"{item.company_name} ({item.company_key})"
             return company_key
 
-        company_options = company_keys if company_keys else [""]
         selected_company_key = st.selectbox(
             "회사 선택",
             company_options,
-            index=default_index if company_keys else 0,
+            index=default_index,
             format_func=_company_label,
-            disabled=not bool(company_keys),
+            disabled=not bool(company_options),
         )
 
         selected_company = next((item for item in companies if item.company_key == selected_company_key), None)
@@ -72,6 +74,9 @@ def render_sidebar() -> None:
             st.session_state.company_name = ""
 
         with st.expander("신규 회사 등록", expanded=False):
+            if st.session_state.pop("_clear_register_company_inputs", False):
+                st.session_state["register_company_name"] = ""
+                st.session_state["register_company_code_external"] = ""
             if "register_company_name" not in st.session_state:
                 st.session_state.register_company_name = ""
             if "register_company_code_external" not in st.session_state:
@@ -97,8 +102,7 @@ def render_sidebar() -> None:
                     )
                     st.session_state.company_key = entry.company_key
                     st.session_state.company_name = entry.company_name
-                    st.session_state.register_company_name = ""
-                    st.session_state.register_company_code_external = ""
+                    st.session_state["_clear_register_company_inputs"] = True
                     st.success(f"등록 완료: {entry.company_name} ({entry.company_key})")
                     st.rerun()
                 except ValueError as exc:

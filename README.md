@@ -54,6 +54,8 @@
 Part2 문서 운영 기준:
 - 활성 상태/실행 문서: `docs/architecture/12_part2_status_source_of_truth.md`
 - Part2 레거시 허브: `docs/part2/README.md`
+- 앞으로의 새 단계 작업 문서: `docs/workstreams/`
+  - `docs/part3` 같은 새 단계 폴더는 만들지 않습니다.
 
 ## 2026-03-15 동기화 상태 (CRM KPI 거버넌스)
 

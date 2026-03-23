@@ -95,17 +95,17 @@ class IntakeFixerResult:
     fixes: list[IntakeFix] = field(default_factory=list)
 
 
-def apply_basic_intake_fixes(source_key: str, info: dict[str, Any]) -> IntakeFixerResult:
-    if "file_bytes" not in info:
+def apply_basic_intake_fixes_to_dataframe(source_key: str, dataframe: pd.DataFrame | None) -> IntakeFixerResult:
+    if dataframe is None:
         return IntakeFixerResult(
             dataframe=None,
-            columns=[str(column) for column in info.get("columns", []) if column is not None],
-            row_count=int(info.get("row_count") or 0),
-            preview_rows=[row for row in info.get("preview", []) if isinstance(row, dict)],
+            columns=[],
+            row_count=0,
+            preview_rows=[],
             fixes=[],
         )
 
-    df = _load_uploaded_frame(info)
+    df = dataframe.copy()
     fixes: list[IntakeFix] = []
 
     original_columns = [str(column) for column in df.columns]
@@ -181,3 +181,16 @@ def apply_basic_intake_fixes(source_key: str, info: dict[str, Any]) -> IntakeFix
         preview_rows=preview_rows,
         fixes=fixes,
     )
+
+
+def apply_basic_intake_fixes(source_key: str, info: dict[str, Any]) -> IntakeFixerResult:
+    if "file_bytes" not in info:
+        return IntakeFixerResult(
+            dataframe=None,
+            columns=[str(column) for column in info.get("columns", []) if column is not None],
+            row_count=int(info.get("row_count") or 0),
+            preview_rows=[row for row in info.get("preview", []) if isinstance(row, dict)],
+            fixes=[],
+        )
+
+    return apply_basic_intake_fixes_to_dataframe(source_key, _load_uploaded_frame(info))

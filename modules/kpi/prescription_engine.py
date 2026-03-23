@@ -321,6 +321,7 @@ def build_prescription_builder_context(
 
     filters = {
         "quarters": sorted(rep_kpi_df["year_quarter"].dropna().astype(str).unique().tolist()) if "year_quarter" in rep_kpi_df.columns else [],
+        "months": month_labels,
         "territories": sorted(
             {
                 str(v).strip()
@@ -330,6 +331,7 @@ def build_prescription_builder_context(
         ),
     }
     filters["default_quarter"] = filters["quarters"][-1] if filters["quarters"] else ""
+    filters["default_month"] = filters["months"][-1] if filters["months"] else ""
     filters["default_territory"] = ""
 
     trace_logs: list[dict] = []
@@ -382,13 +384,21 @@ def build_prescription_builder_context(
 
     console_rows = []
     for row in claim_records:
-        if str(row.get("period_type") or "") != "quarter":
+        period_type = str(row.get("period_type") or "")
+        if period_type not in {"quarter", "month"}:
             continue
         verdict = str(row.get("verdict") or "PASS").upper()
         status = "WARNING" if verdict == "REVIEW" else verdict
         console_rows.append(
             {
+                "period_type": period_type,
+                "period_value": (
+                    str(row.get("year_month") or row.get("period_value") or "")
+                    if period_type == "month"
+                    else str(row.get("year_quarter") or row.get("period_value") or "")
+                ),
                 "year_quarter": str(row.get("year_quarter") or row.get("period_value") or ""),
+                "year_month": str(row.get("year_month") or row.get("period_value") or ""),
                 "rep_name": row.get("rep_name") or "미지정",
                 "rep_id": row.get("rep_id") or "",
                 "territory": row.get("territory_name") or row.get("territory_group") or row.get("branch_name") or "미지정",

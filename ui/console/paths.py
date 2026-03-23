@@ -39,11 +39,6 @@ def _get_registered_company_from_state() -> tuple[str, str]:
         if registered is not None:
             return registered.company_key, registered.company_name
 
-    companies = list_registered_companies(project_root)
-    if companies:
-        first_company = companies[0]
-        return first_company.company_key, first_company.company_name
-
     if env_key:
         return env_key, str(env_company_name(env_key)).strip()
 

@@ -79,6 +79,14 @@ flowchart LR
         P3["HTML Preview / Report"]
     end
 
+    subgraph AGL["Agent / LLM Layer"]
+        G1["Final Report Package"]
+        G2["report_context.full / prompt"]
+        G3["Agent Tab / Agent Service"]
+        G4["LLM Provider or Mock Fallback"]
+        G5["Agent Chat History"]
+    end
+
     R1 --> I1
     R2 --> I1
     R3 --> I1
@@ -119,6 +127,139 @@ flowchart LR
     N4 --> P1
 
     P1 --> P2 --> P3
+    P2 --> G1
+    P2 --> G2
+    P3 --> G1
+    G1 --> G3
+    G2 --> G3
+    G3 --> G4
+    G3 --> G5
+```
+
+---
+
+## 1-2. End-to-End Flow (TD Version)
+
+같은 구조를 세로 흐름으로 읽고 싶을 때 쓰는 버전이다.
+
+```mermaid
+flowchart TD
+    subgraph DL["Data Layer"]
+        R1["CRM raw"]
+        R2["Sales raw"]
+        R3["Target raw"]
+        R4["Prescription raw"]
+        R5["Master raw"]
+    end
+
+    subgraph IL["Intake / Onboarding Layer"]
+        I1["Upload / Existing Source"]
+        I2["Common Intake Engine<br/>modules/intake"]
+        I3["_intake_staging"]
+        I4["_onboarding"]
+    end
+
+    subgraph AL["Adapter Layer"]
+        A1["CRM Adapter"]
+        A2["Sales Adapter"]
+        A3["Target Adapter"]
+        A4["Prescription Adapter"]
+        A5["Master Adapter"]
+    end
+
+    subgraph CL["Module / Core Engine Layer"]
+        C1["CRM KPI Engine"]
+        C2["Sandbox KPI Engine"]
+        C3["Territory KPI Engine"]
+        C4["Prescription KPI Engine"]
+        C5["CRM Service"]
+        C6["Sandbox Service"]
+        C7["Territory Service"]
+        C8["Prescription Service"]
+    end
+
+    subgraph RL["Result Asset Layer"]
+        RA1["crm_result_asset"]
+        RA2["sandbox_result_asset"]
+        RA3["territory_result_asset"]
+        RA4["prescription_result_asset"]
+    end
+
+    subgraph VL["Validation / Orchestration Layer (OPS)"]
+        V1["Quality Validation"]
+        V2["Mapping Validation"]
+        V3["Pipeline Orchestration"]
+        V4["Execution Service<br/>modules/validation/workflow"]
+    end
+
+    subgraph INL["Intelligence Layer"]
+        N1["Sandbox Analysis"]
+        N2["Territory Analysis"]
+        N3["Prescription Analysis"]
+        N4["RADAR"]
+    end
+
+    subgraph PL["Presentation Layer"]
+        P1["Builder Payload"]
+        P2["Builder<br/>render-only"]
+        P3["HTML Preview / Report"]
+    end
+
+    subgraph AGL["Agent / LLM Layer"]
+        G1["Final Report Package"]
+        G2["report_context.full / prompt"]
+        G3["Agent Tab / Agent Service"]
+        G4["LLM Provider or Mock Fallback"]
+        G5["Agent Chat History"]
+    end
+
+    R1 --> I1
+    R2 --> I1
+    R3 --> I1
+    R4 --> I1
+    R5 --> I1
+
+    I1 --> I2
+    I2 --> I3
+    I2 --> I4
+
+    I3 --> A1
+    I3 --> A2
+    I3 --> A3
+    I3 --> A4
+    I3 --> A5
+
+    A1 --> C1 --> C5 --> RA1
+    A2 --> C2 --> C6 --> RA2
+    A3 --> C2
+    A4 --> C4 --> C8 --> RA4
+    A5 --> C3 --> C7 --> RA3
+
+    RA1 --> V1
+    RA2 --> V1
+    RA3 --> V1
+    RA4 --> V1
+
+    V1 --> V2 --> V3 --> V4
+
+    V4 --> N1
+    V4 --> N2
+    V4 --> N3
+    V4 --> N4
+
+    N1 --> P1
+    N2 --> P1
+    N3 --> P1
+    N4 --> P1
+
+    P1 --> P2 --> P3
+    P2 --> G1
+    P2 --> G2
+    P3 --> G1
+    G1 --> G3
+    G2 --> G3
+    G3 --> G4
+    G3 --> G5
 ```
 
 ---
@@ -207,7 +348,57 @@ flowchart LR
 
 ---
 
-## 6. One-Line Summary
+## 6. Agent / LLM Connection
+
+현재 Agent는 운영 파이프라인 앞단이 아니라, Builder 이후의 해석 레이어로 붙는다.
+
+```mermaid
+flowchart LR
+    B1["Validation-approved result asset"] --> B2["Builder"]
+    B2 --> B3["HTML Preview / Report"]
+    B2 --> B4["report_context.full.json"]
+    B2 --> B5["report_context.prompt.json"]
+    B2 --> B6["run artifacts / final report package"]
+
+    B4 --> A1["common/run_storage"]
+    B5 --> A1
+    B6 --> A1
+    B3 --> A1
+
+    A1 --> A2["Agent Tab<br/>ui/console/tabs/agent_tab.py"]
+    A2 --> A3["Agent Service<br/>ui/console/agent/service.py"]
+    A3 --> A4["LLM Adapter<br/>ui/console/agent/llm.py"]
+    A3 --> A5["Mock Fallback"]
+
+    A4 --> A6["OpenAI / Claude / Gemini<br/>configured provider"]
+    A3 --> A7["agent_chat_history.jsonl"]
+    A3 --> A8["agent_chat_logs / run_report_context"]
+```
+
+---
+
+## 7. Run-Centered Agent Flow
+
+```mermaid
+flowchart TD
+    R1["Pipeline Run"] --> R2["run_id 생성"]
+    R2 --> R3["result asset / validation summary 저장"]
+    R3 --> R4["Builder HTML 생성"]
+    R4 --> R5["report_context.full.json 생성"]
+    R4 --> R6["report_context.prompt.json 생성"]
+    R5 --> R7["data/ops_validation/{company_key}/runs/{run_id}"]
+    R6 --> R7
+    R4 --> R7
+    R7 --> R8["Agent 탭이 run 선택"]
+    R8 --> R9["prompt context 우선 로드"]
+    R9 --> R10["필요 시 full context / evidence 참조"]
+    R10 --> R11["LLM 응답 생성"]
+    R11 --> R12["chat history 저장"]
+```
+
+---
+
+## 8. One-Line Summary
 
 ```mermaid
 flowchart LR
@@ -222,7 +413,24 @@ flowchart LR
 
 ---
 
-## 7. Diagram Reading Rule
+## 9. One-Line Summary With Agent
+
+```mermaid
+flowchart LR
+    X1["raw"] --> X2["intake/onboarding"]
+    X2 --> X3["adapter"]
+    X3 --> X4["module/core engine"]
+    X4 --> X5["result asset"]
+    X5 --> X6["Validation Layer (OPS)"]
+    X6 --> X7["Intelligence (RADAR)"]
+    X7 --> X8["Builder"]
+    X8 --> X9["Final Report Package / report_context"]
+    X9 --> X10["Agent / LLM"]
+```
+
+---
+
+## 10. Diagram Reading Rule
 
 이 다이어그램은 아래 해석으로 읽는다.
 
@@ -231,6 +439,8 @@ flowchart LR
 - KPI 계산은 `modules/kpi/*`가 단일 소스다.
 - Sandbox / Territory / Prescription / RADAR는 Intelligence Layer 해석 계층이다.
 - Builder는 계산 계층이 아니라 표현 계층이다.
+- Agent는 Builder 이후 결과를 읽는 해석/Q&A 계층이다.
+- Agent는 `report_context`와 run artifacts를 읽고, 필요 시 LLM을 호출한다.
 
 즉 현재 Sales Data OS는 단순한 대시보드가 아니라,
-`입력 정리 -> 표준화 -> 계산 -> 검증 -> 해석 -> 표현`이 연결된 운영 구조로 본다.
+`입력 정리 -> 표준화 -> 계산 -> 검증 -> 해석 -> 표현 -> 후단 질의응답`이 연결된 운영 구조로 본다.

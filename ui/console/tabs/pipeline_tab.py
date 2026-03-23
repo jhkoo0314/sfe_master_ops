@@ -12,6 +12,7 @@ from ui.console.runner import (
     ensure_intake_result,
     get_crm_package_status,
     get_monthly_raw_status,
+    has_session_intake_inputs,
     get_source_target_rows,
     run_actual_pipeline,
     save_pipeline_run_history,
@@ -30,6 +31,7 @@ def render_pipeline_tab() -> None:
     current_mode = st.session_state.get("execution_mode", "crm_to_sandbox")
     crm_status = get_crm_package_status(uploaded)
     monthly_status = get_monthly_raw_status()
+    intake_inputs_ready = has_session_intake_inputs(uploaded)
     intake_result = ensure_intake_result(current_mode, uploaded)
     intake_summary = summarize_intake_result(intake_result)
     ready = [k for k, v in uploaded.items() if v is not None]
@@ -60,7 +62,9 @@ def render_pipeline_tab() -> None:
         )
 
     render_panel_header("Onboarding Ready 상태", "파이프라인 실행 전, intake가 정리한 입력이 Adapter로 넘어갈 준비가 되었는지 먼저 확인합니다.")
-    if intake_summary["blocked_count"]:
+    if not intake_inputs_ready:
+        st.info("아직 이번 세션에서 업로드하거나 월별 raw 저장을 하지 않았습니다. 업로드 후 Intake Gate가 실행되고, 그 다음 파이프라인을 진행할 수 있습니다.")
+    elif intake_summary["blocked_count"]:
         st.error(f"필수 입력 부족으로 막힌 intake 항목이 {intake_summary['blocked_count']}개 있습니다.")
     elif intake_summary["review_count"]:
         st.warning(f"실행 전에 꼭 확인해야 하는 intake 항목이 {intake_summary['review_count']}개 있습니다. 필요한 경우 업로드 탭의 Intake 제안을 먼저 확인하세요.")
@@ -68,12 +72,12 @@ def render_pipeline_tab() -> None:
         st.info(f"치명적이지 않은 intake 주의 항목이 {intake_summary['advisory_count']}개 있습니다. 실행은 가능하며, 분석 탭에서 문제 지점을 다시 설명합니다.")
     else:
         st.success("현재 intake 기준으로 Adapter 전달 준비가 완료되었습니다.")
-    if intake_result.get("analysis_summary_message"):
+    if intake_result and intake_result.get("analysis_summary_message"):
         if intake_summary["timing_alert_count"]:
             st.warning(intake_result["analysis_summary_message"])
         else:
             st.info(intake_result["analysis_summary_message"])
-    for alert in intake_result.get("timing_alerts", []):
+    for alert in (intake_result or {}).get("timing_alerts", []):
         st.caption(f"- {alert.get('message')}")
 
     timing_acknowledged = True
@@ -110,6 +114,7 @@ def render_pipeline_tab() -> None:
         st.session_state.pipeline_result = None
         st.session_state.intake_result = None
         st.session_state.intake_signature = ""
+        st.session_state.monthly_upload_summary = None
         st.session_state.run_log = []
         for key in st.session_state.module_status:
             st.session_state.module_status[key] = "미실행"
@@ -119,6 +124,9 @@ def render_pipeline_tab() -> None:
         st.rerun()
 
     if run_btn:
+        if not intake_inputs_ready:
+            st.warning("먼저 이번 세션에서 파일을 업로드하거나 월별 raw 저장을 진행해야 합니다.")
+            return
         if not timing_acknowledged:
             st.warning("기간 차이 확인 체크를 먼저 해야 실행을 계속할 수 있습니다.")
             return

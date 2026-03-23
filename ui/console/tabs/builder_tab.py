@@ -13,7 +13,7 @@ from ui.console.artifacts import (
     get_report_type_description,
     get_report_type_options,
 )
-from ui.console.tabs.builder_helpers import build_period_filter_defaults, materialize_periodized_report
+from ui.console.tabs.builder_helpers import build_period_filter_defaults, build_report_download_artifact
 
 
 def render_builder_tab() -> None:
@@ -85,17 +85,12 @@ def render_builder_tab() -> None:
     )
 
     if report_output_path and os.path.exists(report_output_path):
-        effective_report_path = materialize_periodized_report(report_output_path, report_period, report_filters)
-        base_name, ext = os.path.splitext(os.path.basename(report_output_path))
-        safe_period = (
-            report_period.replace(" ", "_")
-            .replace("년", "")
-            .replace("월", "")
-            .replace("분기", "Q")
-            .replace("전체", "all")
-            .replace("/", "_")
+        download_data, download_name, download_mime, download_label, effective_report_path = build_report_download_artifact(
+            report_output_path,
+            report_type,
+            report_period,
+            report_filters,
         )
-        download_name = f"{base_name}_{safe_period}{ext}"
         col_open, col_download = st.columns(2)
         with col_open:
             if st.button("🌐 선택한 보고서 열기", disabled=not builder_eligible, use_container_width=True):
@@ -103,15 +98,14 @@ def render_builder_tab() -> None:
                 st.info(f"브라우저에서 '{report_type}' 보고서를 엽니다. 선택 기간: {report_period}")
                 add_log(f"보고서 열기: {report_type} ({report_period})")
         with col_download:
-            with open(effective_report_path, "rb") as f:
-                st.download_button(
-                    label="⬇️ 생성된 보고서 다운로드",
-                    data=f.read(),
-                    file_name=download_name,
-                    mime="text/html",
-                    disabled=not builder_eligible,
-                    use_container_width=True,
-                )
+            st.download_button(
+                label=download_label,
+                data=download_data,
+                file_name=download_name,
+                mime=download_mime,
+                disabled=not builder_eligible,
+                use_container_width=True,
+            )
 
         raw_downloads = [(label, path) for label, path in get_report_download_paths(report_type) if os.path.exists(path)]
         if raw_downloads:

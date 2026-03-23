@@ -1,7 +1,7 @@
 # Part2 Status Source Of Truth
 
-작성일: 2026-03-20  
-상태: `active`
+작성일: 2026-03-23  
+상태: `completed`
 
 ## 문서 목적
 
@@ -10,7 +10,7 @@ Part2의 완료/진행/대기 상태는 이 문서를 기준으로 본다.
 
 ## 현재 기준
 
-- 현재 단계: `Part2 KPI 엔진 분리 진행`
+- 현재 단계: `Part2 완료`
 - 완료된 축:
   - CRM KPI 엔진 운영 (`modules/kpi/crm_engine.py`)
   - Sandbox KPI 엔진 1차 분리 (`modules/kpi/sandbox_engine.py`)
@@ -138,33 +138,55 @@ Part2의 완료/진행/대기 상태는 이 문서를 기준으로 본다.
     - CRM 활동일 범위 `2025-01-01 ~ 2025-12-31`
   - 생성 산출물은 `data/company_source/tera_pharma/` 아래에 저장
   - 현재 raw generator는 제품명/SKU/제형/포장단위/채널 적합성/전략 비중을 맞추기 위해 `docs/part1/hangyeol-pharma-portfolio-draft.csv`를 공통 제품 기준표로 사용
+- `company_000001` 메가제약 실사용 월별 업로드 검증 완료 (`2026-03-23`)
+  - 회사명: `메가제약`
+  - 기간: `2025-01 ~ 2025-03`
+  - 담당자 수: 의원 `35명`, 종합병원 `20명`
+  - 월별 raw 업로드 -> 자동 병합 -> intake -> 파이프라인 -> Builder 흐름을 실제 UI에서 확인
+  - Prescription 보고서 월별 필터가 실제 생성본 기준으로 정상 동작함을 확인
+  - 따라서 `월별 raw 운영 흐름`은 현재 콘솔 기준으로 실사용 검증 완료 상태로 본다
+- `company_000002` 지저분한 raw intake 자동보정 검증 완료 (`2026-03-23`)
+  - 회사명: `보정테스트제약`
+  - 기간: `2025-04 ~ 2025-06`
+  - 담당자 수: 의원 `20명`, 종합병원 `25명`
+  - 컬럼명 공백, 날짜/월 형식 흔들림, 중복 행이 있는 월별 raw 기준으로 점검
+  - intake 단계에서 기본 자동보정 후 `_intake_staging` 정리본 생성 확인
+  - staging 입력 기준으로 전체 파이프라인이 끝까지 실행됨을 확인
+  - 즉 현재 intake는 `형식 보정 + staging 연결 + 파이프라인 전달`까지 실검증 완료 상태로 본다
+- intake staging 표준 컬럼 정렬 보강 완료 (`2026-03-23`)
+  - 기존 원천/병합 raw에도 기본 intake fix가 적용되도록 정리
+  - staging 저장 시 Adapter가 기대하는 표준 컬럼명으로 한 번 더 맞추도록 보강
+  - 예: `병원코드 -> account_id`, `병원명 -> account_name`, `목표월 -> 기준년월`, `출고일 -> ship_date`
+  - 목적은 “인테이크는 통과했지만 파이프라인에서 컬럼명 차이로 실패”하는 구간을 줄이는 것이다
+- Territory 보고서 오프라인 번들 안정화 완료 (`2026-03-23`)
+  - `territory_map_preview.html`은 이제 외부 지도 CDN 의존 대신 내부 SVG 기반 시각화로 동작
+  - 통합 검증 보고서 안 iframe 기준과 zip 다운로드 기준 모두에서 안정적으로 열 수 있도록 정리
+  - Territory 보고서는 HTML 단독 파일이 아니라 asset 포함 번들 기준으로 본다는 점을 운영 원칙으로 고정
+- Prescription 보고서 월별 필터/월별 asset 로딩 보강 완료 (`2026-03-23`)
+  - 템플릿에서 분기/월 필터 충돌을 정리해 월 선택 시 분기 기본값이 우선하지 않도록 수정
+  - 월별 detail asset(`claims__2025_04.js` 등) 생성/복사 경로를 Builder까지 연결
+  - 현재 생성본 `prescription_flow_preview.html` 기준으로 `2025-04`, `2025-05`, `2025-06` 월 필터 정상 동작 확인
+- Part2 실사용 검증 기준 정리 (`2026-03-23`)
+  - 월별 raw 운영 흐름 검증: `company_000001`
+  - 지저분한 raw intake 자동보정 검증: `company_000002`
+  - 통합 검증/개별 보고서 다운로드 안정화 검증: Territory/Total Validation 번들
+  - Prescription 월별 필터 동작 검증: Builder 실제 생성본 확인
+  - 현재 기준으로 Part2는 “핵심 구현 + 실사용 검증 완료 상태”로 분류한다
+- Part2 완료 선언 기준 충족 (`2026-03-23`)
+  - KPI 계산 단일 소스 분리 완료
+  - intake -> staging -> pipeline -> builder 운영 흐름 실검증 완료
+  - 월별 raw 업로드/자동 병합 실검증 완료
+  - 지저분한 raw 자동보정 실검증 완료
+  - Builder 6종 산출물과 다운로드 안정화 확인 완료
+  - 남은 Territory `WARN`은 실행 차단 이슈가 아니라 운영 경고로 분류한다
 
 ## 진행중(In Progress)
 
-- Part2 진행 문서의 최신 구조 반영(Agent 탭/Run storage 포함)
-  - [x] Agent 탭 연결 상태와 경로 반영
-  - [x] run_storage 경로 반영
-- 실제 회사 raw intake/onboarding 공통화 설계 고정
-  - [x] intake gate 운영 설계 문서 작성
-  - [x] 공통 intake engine 구현 계획 문서 작성
-  - [x] 공통엔진 1개 + `scenario + mapping + rules` 업데이트 구조로 방향 고정
-  - [x] intake/onboarding 공통엔진 구현
-  - [x] 비치명적 intake 제안은 advisory로 완화
-  - [x] 다온제약 실제 컬럼 인식 보강
-- raw generator 구조 단순화 설계 고정
-  - [x] 공통 생성기 구조 설계 문서 초안 작성
-  - [x] 설정 기반 공통 generation engine 구현
-  - [x] 회사별 generator thin wrapper 전환 후 legacy 파일 정리 완료
-- `ops_core -> modules/validation` 점진 전환 준비
-  - [x] `ops_core` 책임 분리 및 의미 재정의
-  - [x] 위치 이동 검토 문서화
-  - [x] `modules/validation` bridge 패키지 추가
-  - [x] 운영 핵심 import를 `modules.validation...` 기준으로 전환
-  - [x] 현재 기준 레거시 문서/테스트 import 정리
+- 없음
 
 ## 대기(Next)
 
-- Part2 다음 우선순위 모듈 착수 준비
+- Part2 이후 다음 우선순위 모듈 착수 준비
 - run 중심 저장 구조 및 report context 반영 설계의 구현 전환
 - 새 테스트 회사 추가 시 raw generation config만 추가하는 운영 규칙 유지
 - `modules/validation` bridge 추가 후 실제 import 전환 검토
