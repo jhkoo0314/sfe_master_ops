@@ -113,8 +113,10 @@
 6. `docs/ai/05_crm_rules.md`
 7. `docs/ai/06_builder_and_outputs.md`
 8. `docs/ai/02_repo_map.md`
-9. `docs/ai/07_current_phase.md`
-10. `README.md`
-11. `RUNBOOK.md`
-12. `STRUCTURE.md`
+9. `docs/architecture/12_part2_status_source_of_truth.md`
+10. `docs/architecture/23_part2_completion_declaration.md`
+11. `docs/ai/07_current_phase.md`
+12. `README.md`
+13. `RUNBOOK.md`
+14. `STRUCTURE.md`
 

@@ -22,7 +22,8 @@
 6. `06_builder_and_outputs.md`
 7. `02_repo_map.md`
 8. `../architecture/12_part2_status_source_of_truth.md`
-9. `07_current_phase.md`
+9. `../architecture/23_part2_completion_declaration.md`
+10. `07_current_phase.md`
 
 ## 가장 중요한 기준
 
@@ -36,6 +37,10 @@
 Part2 우선순위/진행 상태 단일 기준:
 
 `docs/architecture/12_part2_status_source_of_truth.md`
+
+Part2 완료 판단/선언 기준:
+
+`docs/architecture/23_part2_completion_declaration.md`
 
 ## 이 폴더에서 하지 않는 일
 
