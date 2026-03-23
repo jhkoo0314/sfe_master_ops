@@ -32,6 +32,18 @@ OUTPUT_ROOT = get_company_root(ROOT, "ops_validation", COMPANY_KEY) / "territory
 TERRITORY_ACTIVITY_PATH = TERRITORY_STANDARD_ROOT / "ops_territory_activity.xlsx"
 
 
+def _refresh_runtime_context() -> None:
+    global COMPANY_KEY, COMPANY_NAME, PROFILE, SANDBOX_VALIDATION_ROOT, TERRITORY_STANDARD_ROOT, SOURCE_ROOT, OUTPUT_ROOT, TERRITORY_ACTIVITY_PATH
+    COMPANY_KEY = get_active_company_key()
+    COMPANY_NAME = get_active_company_name(COMPANY_KEY)
+    PROFILE = get_company_ops_profile(COMPANY_KEY)
+    SANDBOX_VALIDATION_ROOT = get_company_root(ROOT, "ops_validation", COMPANY_KEY) / "sandbox"
+    TERRITORY_STANDARD_ROOT = get_company_root(ROOT, "ops_standard", COMPANY_KEY) / "territory"
+    SOURCE_ROOT = get_company_root(ROOT, "company_source", COMPANY_KEY)
+    OUTPUT_ROOT = get_company_root(ROOT, "ops_validation", COMPANY_KEY) / "territory"
+    TERRITORY_ACTIVITY_PATH = TERRITORY_STANDARD_ROOT / "ops_territory_activity.xlsx"
+
+
 def load_hospital_records() -> list[HospitalAnalysisRecord]:
     payload = json.loads((SANDBOX_VALIDATION_ROOT / "sandbox_result_asset.json").read_text(encoding="utf-8"))
     return [HospitalAnalysisRecord(**row) for row in payload["hospital_records"]]
@@ -55,6 +67,7 @@ def build_hospital_maps() -> tuple[dict[str, str], dict[str, GeoCoord], dict[str
 
 
 def main() -> None:
+    _refresh_runtime_context()
     OUTPUT_ROOT.mkdir(parents=True, exist_ok=True)
     chunk_root = OUTPUT_ROOT / "territory_builder_payload_assets"
     chunk_root.mkdir(parents=True, exist_ok=True)

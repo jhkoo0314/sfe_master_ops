@@ -3,6 +3,50 @@ from __future__ import annotations
 import pandas as pd
 
 
+_CLAIM_REQUIRED_COLUMNS = {
+    "year_quarter": "",
+    "tracked_amount": 0.0,
+    "period_type": "",
+    "period_value": "",
+    "year": "",
+    "year_month": "",
+    "rep_id": "",
+    "rep_name": "",
+    "branch_name": "",
+    "territory_group": "",
+    "territory_name": "",
+    "hospital_id": "",
+    "hospital_name": "",
+    "hospital_type": "",
+    "product_name": "",
+    "claimed_amount": 0.0,
+    "variance_amount": 0.0,
+    "variance_rate": 0.0,
+    "verdict": "",
+    "severity": "low",
+    "trace_case": "CLAIM_CONFIRMED",
+}
+
+_REP_KPI_REQUIRED_COLUMNS = {
+    "year_quarter": "",
+    "post_share_amount": 0.0,
+    "total_amount": 0.0,
+    "total_quantity": 0.0,
+    "pre_share_amount": 0.0,
+    "settlement_gap_amount": 0.0,
+    "settlement_gap_rate": 0.0,
+    "territory_group": "",
+    "territory_name": "",
+    "rep_id": "",
+    "rep_name": "",
+    "branch_name": "",
+    "product_name": "",
+    "status": "No Rule",
+    "rule_version": "-",
+    "rule_applied": False,
+}
+
+
 def _pick_primary_text(series: pd.Series, fallback: str = "") -> str:
     values = [str(v).strip() for v in series if pd.notna(v) and str(v).strip()]
     if not values:
@@ -14,6 +58,14 @@ def _safe_percent(numerator: float, denominator: float) -> float:
     if not denominator:
         return 0.0
     return round(float(numerator) / float(denominator), 4)
+
+
+def _ensure_columns(dataframe: pd.DataFrame, defaults: dict[str, object]) -> pd.DataFrame:
+    df = dataframe.copy()
+    for column, default in defaults.items():
+        if column not in df.columns:
+            df[column] = default
+    return df
 
 
 def _build_flow_series_from_maps(
@@ -46,9 +98,9 @@ def build_prescription_builder_context(
     download_files: dict[str, str] | None = None,
 ) -> dict:
     flow_df = flow_df.copy()
-    claim_df = claim_df.copy()
+    claim_df = _ensure_columns(claim_df, _CLAIM_REQUIRED_COLUMNS)
     gap_df = gap_df.copy()
-    rep_kpi_df = rep_kpi_df.copy()
+    rep_kpi_df = _ensure_columns(rep_kpi_df, _REP_KPI_REQUIRED_COLUMNS)
 
     flow_df["metric_month"] = flow_df["metric_month"].astype(str)
     flow_df["year"] = flow_df["metric_month"].str[:4]

@@ -21,8 +21,8 @@ def render_artifacts_tab() -> None:
         return
 
     execution_mode = st.session_state.get("execution_mode", "crm_to_sandbox")
-    intake_result = ensure_intake_result(execution_mode, st.session_state.uploaded_data)
-    intake_inputs_ready = has_session_intake_inputs(st.session_state.uploaded_data)
+    intake_result = ensure_intake_result(execution_mode, st.session_state.saved_uploaded_data)
+    intake_inputs_ready = has_session_intake_inputs(st.session_state.saved_uploaded_data)
     artifacts = collect_artifact_files(execution_mode)
     analysis_doc_path = get_execution_analysis_doc_path()
     render_panel_header("기간 차이 해석", "입력 데이터의 월 범위가 서로 다를 때, 실제 검증이 어느 공통 구간 기준으로 진행됐는지 먼저 설명합니다.")

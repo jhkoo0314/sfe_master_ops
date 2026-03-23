@@ -25,6 +25,37 @@ from adapters.crm.adapter_config import CompanyMasterAdapterConfig
 from common.exceptions import AdapterInputError, AdapterMappingError
 
 
+def _normalize_column_name(name: str) -> str:
+    return "".join(ch for ch in str(name).strip().lower() if ch.isalnum())
+
+
+_COMPANY_MASTER_COLUMN_ALIASES = {
+    "rep_id": ("rep_id", "담당자id", "담당자코드", "영업사원코드", "사원번호"),
+    "rep_name": ("rep_name", "담당자명", "영업사원명", "사원명"),
+    "branch_id": ("branch_id", "본부코드", "지점코드", "team_code"),
+    "branch_name": ("branch_name", "본부명", "지점명", "조직명", "team_name"),
+    "hospital_name": ("hospital_name", "account_name", "거래처명", "병원명", "요양기관명"),
+    "hospital_id": ("hospital_id", "account_id", "거래처코드", "병원코드"),
+    "channel_type": ("channel_type", "기관구분", "채널구분", "account_type"),
+    "is_primary": ("is_primary", "주담당여부", "대표담당여부"),
+}
+
+
+def _resolve_column_name(columns: list[str], preferred: str | None, aliases: tuple[str, ...]) -> str | None:
+    if not preferred and not aliases:
+        return preferred
+    normalized_map = {
+        _normalize_column_name(column): str(column)
+        for column in columns
+    }
+    candidates = ((preferred,) if preferred else tuple()) + aliases
+    for candidate in candidates:
+        matched = normalized_map.get(_normalize_column_name(candidate))
+        if matched:
+            return matched
+    return preferred
+
+
 def load_company_master_from_file(
     file_path: str | Path,
     config: CompanyMasterAdapterConfig,
@@ -89,15 +120,26 @@ def _convert_dataframe_to_company_master(
     hospital_index: dict[str, HospitalMaster],
 ) -> tuple[list[CompanyMasterStandard], list[dict]]:
     """내부 공통 변환 로직."""
+    columns = list(df.columns)
+    resolved_cols = {
+        "rep_id": _resolve_column_name(columns, config.rep_id_col, _COMPANY_MASTER_COLUMN_ALIASES["rep_id"]),
+        "rep_name": _resolve_column_name(columns, config.rep_name_col, _COMPANY_MASTER_COLUMN_ALIASES["rep_name"]),
+        "branch_id": _resolve_column_name(columns, config.branch_id_col, _COMPANY_MASTER_COLUMN_ALIASES["branch_id"]),
+        "branch_name": _resolve_column_name(columns, config.branch_name_col, _COMPANY_MASTER_COLUMN_ALIASES["branch_name"]),
+        "hospital_name": _resolve_column_name(columns, config.hospital_name_col, _COMPANY_MASTER_COLUMN_ALIASES["hospital_name"]),
+        "hospital_id": _resolve_column_name(columns, config.hospital_id_col, _COMPANY_MASTER_COLUMN_ALIASES["hospital_id"]),
+        "channel_type": _resolve_column_name(columns, config.channel_type_col, _COMPANY_MASTER_COLUMN_ALIASES["channel_type"]),
+        "is_primary": _resolve_column_name(columns, config.is_primary_col, _COMPANY_MASTER_COLUMN_ALIASES["is_primary"]),
+    }
+
     # 필수 컬럼 확인
     required_cols = {
-        "rep_id": config.rep_id_col,
-        "rep_name": config.rep_name_col,
-        "branch_id": config.branch_id_col,
-        "branch_name": config.branch_name_col,
-        "hospital_name": config.hospital_name_col,
+        "rep_id": resolved_cols["rep_id"],
+        "rep_name": resolved_cols["rep_name"],
+        "branch_id": resolved_cols["branch_id"],
+        "branch_name": resolved_cols["branch_name"],
+        "hospital_name": resolved_cols["hospital_name"],
     }
-    columns = list(df.columns)
     missing = [f"{field}({col})" for field, col in required_cols.items() if col not in columns]
     if missing:
         raise AdapterInputError(
@@ -117,12 +159,12 @@ def _convert_dataframe_to_company_master(
 
     rows = df.iter_rows(named=True) if pl is not None and isinstance(df, pl.DataFrame) else df.to_dict(orient="records")
     for row in rows:
-        rep_id = str(row.get(config.rep_id_col, "")).strip()
-        raw_hospital_name = str(row.get(config.hospital_name_col, "")).strip()
+        rep_id = str(row.get(resolved_cols["rep_id"], "")).strip()
+        raw_hospital_name = str(row.get(resolved_cols["hospital_name"], "")).strip()
 
         # hospital_id 결정: 직접 컬럼 우선, 없으면 이름으로 역매핑
-        if config.hospital_id_col and config.hospital_id_col in df.columns:
-            hospital_id = str(row.get(config.hospital_id_col, "")).strip()
+        if resolved_cols["hospital_id"] and resolved_cols["hospital_id"] in df.columns:
+            hospital_id = str(row.get(resolved_cols["hospital_id"], "")).strip()
             if hospital_id not in hospital_index:
                 unmapped.append({
                     "rep_id": rep_id,
@@ -143,15 +185,15 @@ def _convert_dataframe_to_company_master(
                 continue
 
         # is_primary 파싱 (Y/N, True/False, 1/0 등 범용 처리)
-        if config.is_primary_col and config.is_primary_col in df.columns:
-            is_primary_raw = str(row.get(config.is_primary_col, "Y")).strip().upper()
+        if resolved_cols["is_primary"] and resolved_cols["is_primary"] in df.columns:
+            is_primary_raw = str(row.get(resolved_cols["is_primary"], "Y")).strip().upper()
             is_primary = is_primary_raw in ("TRUE", "Y", "1", "주담당", "주")
         else:
             is_primary = True  # 컬럼 없으면 전부 주담당으로 간주
 
         # channel_type 파싱
-        if config.channel_type_col and config.channel_type_col in df.columns:
-            channel_type = str(row.get(config.channel_type_col, "미분류")).strip()
+        if resolved_cols["channel_type"] and resolved_cols["channel_type"] in df.columns:
+            channel_type = str(row.get(resolved_cols["channel_type"], "미분류")).strip()
         else:
             # 병원 종별로 채널 결정
             hospital = hospital_index.get(hospital_id)
@@ -160,9 +202,9 @@ def _convert_dataframe_to_company_master(
         try:
             master = CompanyMasterStandard(
                 rep_id=rep_id,
-                rep_name=str(row.get(config.rep_name_col, "")).strip(),
-                branch_id=str(row.get(config.branch_id_col, "")).strip(),
-                branch_name=str(row.get(config.branch_name_col, "")).strip(),
+                rep_name=str(row.get(resolved_cols["rep_name"], "")).strip(),
+                branch_id=str(row.get(resolved_cols["branch_id"], "")).strip(),
+                branch_name=str(row.get(resolved_cols["branch_name"], "")).strip(),
                 hospital_id=hospital_id,
                 hospital_name=raw_hospital_name,
                 channel_type=channel_type,

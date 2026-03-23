@@ -33,6 +33,17 @@ OUTPUT_ROOT = get_company_root(ROOT, "ops_validation", COMPANY_KEY) / "prescript
 ACCOUNT_MASTER_PATH = PROFILE.source_path(SOURCE_ROOT, "crm_account_assignment")
 
 
+def _refresh_runtime_context() -> None:
+    global COMPANY_KEY, COMPANY_NAME, PROFILE, SOURCE_ROOT, STANDARD_ROOT, OUTPUT_ROOT, ACCOUNT_MASTER_PATH
+    COMPANY_KEY = get_active_company_key()
+    COMPANY_NAME = get_active_company_name(COMPANY_KEY)
+    PROFILE = get_company_ops_profile(COMPANY_KEY)
+    SOURCE_ROOT = get_company_root(ROOT, "company_source", COMPANY_KEY)
+    STANDARD_ROOT = get_company_root(ROOT, "ops_standard", COMPANY_KEY) / "prescription"
+    OUTPUT_ROOT = get_company_root(ROOT, "ops_validation", COMPANY_KEY) / "prescription"
+    ACCOUNT_MASTER_PATH = PROFILE.source_path(SOURCE_ROOT, "crm_account_assignment")
+
+
 def load_standard_records() -> list[CompanyPrescriptionStandard]:
     df = pd.read_excel(STANDARD_ROOT / "ops_prescription_standard.xlsx")
     records: list[CompanyPrescriptionStandard] = []
@@ -532,6 +543,7 @@ def build_claim_validation_frame(flow_report_df: pd.DataFrame) -> pd.DataFrame:
 
 
 def main() -> None:
+    _refresh_runtime_context()
     OUTPUT_ROOT.mkdir(parents=True, exist_ok=True)
     chunk_root = OUTPUT_ROOT / "prescription_builder_payload_assets"
     chunk_root.mkdir(parents=True, exist_ok=True)

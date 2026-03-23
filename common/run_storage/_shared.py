@@ -228,6 +228,122 @@ def _compute_sandbox_member_insights(company_key: str) -> dict[str, Any]:
     }
 
 
+def _build_agent_summary_for_builder_artifact(report_key: str, file_role: str, file_path: str) -> dict[str, Any]:
+    path = Path(file_path)
+    if file_role != "payload_standard" or not path.exists() or path.suffix.lower() != ".json":
+        return {}
+
+    root = _load_json_if_exists(path)
+    if not root:
+        return {}
+    payload = root.get("payload", {})
+    if not isinstance(payload, dict):
+        return {}
+
+    if report_key == "crm_analysis":
+        overview = payload.get("overview", {})
+        activity_context = payload.get("activity_context", {})
+        if not isinstance(overview, dict) or not isinstance(activity_context, dict):
+            return {}
+        return {
+            "report_key": report_key,
+            "summary_version": "agent_summary_v1",
+            "headline": (
+                f"CRM 품질 {overview.get('quality_status', '-')} "
+                f"/ score {overview.get('quality_score', '-')} "
+                f"/ 활동 {overview.get('crm_activity_count', '-')}건"
+            ),
+            "facts": [
+                f"기간 {activity_context.get('date_range_start', '-')} ~ {activity_context.get('date_range_end', '-')}",
+                f"담당자 {overview.get('unique_reps', '-')}명 / 병원 {overview.get('unique_hospitals', '-')}곳 / 지점 {overview.get('unique_branches', '-')}개",
+                f"매핑률 {overview.get('hospital_mapping_rate', '-')} / unmapped {overview.get('crm_unmapped_count', '-')}",
+            ],
+        }
+
+    if report_key == "prescription_flow":
+        overview = payload.get("overview", {})
+        flow_summary = payload.get("flow_summary", {})
+        if not isinstance(overview, dict) or not isinstance(flow_summary, dict):
+            return {}
+        claim_validation = overview.get("claim_validation_summary", {})
+        return {
+            "report_key": report_key,
+            "summary_version": "agent_summary_v1",
+            "headline": (
+                f"Prescription 품질 {overview.get('quality_status', '-')} "
+                f"/ score {overview.get('quality_score', '-')} "
+                f"/ 연결병원 {overview.get('connected_hospital_count', '-')}"
+            ),
+            "facts": [
+                f"표준 {overview.get('standard_record_count', '-')}건 / flow completion {overview.get('flow_completion_rate', '-')}",
+                f"claim pass {claim_validation.get('pass_count', '-')} / review {claim_validation.get('review_count', '-')} / suspect {claim_validation.get('suspect_count', '-')}" if isinstance(claim_validation, dict) else "claim summary 없음",
+                f"tracked {round(float(flow_summary.get('tracked_amount', 0) or 0)):,} / final {round(float(flow_summary.get('pre_kpi_final_amount', 0) or 0)):,}",
+            ],
+        }
+
+    if report_key == "territory_map":
+        overview = payload.get("overview", {})
+        if not isinstance(overview, dict):
+            return {}
+        return {
+            "report_key": report_key,
+            "summary_version": "agent_summary_v1",
+            "headline": (
+                f"Territory coverage {overview.get('coverage_rate', '-')} "
+                f"/ 담당자 {overview.get('total_reps', '-')}명 "
+                f"/ 병원 {overview.get('territory_hospital_count', '-')}"
+            ),
+            "facts": [
+                f"지역 {overview.get('total_regions', '-')}개 / route 선택 {overview.get('route_selection_count', '-')}",
+                f"period {overview.get('period_label', '-')}",
+            ],
+        }
+
+    if report_key == "sandbox_report":
+        root_payload = _load_json_if_exists(path)
+        payload_obj = root_payload.get("payload", {}) if isinstance(root_payload, dict) else {}
+        if not isinstance(payload_obj, dict):
+            return {}
+        manifest = payload_obj.get("branch_asset_manifest", {})
+        return {
+            "report_key": report_key,
+            "summary_version": "agent_summary_v1",
+            "headline": f"Sandbox branch asset {len(manifest) if isinstance(manifest, dict) else 0}개",
+            "facts": [
+                f"payload keys: {', '.join(list(payload_obj.keys())[:5])}",
+            ],
+        }
+
+    if report_key == "radar_report":
+        overview = payload.get("overview", {})
+        signals = payload.get("signals", [])
+        decision_options = payload.get("decision_options", [])
+        if not isinstance(overview, dict):
+            return {}
+        top_signal = ""
+        if isinstance(signals, list):
+            for item in signals:
+                if isinstance(item, dict):
+                    top_signal = str(item.get("title") or item.get("signal_title") or item.get("issue") or "").strip()
+                    if top_signal:
+                        break
+        return {
+            "report_key": report_key,
+            "summary_version": "agent_summary_v1",
+            "headline": (
+                f"RADAR 상태 {overview.get('overall_status', '-')} "
+                f"/ signal {overview.get('signal_count', '-')}"
+            ),
+            "facts": [
+                f"top_signal {top_signal or '-'}",
+                f"decision_options {len(decision_options) if isinstance(decision_options, list) else 0}개",
+                f"period {overview.get('period_value', '-')}",
+            ],
+        }
+
+    return {}
+
+
 def _validation_root(company_key: str) -> Path:
     return Path(r"C:\sfe_master_ops\data\ops_validation") / company_key
 
@@ -414,7 +530,11 @@ def _build_run_artifact_rows(run_db_id: str, result: dict[str, Any], company_key
                     artifact_class=artifact_class,
                     storage_path=file_path,
                     mime_type=mime_type,
-                    payload={"report_key": report_key, "file_role": file_role},
+                    payload={
+                        "report_key": report_key,
+                        "file_role": file_role,
+                        "agent_summary": _build_agent_summary_for_builder_artifact(report_key, file_role, file_path),
+                    },
                 )
 
     full_ctx, prompt_ctx = _resolve_report_contexts(company_key, run_key)

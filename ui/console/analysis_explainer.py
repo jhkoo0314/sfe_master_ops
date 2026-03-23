@@ -37,16 +37,24 @@ def explain_module_result(module: str, step: dict[str, Any]) -> dict[str, Any]:
     if module == "prescription":
         gap_count = int(summary.get("gap_record_count", 0))
         completion = summary.get("flow_completion_rate", 0)
+        connected_hospital_count = int(summary.get("connected_hospital_count", 0))
+        flow_record_count = int(summary.get("flow_record_count", 0))
         if status == "PASS":
             explanation = "Prescription 흐름 연결이 정상이며 gap 없이 다음 분석 단계에서 활용 가능한 상태입니다."
         elif status == "WARN":
             explanation = "Prescription 흐름은 생성됐지만 연결 누락 또는 검토 대상 케이스가 남아 있습니다."
+        elif flow_record_count > 0 and connected_hospital_count == 0:
+            explanation = (
+                "Prescription 원본은 읽혔지만 병원 연결이 1건도 성사되지 않았습니다. "
+                "즉 출고 흐름은 생성됐지만 병원/거래처 마스터와 이어지지 않아 분석용 흐름으로 확정되지 못한 상태입니다."
+            )
         else:
             explanation = "Prescription 흐름 추적 또는 검증에 실패해 후속 활용이 어렵습니다."
         evidence = [
             f"flow_record_count={summary.get('flow_record_count', '-')}",
             f"gap_record_count={gap_count}",
             f"flow_completion_rate={completion}",
+            f"connected_hospital_count={connected_hospital_count}",
             f"quality_score={_format_number(score)}",
         ]
         return {"summary": explanation, "evidence": evidence}
@@ -122,4 +130,3 @@ def explain_module_result(module: str, step: dict[str, Any]) -> dict[str, Any]:
     explanation = "상태는 계산됐지만 이 모듈용 해석 문장이 아직 정의되지 않았습니다."
     evidence = [f"status={status}", f"score={_format_number(score)}"]
     return {"summary": explanation, "evidence": evidence}
-

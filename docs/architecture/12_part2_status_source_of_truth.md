@@ -158,10 +158,31 @@ Part2의 완료/진행/대기 상태는 이 문서를 기준으로 본다.
   - staging 저장 시 Adapter가 기대하는 표준 컬럼명으로 한 번 더 맞추도록 보강
   - 예: `병원코드 -> account_id`, `병원명 -> account_name`, `목표월 -> 기준년월`, `출고일 -> ship_date`
   - 목적은 “인테이크는 통과했지만 파이프라인에서 컬럼명 차이로 실패”하는 구간을 줄이는 것이다
+- 운영 콘솔 패키지 업로드 저장 기준 정리 완료 (`2026-03-23`)
+  - 파일 1개 업로드 시점이 아니라 `패키지 업로드 저장` 시점에 intake 검증이 시작되도록 정리
+  - 실행 탭은 즉시 업로드본이 아니라 `저장된 파일` 기준으로만 파이프라인 준비 상태를 판단
+  - 목적은 raw 업로드 흐름과 package 업로드 흐름을 같은 저장 기준으로 맞추는 것이다
+- `company_000002` 지저분한 raw 실검증 보강 완료 (`2026-03-23`)
+  - intake는 “느슨한 통과”가 아니라 Adapter가 실제로 읽을 수 있는 staging 정리본 생성까지 수행하도록 보강
+  - `crm_rep_master`, `crm_account_assignment`, `crm_activity_raw`를 함께 보고 실행용 CRM staging을 만들 수 있게 정리
+  - Prescription `year_quarter` 빈 결과표 방어 처리 보강
+  - Prescription 품질 `FAIL`은 통합 실행 중단 사유가 아니라 다음 단계 경고로 처리하도록 정리
+  - Sandbox는 병원 ID 체계 보정 후 재검증 기준 `PASS`
+  - Territory는 실행 실패가 아니라 운영 품질 `WARN`으로 분류
+- Agent run context / artifact 요약 연결 보강 완료 (`2026-03-23`)
+  - Agent artifact context 상한을 확대해 Builder/validation 산출물을 더 많이 읽을 수 있게 정리
+  - `crm_analysis`, `prescription_flow`, `territory_map`, `sandbox_report`, `radar_report`는 run 저장 시 `payload.agent_summary`를 함께 저장
+  - 최신 run 기준 로컬 run bundle 저장 연결
+    - `runs/<run_id>/report_context.full.json`
+    - `runs/<run_id>/report_context.prompt.json`
+    - `runs/<run_id>/pipeline_summary.json`
+    - `runs/<run_id>/artifacts.index.json`
+  - Agent는 legacy 요약보다 최신 run bundle / 최신 run history를 우선 읽도록 fallback 순서를 정리
 - Territory 보고서 오프라인 번들 안정화 완료 (`2026-03-23`)
-  - `territory_map_preview.html`은 이제 외부 지도 CDN 의존 대신 내부 SVG 기반 시각화로 동작
-  - 통합 검증 보고서 안 iframe 기준과 zip 다운로드 기준 모두에서 안정적으로 열 수 있도록 정리
-  - Territory 보고서는 HTML 단독 파일이 아니라 asset 포함 번들 기준으로 본다는 점을 운영 원칙으로 고정
+  - `territory_map_preview.html`은 현재 `Leaflet` 기반 지도를 사용한다
+  - Builder는 `leaflet.js`, `leaflet.css`, marker image를 `territory_map_preview_assets/leaflet/` 아래에 함께 복사한다
+  - 따라서 Territory 보고서는 외부 CDN이 아니라 로컬 라이브러리 기준으로 열 수 있다
+  - 통합 검증 보고서 zip / 개별 보고서 zip 모두에서 asset 포함 번들 기준으로 연다
 - Prescription 보고서 월별 필터/월별 asset 로딩 보강 완료 (`2026-03-23`)
   - 템플릿에서 분기/월 필터 충돌을 정리해 월 선택 시 분기 기본값이 우선하지 않도록 수정
   - 월별 detail asset(`claims__2025_04.js` 등) 생성/복사 경로를 Builder까지 연결

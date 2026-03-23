@@ -187,8 +187,8 @@ def render_agent_tab() -> None:
                 st.warning('질문을 입력하세요.')
             else:
                 artifacts = _load_run_artifacts(company_key, selected_run_id, run_db_id=selected_run_db_id)
-                # 보고서가 5~6개까지 생성되므로 모두 포함하도록 상한을 넉넉히 둔다.
-                artifact_contexts, artifact_evidence_refs = build_artifact_contexts(artifacts, max_items=8)
+                # 보고서 수와 보조 payload가 함께 저장되는 경우를 감안해 상한을 더 넓힌다.
+                artifact_contexts, artifact_evidence_refs = build_artifact_contexts(artifacts, max_items=18)
                 combined_evidence_refs = _dedupe_strings(default_evidence_refs + artifact_evidence_refs)
                 used_mock = False
                 fallback_reason = ''

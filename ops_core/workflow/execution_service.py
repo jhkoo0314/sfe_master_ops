@@ -166,8 +166,13 @@ def _run_execution_steps(
         if step_result.summary is not None:
             summary_by_module[step_result.module] = step_result.summary
         if step_result.status == "FAIL":
-            recommended_actions.append(f"{step_definition.module.upper()} 단계 오류를 먼저 해결해야 합니다.")
-            break
+            if step_result.error:
+                recommended_actions.append(f"{step_definition.module.upper()} 단계 실행 오류를 먼저 해결해야 합니다.")
+                break
+            recommended_actions.append(
+                f"{step_definition.module.upper()} 단계 품질은 FAIL이지만, 다음 단계 진단을 위해 통합 실행을 계속 진행했습니다."
+            )
+            continue
         for next_module in step_result.next_modules:
             if next_module not in final_eligible_modules:
                 final_eligible_modules.append(next_module)

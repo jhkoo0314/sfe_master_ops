@@ -28,7 +28,17 @@ SOURCE_ROOT = get_company_root(ROOT, "company_source", COMPANY_KEY)
 OUTPUT_ROOT = get_company_root(ROOT, "ops_validation", COMPANY_KEY) / "crm"
 
 
+def _refresh_runtime_context() -> None:
+    global COMPANY_KEY, COMPANY_NAME, PROFILE, SOURCE_ROOT, OUTPUT_ROOT
+    COMPANY_KEY = get_active_company_key()
+    COMPANY_NAME = get_active_company_name(COMPANY_KEY)
+    PROFILE = get_company_ops_profile(COMPANY_KEY)
+    SOURCE_ROOT = get_company_root(ROOT, "company_source", COMPANY_KEY)
+    OUTPUT_ROOT = get_company_root(ROOT, "ops_validation", COMPANY_KEY) / "crm"
+
+
 def main() -> None:
+    _refresh_runtime_context()
     OUTPUT_ROOT.mkdir(parents=True, exist_ok=True)
     chunk_root = OUTPUT_ROOT / "crm_builder_payload_assets"
     chunk_root.mkdir(parents=True, exist_ok=True)

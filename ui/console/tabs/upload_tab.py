@@ -1,5 +1,6 @@
 import pandas as pd
 import streamlit as st
+from pathlib import Path
 
 from ui.console.display import render_page_hero, render_panel_header, render_upload_row
 from ui.console.paths import get_active_company_name, get_source_target_display_path, get_source_target_map
@@ -11,15 +12,33 @@ from ui.console.runner import (
     summarize_intake_result,
 )
 from ui.console.state import save_monthly_upload_batch
+from ui.console.state import save_uploaded_batch
 from modules.intake import get_monthly_raw_root
+
+
+def _has_prescription_mapping_risk(intake_result: dict | None, saved_uploaded: dict) -> bool:
+    if not intake_result or not saved_uploaded.get("prescription"):
+        return False
+    for package in intake_result.get("packages", []):
+        if str(package.get("source_key") or "") != "crm_account_assignment":
+            continue
+        fix_types = {
+            str(item.get("fix_type") or "")
+            for item in package.get("fixes", [])
+        }
+        if "derive_account_assignment_from_crm_activity" in fix_types:
+            return True
+    return False
 
 
 def render_upload_tab() -> None:
     company_name = get_active_company_name()
     monthly_status = get_monthly_raw_status()
     current_mode = st.session_state.get("execution_mode", "crm_to_sandbox")
-    intake_inputs_ready = has_session_intake_inputs(st.session_state.uploaded_data)
-    intake_result = ensure_intake_result(current_mode, st.session_state.uploaded_data)
+    staged_uploaded = st.session_state.uploaded_data
+    saved_uploaded = st.session_state.saved_uploaded_data
+    intake_inputs_ready = has_session_intake_inputs(saved_uploaded)
+    intake_result = ensure_intake_result(current_mode, saved_uploaded)
     intake_summary = summarize_intake_result(intake_result)
     render_page_hero(
         "RAW 데이터 투입",
@@ -27,12 +46,14 @@ def render_upload_tab() -> None:
         "DATA ADAPTER",
     )
     render_panel_header("업로드 목록", "실행할 흐름에 필요한 원천 파일만 올리면 됩니다. 같은 파일을 여러 항목에 써도 됩니다.")
-    crm_status = get_crm_package_status(st.session_state.uploaded_data)
-    loaded_count = sum(1 for v in st.session_state.uploaded_data.values() if v is not None)
+    crm_status = get_crm_package_status(saved_uploaded)
+    loaded_count = sum(1 for v in staged_uploaded.values() if v is not None)
+    saved_count = sum(1 for v in saved_uploaded.values() if v is not None)
     st.markdown(
         f"""
         <div class="stat-strip">
           <div class="stat-chip"><div class="label">Loaded Files</div><div class="value">{loaded_count} / 7</div></div>
+          <div class="stat-chip"><div class="label">Saved Files</div><div class="value">{saved_count} / 7</div></div>
           <div class="stat-chip"><div class="label">Adapter Mode</div><div class="value">Standard Normalize</div></div>
           <div class="stat-chip"><div class="label">CRM Package</div><div class="value">{crm_status['package_count']} / 4</div></div>
           <div class="stat-chip"><div class="label">Intake</div><div class="value">{str(intake_summary['status']).upper()}</div></div>
@@ -42,9 +63,31 @@ def render_upload_tab() -> None:
     )
     st.markdown('<div class="action-note">원본 추출 파일 우선 · 중복 업로드 허용 · 자세한 설명은 각 항목의 예시에서 확인</div>', unsafe_allow_html=True)
 
-    render_panel_header("Intake Gate 결과", "업로드 직후 공통 intake engine이 자동 수정, 제안, onboarding 가능 여부를 먼저 점검합니다.")
+    pending_package_count = sum(
+        1
+        for key, value in staged_uploaded.items()
+        if value is not None and saved_uploaded.get(key) != value
+    )
+    render_panel_header("패키지 업로드 저장", "패키지 파일은 먼저 임시로 올라가고, 아래 저장 버튼을 눌러야 실제 반영 대상으로 확정됩니다.")
+    c_save_1, c_save_2 = st.columns([1, 2])
+    with c_save_1:
+        save_package_btn = st.button("패키지 업로드 저장", use_container_width=True, type="secondary")
+    with c_save_2:
+        if pending_package_count:
+            st.info(f"저장 대기 패키지: {pending_package_count}개")
+        else:
+            st.caption("저장 대기 중인 패키지 파일이 없습니다.")
+    if save_package_btn:
+        save_result = save_uploaded_batch()
+        if save_result["saved_count"] <= 0:
+            st.warning("저장할 패키지 파일이 없습니다.")
+        else:
+            st.success(f"패키지 업로드 저장 완료: {save_result['saved_count']}개 파일 / {save_result['rows']}건")
+            st.rerun()
+
+    render_panel_header("Intake Gate 결과", "패키지 업로드 저장 또는 월별 raw 저장이 끝난 뒤 공통 intake engine이 시작됩니다.")
     if not intake_inputs_ready:
-        st.info("아직 이번 세션에서 업로드하거나 월별 raw 저장을 하지 않았습니다. 파일을 넣은 뒤 Intake Gate가 시작됩니다.")
+        st.info("아직 패키지 업로드 저장 또는 월별 raw 저장을 하지 않았습니다. 파일을 모두 올린 뒤 저장하면 Intake Gate가 시작됩니다.")
     else:
         st.markdown(
             f"""
@@ -55,6 +98,7 @@ def render_upload_tab() -> None:
               <div class="stat-chip"><div class="label">Needs Review</div><div class="value">{intake_summary['review_count']}</div></div>
               <div class="stat-chip"><div class="label">Advisory</div><div class="value">{intake_summary['advisory_count']}</div></div>
               <div class="stat-chip"><div class="label">Timing Alerts</div><div class="value">{intake_summary['timing_alert_count']}</div></div>
+              <div class="stat-chip"><div class="label">Rx Mapping Risk</div><div class="value">{intake_summary.get('prescription_mapping_risk_score', 0)}</div></div>
             </div>
             """,
             unsafe_allow_html=True,
@@ -67,6 +111,16 @@ def render_upload_tab() -> None:
             st.info(f"치명적이지 않은 intake 주의 항목이 {intake_summary['advisory_count']}개 있습니다. 실행은 가능하며 분석 화면에서 다시 설명됩니다.")
         else:
             st.success("현재 업로드 기준으로 onboarding-ready 상태입니다.")
+        if _has_prescription_mapping_risk(intake_result, saved_uploaded):
+            st.warning(
+                "Prescription 파일은 실행 가능 상태지만, 현재 거래처/병원 배정표가 부족해서 CRM 활동 기준 임시 병원 배정표로 보정됐습니다. "
+                "이 경우 Prescription 병원 연결률이 낮거나 0%로 나올 수 있습니다."
+            )
+            if intake_summary.get("prescription_mapping_risk_reason"):
+                st.caption(
+                    f"Prescription 연결 위험 점수: {intake_summary.get('prescription_mapping_risk_score', 0)} / 100"
+                    f" · 사유: {intake_summary.get('prescription_mapping_risk_reason')}"
+                )
         if intake_result.get("analysis_summary_message"):
             if intake_summary["timing_alert_count"]:
                 st.warning(intake_result["analysis_summary_message"])
@@ -76,16 +130,20 @@ def render_upload_tab() -> None:
             st.caption(f"- {alert.get('message')}")
 
         package_rows = []
+        source_target_map = get_source_target_map()
         for package in intake_result.get("packages", []):
             if package.get("source_key") == "rep_master":
                 continue
+            source_key = str(package.get("source_key") or "")
+            target_path = source_target_map.get(source_key, ("", ""))[0]
             package_rows.append(
                 {
-                    "입력 묶음": package.get("source_key"),
+                    "입력 묶음": source_key,
                     "상태": package.get("status"),
                     "자동수정": len(package.get("fixes", [])),
                     "제안": len(package.get("suggestions", [])),
                     "Adapter 전달": "가능" if package.get("ready_for_adapter") else "보류",
+                    "내부 저장 파일명": Path(target_path).name if target_path else "-",
                     "기간": (
                         f"{package['period_coverage']['start_month']} ~ {package['period_coverage']['end_month']} "
                         f"({package['period_coverage']['month_count']}개월)"
@@ -114,9 +172,20 @@ def render_upload_tab() -> None:
                 st.dataframe(pd.DataFrame(important_suggestions), use_container_width=True, hide_index=True)
 
     render_panel_header("CRM 패키지", f"필수 2개, 권장 1개, 선택 1개 구조입니다. 현재 상태: {'필수 준비 완료' if crm_status['required_ready'] else '필수 미완성'}")
+    st.markdown(
+        """
+        <div class="action-note">
+        <b>담당자 / 조직 마스터</b>와 <b>거래처 / 병원 담당 배정</b>은 같은 파일이 아닙니다.<br>
+        담당자 / 조직 마스터는 <code>rep master</code>처럼 담당자, 본부, 지점, 역할 정보를 담는 파일입니다.<br>
+        거래처 / 병원 담당 배정은 담당자가 어떤 거래처/병원을 맡는지 연결하는 배정표입니다.<br>
+        인테이크는 두 파일을 구분해서 보고, 필요하면 실행용 staging에서 함께 조합합니다.
+        </div>
+        """,
+        unsafe_allow_html=True,
+    )
     render_upload_row("crm_activity", "crm_activity_up", "CRM 활동 원본", "필수", "방문, 디테일, 통화 같은 활동 로그", get_source_target_display_path("crm_activity"), ["방문일, 담당자명 또는 담당자ID", "방문기관명, 기관코드, 주소 중 하나 이상", "활동유형(방문, 디테일, 미팅 등)"], ["월별 합계보다 활동 한 줄 한 줄이 남아 있는 원본이 좋습니다.", "가공 요약표보다 시스템 추출 원본이 더 적합합니다."], "CRM 활동 업로드")
-    render_upload_row("crm_rep_master", "crm_rep_master_up", "담당자 / 조직 마스터", "필수", "담당자, 지점, 팀 기준 파일", get_source_target_display_path("crm_rep_master"), ["담당자 ID, 담당자명", "지점명, 팀명, 조직코드", "직무 또는 역할"], ["CRM 활동 파일과 연결하려면 담당자 코드가 살아 있는 편이 좋습니다."], "담당자 마스터 업로드")
-    render_upload_row("crm_account_assignment", "crm_assignment_up", "거래처 / 병원 담당 배정", "권장", "병원과 담당자를 연결하는 파일", get_source_target_display_path("crm_account_assignment"), ["병원코드 또는 거래처코드", "병원명 또는 거래처명", "담당자 ID 또는 담당자명"], ["있으면 CRM 연결 정확도가 높아집니다."], "담당 배정 업로드")
+    render_upload_row("crm_rep_master", "crm_rep_master_up", "담당자 / 조직 마스터", "필수", "rep master 성격의 파일입니다. 담당자와 조직 구조를 담습니다.", get_source_target_display_path("crm_rep_master"), ["담당자 ID, 담당자명", "본부/지점/팀/조직 코드", "직무 또는 역할"], ["거래처 한 줄 한 줄이 없어도 됩니다.", "담당자 코드와 조직 코드가 살아 있는 편이 가장 좋습니다."], "담당자 마스터 업로드")
+    render_upload_row("crm_account_assignment", "crm_assignment_up", "거래처 / 병원 담당 배정", "권장", "담당자와 거래처/병원을 연결하는 배정표입니다.", get_source_target_display_path("crm_account_assignment"), ["병원코드 또는 거래처코드", "병원명 또는 거래처명", "담당자 ID 또는 담당자명", "가능하면 본부/지점 정보도 함께"], ["rep master와는 다른 파일입니다.", "있으면 CRM 연결 정확도가 높아지고 실행용 staging 조합이 쉬워집니다."], "담당 배정 업로드")
     render_upload_row("crm_rules", "crm_rules_up", "CRM 규칙 / KPI 설정", "선택", "방문 인정 기준과 KPI 규칙", get_source_target_display_path("crm_rules"), ["방문 점수 규칙", "활동 유형별 가중치", "월별 KPI 기준"], ["없으면 기본 규칙으로도 검증은 가능합니다."], "CRM 규칙 업로드")
 
     render_panel_header("Sandbox 입력")
@@ -211,22 +280,22 @@ def render_upload_tab() -> None:
     status_data = {
         "입력 묶음": ["CRM 활동 원본", "담당자/조직 마스터", "거래처 담당 배정", "CRM 규칙/KPI", "실적", "목표", "Prescription"],
         "상태": [
-            "✅ 업로드됨" if st.session_state.uploaded_data["crm_activity"] else "⬜ 필수",
-            "✅ 업로드됨" if st.session_state.uploaded_data["crm_rep_master"] else "⬜ 필수",
-            "✅ 업로드됨" if st.session_state.uploaded_data["crm_account_assignment"] else "⬜ 권장",
-            "✅ 업로드됨" if st.session_state.uploaded_data["crm_rules"] else "⬜ 선택",
-            "✅ 업로드됨" if st.session_state.uploaded_data["sales"] else "⬜ 대기",
-            "✅ 업로드됨" if st.session_state.uploaded_data["target"] else "⬜ 대기",
-            "✅ 업로드됨" if st.session_state.uploaded_data["prescription"] else "⬜ 선택사항",
+            "✅ 저장됨" if saved_uploaded["crm_activity"] else "⬜ 필수",
+            "✅ 저장됨" if saved_uploaded["crm_rep_master"] else "⬜ 필수",
+            "✅ 저장됨" if saved_uploaded["crm_account_assignment"] else "⬜ 권장",
+            "✅ 저장됨" if saved_uploaded["crm_rules"] else "⬜ 선택",
+            "✅ 저장됨" if saved_uploaded["sales"] else "⬜ 대기",
+            "✅ 저장됨" if saved_uploaded["target"] else "⬜ 대기",
+            "✅ 저장됨" if saved_uploaded["prescription"] else "⬜ 선택사항",
         ],
         "건수": [
-            st.session_state.uploaded_data["crm_activity"]["row_count"] if st.session_state.uploaded_data["crm_activity"] else 0,
-            st.session_state.uploaded_data["crm_rep_master"]["row_count"] if st.session_state.uploaded_data["crm_rep_master"] else 0,
-            st.session_state.uploaded_data["crm_account_assignment"]["row_count"] if st.session_state.uploaded_data["crm_account_assignment"] else 0,
-            st.session_state.uploaded_data["crm_rules"]["row_count"] if st.session_state.uploaded_data["crm_rules"] else 0,
-            st.session_state.uploaded_data["sales"]["row_count"] if st.session_state.uploaded_data["sales"] else 0,
-            st.session_state.uploaded_data["target"]["row_count"] if st.session_state.uploaded_data["target"] else 0,
-            st.session_state.uploaded_data["prescription"]["row_count"] if st.session_state.uploaded_data["prescription"] else 0,
+            saved_uploaded["crm_activity"]["row_count"] if saved_uploaded["crm_activity"] else 0,
+            saved_uploaded["crm_rep_master"]["row_count"] if saved_uploaded["crm_rep_master"] else 0,
+            saved_uploaded["crm_account_assignment"]["row_count"] if saved_uploaded["crm_account_assignment"] else 0,
+            saved_uploaded["crm_rules"]["row_count"] if saved_uploaded["crm_rules"] else 0,
+            saved_uploaded["sales"]["row_count"] if saved_uploaded["sales"] else 0,
+            saved_uploaded["target"]["row_count"] if saved_uploaded["target"] else 0,
+            saved_uploaded["prescription"]["row_count"] if saved_uploaded["prescription"] else 0,
         ],
     }
     st.dataframe(pd.DataFrame(status_data), use_container_width=True, hide_index=True)

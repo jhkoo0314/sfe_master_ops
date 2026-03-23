@@ -54,6 +54,11 @@ _ADAPTER_CANONICAL_COLUMN_MAP: dict[str, dict[str, str]] = {
         "병원명": "방문기관",
         "병원코드": "거래처코드",
         "활동내용": "활동메모",
+        "담당자id": "영업사원코드",
+        "담당자명": "영업사원명",
+        "활동유형": "액션유형",
+        "방문일": "실행일",
+        "활동일": "실행일",
     },
     "crm_rep_master": {
         "병원코드": "거래처코드",
@@ -61,18 +66,37 @@ _ADAPTER_CANONICAL_COLUMN_MAP: dict[str, dict[str, str]] = {
         "담당자id": "영업사원코드",
         "담당자명": "영업사원명",
         "지점": "본부명",
+        "branch_name": "본부명",
+        "rep_name": "영업사원명",
     },
     "crm_account_assignment": {
         "병원코드": "account_id",
         "병원명": "account_name",
         "지점": "branch_name",
         "담당자명": "rep_name",
+        "account_id": "거래처코드",
+        "account_name": "거래처명",
+        "담당자id": "영업사원코드",
+        "rep_name": "영업사원명",
+        "rep_id": "영업사원코드",
+        "branch_name": "본부명",
+        "branch_id": "본부코드",
+        "기관구분": "account_type",
+        "광역시도": "region_key",
+        "시군구": "sub_region_key",
+        "주소원본": "address",
     },
     "sales": {
         "병원코드": "거래처코드",
         "병원명": "거래처명",
         "매출월": "기준년월",
         "제품명": "브랜드명",
+        "담당자id": "영업사원코드",
+        "담당자명": "영업사원명",
+        "rep_name": "영업사원명",
+        "branch_name": "본부명",
+        "account_id": "거래처코드",
+        "account_name": "거래처명",
     },
     "target": {
         "병원코드": "거래처코드",
@@ -80,6 +104,12 @@ _ADAPTER_CANONICAL_COLUMN_MAP: dict[str, dict[str, str]] = {
         "목표월": "기준년월",
         "제품명": "브랜드명",
         "목표금액": "계획금액",
+        "담당자id": "영업사원코드",
+        "담당자명": "영업사원명",
+        "rep_name": "영업사원명",
+        "branch_name": "본부명",
+        "account_id": "거래처코드",
+        "account_name": "거래처명",
     },
     "prescription": {
         "출고일": "ship_date (출고일)",
@@ -112,26 +142,266 @@ def _apply_adapter_canonical_columns(
         _normalize_column_name(column): str(column)
         for column in df.columns
     }
-    rename_map: dict[str, str] = {}
+    copied_columns: list[str] = []
     for alias, canonical in canonical_map.items():
         matched_column = normalized_columns.get(_normalize_column_name(alias))
         if matched_column is None or matched_column == canonical or canonical in df.columns:
             continue
-        rename_map[matched_column] = canonical
+        df[canonical] = df[matched_column]
+        copied_columns.append(canonical)
 
-    if not rename_map:
+    if not copied_columns:
         return df, []
 
-    df = df.rename(columns=rename_map)
     fixes = [
         IntakeFix(
             source_key=source_key,
             fix_type="canonicalize_adapter_columns",
-            message="파이프라인 표준 컬럼명으로 자동 정렬했습니다.",
-            affected_count=len(rename_map),
+            message="파이프라인 실행용 컬럼을 원본 옆에 자동 추가했습니다.",
+            affected_count=len(copied_columns),
         )
     ]
     return df, fixes
+
+
+def _has_all_columns(dataframe: pd.DataFrame | None, required_columns: tuple[str, ...]) -> bool:
+    if dataframe is None:
+        return False
+    columns = {str(column) for column in dataframe.columns}
+    return all(column in columns for column in required_columns)
+
+
+def _build_execution_ready_crm_rep_master(
+    source_frames: dict[str, pd.DataFrame | None],
+) -> tuple[pd.DataFrame | None, list[IntakeFix]]:
+    current_df = source_frames.get("crm_rep_master")
+    assignment_df = source_frames.get("crm_account_assignment")
+    required_columns = ("영업사원코드", "영업사원명", "본부코드", "본부명", "거래처명")
+
+    if _has_all_columns(current_df, required_columns):
+        return current_df, []
+    if assignment_df is None:
+        return current_df, []
+
+    execution_df = assignment_df.copy()
+    derived_columns = {
+        "영업사원코드": ("영업사원코드", "rep_id"),
+        "영업사원명": ("영업사원명", "rep_name"),
+        "본부코드": ("본부코드", "branch_id"),
+        "본부명": ("본부명", "branch_name"),
+        "거래처코드": ("거래처코드", "account_id"),
+        "거래처명": ("거래처명", "account_name"),
+    }
+    for target_column, candidates in derived_columns.items():
+        if target_column in execution_df.columns:
+            continue
+        for candidate in candidates:
+            if candidate in execution_df.columns:
+                execution_df[target_column] = execution_df[candidate]
+                break
+
+    if not _has_all_columns(execution_df, required_columns):
+        return current_df, []
+
+    fixes = [
+        IntakeFix(
+            source_key="crm_rep_master",
+            fix_type="hydrate_company_assignment_from_account_mapping",
+            message="담당자/조직 마스터만으로는 배정표가 부족해 거래처 담당 배정 파일을 실행용 CRM 마스터로 함께 사용했습니다.",
+            affected_count=int(len(execution_df)),
+        )
+    ]
+
+    if current_df is None or current_df.empty:
+        return execution_df, fixes
+
+    if "영업사원코드" not in current_df.columns:
+        return execution_df, fixes
+
+    enrichment_columns = [
+        column
+        for column in current_df.columns
+        if column not in execution_df.columns and column != "영업사원코드"
+    ]
+    if not enrichment_columns:
+        return execution_df, fixes
+
+    rep_master_unique = current_df[["영업사원코드", *enrichment_columns]].drop_duplicates(subset=["영업사원코드"])
+    execution_df = execution_df.merge(rep_master_unique, how="left", on="영업사원코드")
+    return execution_df, fixes
+
+
+def _first_existing_column(dataframe: pd.DataFrame | None, *candidates: str) -> str | None:
+    if dataframe is None:
+        return None
+    for candidate in candidates:
+        if candidate in dataframe.columns:
+            return candidate
+    return None
+
+
+def _infer_account_type_from_name(account_name: str) -> str:
+    normalized = str(account_name).strip().lower()
+    if "상급종합" in normalized:
+        return "상급종합"
+    if "종합병원" in normalized:
+        return "종합병원"
+    if "병원" in normalized:
+        return "병원"
+    if "clinic" in normalized:
+        return "의원"
+    return "의원"
+
+
+def _build_execution_ready_crm_account_assignment(
+    source_frames: dict[str, pd.DataFrame | None],
+) -> tuple[pd.DataFrame | None, list[IntakeFix]]:
+    current_df = source_frames.get("crm_account_assignment")
+    crm_df = source_frames.get("crm_activity")
+    rep_df = source_frames.get("crm_rep_master")
+    required_columns = ("account_id", "account_name", "account_type", "region_key", "sub_region_key")
+
+    if _has_all_columns(current_df, required_columns):
+        return current_df, []
+
+    if crm_df is None or crm_df.empty:
+        return current_df, []
+
+    rep_id_col = _first_existing_column(crm_df, "영업사원코드", "rep_id", "담당자id")
+    account_name_col = _first_existing_column(crm_df, "방문기관", "병원명", "hospital_name", "account_name", "거래처명")
+    if rep_id_col is None or account_name_col is None:
+        return current_df, []
+
+    working = crm_df.copy()
+    working["rep_id"] = working[rep_id_col].astype(str).str.strip()
+    working["account_name"] = working[account_name_col].astype(str).str.strip()
+    working = working[(working["rep_id"] != "") & (working["account_name"] != "")]
+    if working.empty:
+        return current_df, []
+
+    region_source = _first_existing_column(working, "region_key", "광역시도", "시도", "시도명")
+    sub_region_source = _first_existing_column(working, "sub_region_key", "시군구", "시군구명")
+    account_type_source = _first_existing_column(working, "account_type", "기관구분", "channel_type")
+    address_source = _first_existing_column(working, "address", "주소원본", "주소")
+    latitude_source = _first_existing_column(working, "latitude", "기관위도")
+    longitude_source = _first_existing_column(working, "longitude", "기관경도")
+
+    normalized_name = (
+        working["account_name"]
+        .astype(str)
+        .str.replace(r"\s+", "", regex=True)
+        .str.lower()
+    )
+    account_codes = {
+        name: f"DERIVED_ACC_{index:04d}"
+        for index, name in enumerate(sorted(normalized_name.unique()), start=1)
+    }
+    working["_normalized_account_name"] = normalized_name
+    working["account_id"] = working["_normalized_account_name"].map(account_codes)
+    working["region_key"] = (
+        working[region_source].astype(str).str.strip()
+        if region_source
+        else "UNKNOWN_REGION"
+    )
+    working["sub_region_key"] = (
+        working[sub_region_source].astype(str).str.strip()
+        if sub_region_source
+        else "UNKNOWN_SUB_REGION"
+    )
+    if account_type_source:
+        working["account_type"] = working[account_type_source].astype(str).str.strip()
+        empty_account_type = working["account_type"].eq("") | working["account_type"].isna()
+        if empty_account_type.any():
+            working.loc[empty_account_type, "account_type"] = working.loc[empty_account_type, "account_name"].map(_infer_account_type_from_name)
+    else:
+        working["account_type"] = working["account_name"].map(_infer_account_type_from_name)
+    if address_source:
+        working["address"] = working[address_source].astype(str).str.strip()
+
+    keep_columns = ["account_id", "account_name", "account_type", "region_key", "sub_region_key", "rep_id"]
+    if "address" in working.columns:
+        keep_columns.append("address")
+    if latitude_source:
+        working["latitude"] = working[latitude_source]
+        keep_columns.append("latitude")
+    if longitude_source:
+        working["longitude"] = working[longitude_source]
+        keep_columns.append("longitude")
+
+    execution_df = working[keep_columns].drop_duplicates(subset=["account_id", "rep_id"]).copy()
+
+    if current_df is not None and not current_df.empty:
+        alias_pairs = {
+            "rep_name": ("rep_name", "영업사원명", "담당자명"),
+            "branch_id": ("branch_id", "본부코드"),
+            "branch_name": ("branch_name", "본부명", "지점"),
+        }
+        for target_column, candidates in alias_pairs.items():
+            source_col = _first_existing_column(current_df, *candidates)
+            if source_col and target_column not in current_df.columns:
+                current_df = current_df.copy()
+                current_df[target_column] = current_df[source_col]
+
+    rep_enrichment = rep_df if rep_df is not None and not rep_df.empty else current_df
+    if rep_enrichment is not None and not rep_enrichment.empty:
+        rep_lookup = rep_enrichment.copy()
+        rep_id_source = _first_existing_column(rep_lookup, "영업사원코드", "rep_id", "담당자id")
+        if rep_id_source:
+            rep_lookup["rep_id"] = rep_lookup[rep_id_source].astype(str).str.strip()
+            enrichment_columns: list[str] = []
+            for target_column, candidates in {
+                "rep_name": ("영업사원명", "rep_name", "담당자명"),
+                "branch_id": ("본부코드", "branch_id"),
+                "branch_name": ("본부명", "branch_name", "지점"),
+            }.items():
+                source_col = _first_existing_column(rep_lookup, *candidates)
+                if source_col:
+                    rep_lookup[target_column] = rep_lookup[source_col].astype(str).str.strip()
+                    enrichment_columns.append(target_column)
+            if enrichment_columns:
+                rep_lookup = rep_lookup[["rep_id", *enrichment_columns]].drop_duplicates(subset=["rep_id"])
+                execution_df = execution_df.merge(rep_lookup, how="left", on="rep_id")
+
+    fixes = [
+        IntakeFix(
+            source_key="crm_account_assignment",
+            fix_type="derive_account_assignment_from_crm_activity",
+            message="거래처 담당 배정 파일이 부족해 CRM 활동 원본에서 실행용 거래처/병원 배정표를 자동 생성했습니다.",
+            affected_count=int(len(execution_df)),
+        )
+    ]
+
+    if not _has_all_columns(execution_df, required_columns):
+        return current_df, []
+
+    return execution_df, fixes
+
+
+def _adapter_ready_check(source_key: str, dataframe: pd.DataFrame | None) -> tuple[bool, list[str]]:
+    required_by_source = {
+        "crm_account_assignment": ("account_id", "account_name", "account_type", "region_key", "sub_region_key"),
+        "crm_rep_master": ("영업사원코드", "영업사원명", "본부코드", "본부명", "거래처명"),
+        "crm_activity": ("영업사원코드", "실행일", "액션유형"),
+        "sales": ("거래처코드", "거래처명", "기준년월"),
+        "target": ("기준년월",),
+        "prescription": ("ship_date (출고일)", "pharmacy_name (약국명)", "qty (수량)"),
+    }
+    required_columns = required_by_source.get(source_key)
+    if not required_columns:
+        return True, []
+    if dataframe is None or dataframe.empty:
+        return False, ["실행용 데이터가 비어 있습니다."]
+
+    columns = {str(column) for column in dataframe.columns}
+
+    missing = [column for column in required_columns if column not in columns]
+    if source_key == "crm_activity":
+        has_hospital_link = ("방문기관" in columns) or ("거래처코드" in columns)
+        if not has_hospital_link:
+            missing.append("방문기관|거래처코드")
+    if missing:
+        return False, missing
+    return True, []
 
 
 def _format_month_token(month_token: str) -> str:
@@ -663,9 +933,43 @@ def build_intake_result(
     )
 
     coverages: dict[str, IntakePeriodCoverage] = {}
+    crm_account_assignment_df, crm_account_assignment_fixes = _build_execution_ready_crm_account_assignment(source_frames)
+    if crm_account_assignment_df is not None:
+        source_frames["crm_account_assignment"] = crm_account_assignment_df
+
+    crm_rep_master_df, crm_rep_master_fixes = _build_execution_ready_crm_rep_master(source_frames)
+    if crm_rep_master_df is not None:
+        source_frames["crm_rep_master"] = crm_rep_master_df
 
     for package in result.packages:
+        if package.source_key == "crm_account_assignment" and crm_account_assignment_fixes:
+            package.fixes.extend(crm_account_assignment_fixes)
+            result.fixes.extend(crm_account_assignment_fixes)
+        if package.source_key == "crm_rep_master" and crm_rep_master_fixes:
+            package.fixes.extend(crm_rep_master_fixes)
+            result.fixes.extend(crm_rep_master_fixes)
+
         dataframe = source_frames.get(package.source_key)
+        adapter_ready, missing_execution_columns = _adapter_ready_check(package.source_key, dataframe)
+        if not adapter_ready:
+            package.ready_for_adapter = False
+            package.status = "needs_review"
+            package.findings.append(
+                IntakeFinding(
+                    level="warn",
+                    source_key=package.source_key,
+                    issue_code="adapter_execution_columns_incomplete",
+                    message=(
+                        "인테이크 기본 검사는 통과했지만, 실행용 staging에서 아답터 필수 컬럼이 아직 부족합니다. "
+                        f"부족 항목: {missing_execution_columns}"
+                    ),
+                )
+            )
+            result.findings.append(package.findings[-1])
+        elif package.status == "ready":
+            package.status = "ready_with_fixes" if package.fixes else "ready"
+            package.ready_for_adapter = True
+
         period_coverage = _build_period_coverage(
             source_key=package.source_key,
             columns=next((source.columns for source in sources if source.source_key == package.source_key), []),
@@ -686,6 +990,15 @@ def build_intake_result(
             )
             package.staged_path = str(staged_path)
         save_onboarding_package(project_root, company_key, package.to_dict())
+
+    if any(pkg.status == "blocked" for pkg in result.packages):
+        result.status = "blocked"
+    elif any(pkg.status == "needs_review" for pkg in result.packages):
+        result.status = "needs_review"
+    elif any(pkg.status == "ready_with_fixes" for pkg in result.packages):
+        result.status = "ready_with_fixes"
+    else:
+        result.status = "ready"
 
     (
         result.timing_alerts,

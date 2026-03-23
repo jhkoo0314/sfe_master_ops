@@ -4,6 +4,7 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Territory Optimizer</title>
+  <link rel="stylesheet" href="territory_map_preview_assets/leaflet/leaflet.css" />
   <style>
     :root {
       --bg: #0d1117;
@@ -344,113 +345,32 @@
       color: var(--muted);
     }
 
-    .map-canvas {
-      position: relative;
-      width: 100%;
-      height: 100%;
-      background:
-        radial-gradient(circle at 20% 16%, rgba(88, 166, 255, 0.08), transparent 24%),
-        linear-gradient(180deg, rgba(14, 19, 30, 0.92), rgba(7, 11, 20, 0.98));
-      overflow: hidden;
+    .leaflet-control-zoom a {
+      background: var(--surface2) !important;
+      color: var(--text) !important;
+      border-color: var(--border) !important;
     }
 
-    .map-grid {
-      position: absolute;
-      inset: 0;
-      background-image:
-        linear-gradient(rgba(88, 166, 255, 0.06) 1px, transparent 1px),
-        linear-gradient(90deg, rgba(88, 166, 255, 0.06) 1px, transparent 1px);
-      background-size: 44px 44px;
-      opacity: 0.45;
-      pointer-events: none;
-    }
-
-    .map-svg {
-      position: absolute;
-      inset: 0;
-      width: 100%;
-      height: 100%;
-    }
-
-    .map-empty {
-      position: absolute;
-      inset: 0;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      padding: 16px;
-      text-align: center;
-      color: var(--muted);
-      font-size: 12px;
-      line-height: 1.45;
-      pointer-events: none;
-    }
-
-    .route-line {
-      fill: none;
-      stroke: #58a6ff;
-      stroke-width: 2.6;
-      stroke-linecap: round;
-      stroke-linejoin: round;
-      stroke-dasharray: 7 6;
-      opacity: 0.92;
-    }
-
-    .route-point {
-      fill: #7ee787;
-      stroke: #0d1117;
-      stroke-width: 2;
-    }
-
-    .route-point--selected {
-      fill: #58a6ff;
-    }
-
-    .route-label {
-      fill: var(--text);
-      font-size: 10px;
-      font-weight: 700;
-      letter-spacing: 0.02em;
-      text-anchor: middle;
-      dominant-baseline: middle;
-      pointer-events: none;
-    }
-
-    .map-tooltip {
-      position: absolute;
-      min-width: 180px;
-      max-width: 260px;
-      padding: 10px 12px;
-      border: 1px solid var(--border);
-      border-radius: var(--radius);
-      background: rgba(22, 27, 34, 0.96);
-      box-shadow: var(--shadow);
+    .leaflet-popup-content-wrapper,
+    .leaflet-popup-tip {
+      background: var(--surface2);
       color: var(--text);
-      font-size: 12px;
-      line-height: 1.45;
-      pointer-events: none;
-      opacity: 0;
-      transform: translate(-50%, calc(-100% - 12px));
-      transition: opacity 0.15s ease;
-      z-index: 950;
+      border: 1px solid var(--border);
     }
 
-    .map-tooltip.visible {
-      opacity: 1;
-    }
-
-    .map-tooltip-title {
-      font-size: 13px;
+    .popup-title {
+      font-size: 14px;
       font-weight: 700;
-      margin-bottom: 6px;
+      margin-bottom: 8px;
     }
 
-    .map-tooltip-row {
-      margin-top: 3px;
+    .popup-row {
+      font-size: 12px;
       color: var(--muted);
+      margin-top: 4px;
     }
 
-    .map-tooltip-row strong {
+    .popup-row strong {
       color: var(--text);
     }
 
@@ -587,12 +507,7 @@
       </section>
 
       <section class="map-shell">
-        <div id="map" class="map-canvas">
-          <div class="map-grid"></div>
-          <svg id="map-svg" class="map-svg" viewBox="0 0 1000 720" preserveAspectRatio="none"></svg>
-          <div id="map-empty" class="map-empty">담당자를 선택하면 해당 담당자의 방문 동선과 병원 위치를 표시합니다.</div>
-          <div id="map-tooltip" class="map-tooltip"></div>
-        </div>
+        <div id="map"></div>
         <div class="map-status" id="map-status">초기화 중입니다.</div>
       </section>
     </section>
@@ -612,6 +527,8 @@
       </section>
     </aside>
   </div>
+
+  <script src="territory_map_preview_assets/leaflet/leaflet.js"></script>
     <script>
     (function () {
       const territoryData = window.__TERRITORY_DATA__ || {};
@@ -633,11 +550,11 @@
         dateKey: "",
       };
 
+      let map;
+      let markerLayer;
+      let routeLayer;
       const repLoadPromises = {};
       const monthLoadPromises = {};
-      const mapSvg = document.getElementById("map-svg");
-      const mapEmpty = document.getElementById("map-empty");
-      const mapTooltip = document.getElementById("map-tooltip");
 
       function setMapStatus(message) {
         mapStatus.textContent = message;
@@ -907,141 +824,24 @@
       }
 
       function ensureMap() {
-        if (mapSvg) {
-          mapSvg.innerHTML = "";
-        }
+        if (map) return;
+        map = L.map("map", { zoomControl: false, preferCanvas: true }).setView([36.5, 127.8], 7);
+        L.control.zoom({ position: "topright" }).addTo(map);
+        L.tileLayer("https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png", {
+          attribution: "&copy; OpenStreetMap &copy; CARTO",
+          subdomains: "abcd",
+          maxZoom: 20,
+        }).addTo(map);
+        markerLayer = L.layerGroup().addTo(map);
+        routeLayer = L.layerGroup().addTo(map);
+        setTimeout(function () {
+          map.invalidateSize();
+        }, 0);
       }
 
       function clearMap() {
-        if (mapSvg) {
-          mapSvg.innerHTML = "";
-        }
-        hideTooltip();
-      }
-
-      function hideTooltip() {
-        mapTooltip.classList.remove("visible");
-      }
-
-      function showTooltip(content, x, y) {
-        mapTooltip.innerHTML = content;
-        mapTooltip.style.left = x + "px";
-        mapTooltip.style.top = y + "px";
-        mapTooltip.classList.add("visible");
-      }
-
-      function buildTooltipHtml(marker, selection) {
-        return (
-          "<div class=\"map-tooltip-title\">" + marker.hospital + "</div>" +
-          "<div class=\"map-tooltip-row\"><strong>담당자</strong> " + marker.rep_name + "</div>" +
-          "<div class=\"map-tooltip-row\"><strong>선택범위</strong> " + (selection.scope && selection.scope.date_label ? selection.scope.date_label : marker.date) + "</div>" +
-          "<div class=\"map-tooltip-row\"><strong>방문순서</strong> " + marker.seq + "</div>" +
-          "<div class=\"map-tooltip-row\"><strong>누적 매출</strong> " + formatCurrency(marker.sales) + "</div>" +
-          "<div class=\"map-tooltip-row\"><strong>누적 목표</strong> " + formatCurrency(marker.target) + "</div>" +
-          "<div class=\"map-tooltip-row\"><strong>권역</strong> " + (marker.region || "-") + "</div>"
-        );
-      }
-
-      function buildProjection(points) {
-        const lats = points.map(function (point) { return Number(point.lat); });
-        const lons = points.map(function (point) { return Number(point.lon); });
-        const minLat = Math.min.apply(null, lats);
-        const maxLat = Math.max.apply(null, lats);
-        const minLon = Math.min.apply(null, lons);
-        const maxLon = Math.max.apply(null, lons);
-        const latPad = Math.max((maxLat - minLat) * 0.14, 0.03);
-        const lonPad = Math.max((maxLon - minLon) * 0.14, 0.03);
-        const innerWidth = 920;
-        const innerHeight = 620;
-        const offsetX = 40;
-        const offsetY = 50;
-
-        return function project(lat, lon) {
-          const xRatio = (Number(lon) - (minLon - lonPad)) / Math.max((maxLon - minLon) + (lonPad * 2), 0.0001);
-          const yRatio = (Number(lat) - (minLat - latPad)) / Math.max((maxLat - minLat) + (latPad * 2), 0.0001);
-          return {
-            x: offsetX + (xRatio * innerWidth),
-            y: offsetY + ((1 - yRatio) * innerHeight),
-          };
-        };
-      }
-
-      function renderSvgRoute(points, selection) {
-        const selectionPoints = points.filter(function (point) {
-          return Number.isFinite(point.lat) && Number.isFinite(point.lon);
-        });
-        if (!selectionPoints.length) {
-          mapEmpty.style.display = "flex";
-          return;
-        }
-
-        mapEmpty.style.display = "none";
-        const project = buildProjection(selectionPoints);
-        const pointIndex = new Map();
-
-        selectionPoints.forEach(function (point) {
-          const projected = project(point.lat, point.lon);
-          pointIndex.set(point.hospital_id, {
-            point: point,
-            x: projected.x,
-            y: projected.y,
-          });
-        });
-
-        const routeGroups = Array.isArray(selection.route_groups) ? selection.route_groups : [];
-        const lineGroups = routeGroups.length ? routeGroups : [{
-          points: selection.points || [],
-        }];
-
-        lineGroups.forEach(function (group) {
-          const coords = (group.points || []).map(function (row) {
-            return pointIndex.get(row.hospital_id);
-          }).filter(Boolean);
-          if (coords.length < 2) {
-            return;
-          }
-          const polyline = document.createElementNS("http://www.w3.org/2000/svg", "polyline");
-          polyline.setAttribute("class", "route-line");
-          polyline.setAttribute("points", coords.map(function (row) {
-            return row.x.toFixed(1) + "," + row.y.toFixed(1);
-          }).join(" "));
-          mapSvg.appendChild(polyline);
-        });
-
-        selectionPoints.forEach(function (marker) {
-          const projected = pointIndex.get(marker.hospital_id);
-          if (!projected) {
-            return;
-          }
-
-          const group = document.createElementNS("http://www.w3.org/2000/svg", "g");
-          group.style.cursor = "pointer";
-
-          const circle = document.createElementNS("http://www.w3.org/2000/svg", "circle");
-          circle.setAttribute("cx", projected.x.toFixed(1));
-          circle.setAttribute("cy", projected.y.toFixed(1));
-          circle.setAttribute("r", "8");
-          circle.setAttribute("class", marker.seq === 1 ? "route-point route-point--selected" : "route-point");
-          group.appendChild(circle);
-
-          const label = document.createElementNS("http://www.w3.org/2000/svg", "text");
-          label.setAttribute("x", projected.x.toFixed(1));
-          label.setAttribute("y", projected.y.toFixed(1));
-          label.setAttribute("class", "route-label");
-          label.textContent = String(marker.seq || "");
-          group.appendChild(label);
-
-          group.addEventListener("mouseenter", function () {
-            const mapRect = document.getElementById("map").getBoundingClientRect();
-            showTooltip(
-              buildTooltipHtml(marker, selection),
-              ((projected.x / 1000) * mapRect.width),
-              ((projected.y / 720) * mapRect.height),
-            );
-          });
-          group.addEventListener("mouseleave", hideTooltip);
-          mapSvg.appendChild(group);
-        });
+        markerLayer.clearLayers();
+        routeLayer.clearLayers();
       }
 
       function renderTimeline(selection) {
@@ -1100,20 +900,86 @@
       function renderMapSelection(selection) {
         clearMap();
         if (!selection) {
-          mapEmpty.style.display = "flex";
+          if (map) {
+            map.setView([36.5, 127.8], 7);
+          }
           setMapStatus(state.repId ? "선택한 범위의 담당자 동선이 없습니다." : "담당자를 선택하면 해당 담당자의 동선만 불러옵니다.");
           return;
         }
 
         const points = resolveSelectionPoints(selection);
         const routeGroups = Array.isArray(selection.route_groups) ? selection.route_groups : [];
+        const bounds = [];
         const markerMap = new Map();
+
+        if (routeGroups.length) {
+          routeGroups.forEach(function (group) {
+            const groupPoints = resolveSelectionPoints({
+              points: group.points || [],
+              scope: Object.assign({}, selection.scope || {}, {
+                date_key: group.date_key || "",
+                date_label: group.label || group.date_key || "",
+              }),
+            });
+            if (groupPoints.length >= 2) {
+              const latLngs = groupPoints.map(function (row) {
+                return [Number(row.lat), Number(row.lon)];
+              });
+              L.polyline(latLngs, {
+                color: "#58a6ff",
+                weight: 3,
+                opacity: 0.88,
+                dashArray: "6 6",
+              }).addTo(routeLayer);
+              latLngs.forEach(function (row) { bounds.push(row); });
+            }
+          });
+        } else if (points.length >= 2) {
+          const latLngs = points.map(function (row) {
+            return [Number(row.lat), Number(row.lon)];
+          });
+          L.polyline(latLngs, {
+            color: "#58a6ff",
+            weight: 3,
+            opacity: 0.88,
+            dashArray: "6 6",
+          }).addTo(routeLayer);
+          latLngs.forEach(function (row) { bounds.push(row); });
+        }
+
         points.forEach(function (marker) {
           if (!markerMap.has(marker.hospital_id)) {
             markerMap.set(marker.hospital_id, marker);
           }
         });
-        renderSvgRoute(Array.from(markerMap.values()), selection);
+
+        Array.from(markerMap.values()).forEach(function (marker) {
+          const lat = Number(marker.lat);
+          const lon = Number(marker.lon);
+          if (!Number.isFinite(lat) || !Number.isFinite(lon)) return;
+          const circle = L.circleMarker([lat, lon], {
+            radius: 6,
+            color: "#0d1117",
+            weight: 2,
+            fillColor: "#7ee787",
+            fillOpacity: 0.96,
+          }).addTo(markerLayer);
+          circle.bindPopup(
+            "<div class=\"popup-title\">" + marker.hospital + "</div>" +
+            "<div class=\"popup-row\"><strong>담당자</strong> " + marker.rep_name + "</div>" +
+            "<div class=\"popup-row\"><strong>선택범위</strong> " + (selection.scope && selection.scope.date_label ? selection.scope.date_label : marker.date) + "</div>" +
+            "<div class=\"popup-row\"><strong>방문순서</strong> " + marker.seq + "</div>" +
+            "<div class=\"popup-row\"><strong>누적 매출</strong> " + formatCurrency(marker.sales) + "</div>" +
+            "<div class=\"popup-row\"><strong>누적 목표</strong> " + formatCurrency(marker.target) + "</div>" +
+            "<div class=\"popup-row\"><strong>권역</strong> " + (marker.region || "-") + "</div>"
+          );
+          bounds.push([lat, lon]);
+        });
+
+        if (bounds.length) {
+          map.fitBounds(bounds, { padding: [48, 48], maxZoom: 12 });
+        }
+
         setMapStatus(selection.status_line || "선택된 담당자 데이터만 표시 중입니다.");
       }
 
@@ -1179,7 +1045,9 @@
         populateRepSelect();
         initState();
         bindEvents();
-        window.addEventListener("resize", hideTooltip);
+        window.addEventListener("resize", function () {
+          if (map) map.invalidateSize();
+        });
 
         repSelect.value = state.repId || "";
         await applyState({ repId: state.repId, monthKey: state.monthKey, dateKey: state.dateKey });
@@ -1192,3 +1060,4 @@
   </script>
 </body>
 </html>
+

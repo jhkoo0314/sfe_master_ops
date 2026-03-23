@@ -34,6 +34,8 @@ def init_console_state() -> None:
         st.session_state.pipeline_result = None
     if "uploaded_data" not in st.session_state:
         st.session_state.uploaded_data = {key: None for key in UPLOADED_DATA_KEYS}
+    if "saved_uploaded_data" not in st.session_state:
+        st.session_state.saved_uploaded_data = {key: None for key in UPLOADED_DATA_KEYS}
     if "uploaded_tokens" not in st.session_state:
         st.session_state.uploaded_tokens = {key: None for key in UPLOADED_DATA_KEYS}
     if "run_log" not in st.session_state:
@@ -108,6 +110,34 @@ def load_file_once(module_key: str, uploaded_file, label: str) -> dict:
     st.session_state.uploaded_tokens[module_key] = token
     add_log(f"{label} 데이터 {len(df)}건 업로드")
     return info
+
+
+def save_uploaded_batch() -> dict:
+    saved_count = 0
+    saved_rows = 0
+    saved_keys: list[str] = []
+
+    for key in UPLOADED_DATA_KEYS:
+        info = st.session_state.uploaded_data.get(key)
+        if info is None:
+            continue
+        st.session_state.saved_uploaded_data[key] = dict(info)
+        saved_count += 1
+        saved_rows += int(info.get("row_count") or 0)
+        saved_keys.append(key)
+
+    st.session_state.intake_result = None
+    st.session_state.intake_signature = ""
+    st.session_state.pipeline_result = None
+
+    if saved_keys:
+        add_log(f"패키지 업로드 저장 {saved_count}건 반영 ({', '.join(saved_keys)})")
+
+    return {
+        "saved_count": saved_count,
+        "rows": saved_rows,
+        "keys": saved_keys,
+    }
 
 
 def extract_month_token(file_name: str) -> str:

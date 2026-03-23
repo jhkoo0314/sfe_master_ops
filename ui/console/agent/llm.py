@@ -21,6 +21,28 @@ def _load_json_file(path: Path) -> dict[str, Any] | list[Any] | None:
         return None
 
 
+def _load_last_js_assignment_value(path: Path) -> dict[str, Any] | list[Any] | None:
+    try:
+        lines = path.read_text(encoding="utf-8").splitlines()
+    except Exception:
+        return None
+    for raw_line in reversed(lines):
+        line = raw_line.strip()
+        if "=" not in line or not line.endswith(";"):
+            continue
+        _, _, rhs = line.partition("=")
+        payload = rhs.strip().rstrip(";").strip()
+        if not payload or payload in {"{}", "[]"}:
+            continue
+        try:
+            data = json.loads(payload)
+        except Exception:
+            continue
+        if isinstance(data, (dict, list)):
+            return data
+    return None
+
+
 def _load_branch_asset_json(path: Path) -> dict[str, Any] | None:
     try:
         text = path.read_text(encoding="utf-8")
@@ -34,6 +56,28 @@ def _load_branch_asset_json(path: Path) -> dict[str, Any] | None:
     except Exception:
         return None
     return data if isinstance(data, dict) else None
+
+
+def _to_float(value: Any) -> float:
+    try:
+        return float(value or 0)
+    except Exception:
+        return 0.0
+
+
+def _format_amount(value: Any) -> str:
+    return f"{round(_to_float(value)):,}원"
+
+
+def _format_pct(value: Any, scale_100: bool = False) -> str:
+    number = _to_float(value)
+    if scale_100:
+        number *= 100
+    return f"{round(number, 1)}%"
+
+
+def _format_score(value: Any) -> str:
+    return f"{round(_to_float(value), 3)}"
 
 
 def _sum_period(values: Any, start_idx: int, end_idx: int) -> float:
@@ -115,6 +159,301 @@ def _summarize_sandbox_payload(path: Path) -> str:
     )
 
 
+def _summarize_crm_payload(path: Path) -> str:
+    data = _load_json_file(path)
+    if not isinstance(data, dict):
+        return ""
+    payload = data.get("payload", {})
+    if not isinstance(payload, dict):
+        return ""
+    overview = payload.get("overview", {})
+    activity_context = payload.get("activity_context", {})
+    mapping_quality = payload.get("mapping_quality", {})
+    filters = payload.get("filters", {})
+
+    period_options = filters.get("period_options", []) if isinstance(filters, dict) else []
+    team_options = filters.get("team_options", []) if isinstance(filters, dict) else []
+    rep_options = filters.get("rep_options", []) if isinstance(filters, dict) else []
+    activity_types = activity_context.get("activity_types_standard_found", []) if isinstance(activity_context, dict) else []
+    products = activity_context.get("products_mentioned", []) if isinstance(activity_context, dict) else []
+    unmapped_names = mapping_quality.get("unmapped_hospital_names", []) if isinstance(mapping_quality, dict) else []
+
+    period_labels = [str(item.get("label", "")).strip() for item in period_options[:4] if isinstance(item, dict)]
+    team_labels = [str(item.get("label", "")).strip() for item in team_options[1:5] if isinstance(item, dict)]
+    rep_labels = [str(item.get("label", "")).strip() for item in rep_options[1:6] if isinstance(item, dict)]
+    detail_lines: list[str] = []
+    assets_dir = path.parent / "crm_analysis_preview_assets"
+    all_scope_path = assets_dir / "ALL_ALL.js"
+    all_scope = _load_last_js_assignment_value(all_scope_path) if all_scope_path.exists() else None
+    if isinstance(all_scope, dict):
+        matrix_rows = all_scope.get("matrix_rows", []) if isinstance(all_scope.get("matrix_rows"), list) else []
+        ranked_rows = [item for item in matrix_rows if isinstance(item, dict)]
+        if ranked_rows:
+            top_rows = sorted(ranked_rows, key=lambda item: _to_float(item.get("coach_score")), reverse=True)[:3]
+            bottom_rows = sorted(ranked_rows, key=lambda item: _to_float(item.get("coach_score")))[:3]
+            detail_lines.append("[detail asset] ALL 기간 상위 담당자")
+            detail_lines.extend(
+                f"- {item.get('rep_name')} | coach_score {_format_score(item.get('coach_score'))} | visits {round(_to_float(item.get('total_visits'))):,} | branch {_clean_text(item.get('branch_name'))}"
+                for item in top_rows
+            )
+            detail_lines.append("[detail asset] ALL 기간 하위 담당자")
+            detail_lines.extend(
+                f"- {item.get('rep_name')} | coach_score {_format_score(item.get('coach_score'))} | visits {round(_to_float(item.get('total_visits'))):,} | branch {_clean_text(item.get('branch_name'))}"
+                for item in bottom_rows
+            )
+
+    monthly_scope_paths = sorted([asset for asset in assets_dir.glob("*_ALL.js") if asset.name != "ALL_ALL.js"], key=lambda item: item.name)
+    if monthly_scope_paths:
+        monthly_scope = _load_last_js_assignment_value(monthly_scope_paths[0])
+        if isinstance(monthly_scope, dict):
+            monthly_rows = monthly_scope.get("matrix_rows", []) if isinstance(monthly_scope.get("matrix_rows"), list) else []
+            monthly_ranked = [item for item in monthly_rows if isinstance(item, dict)]
+            if monthly_ranked:
+                top_month_rows = sorted(monthly_ranked, key=lambda item: _to_float(item.get("coach_score")), reverse=True)[:3]
+                month_label = _clean_text(monthly_scope.get("period_label")) or monthly_scope_paths[0].stem.split("_")[0]
+                detail_lines.append(f"[detail asset] {month_label} 상위 담당자")
+                detail_lines.extend(
+                    f"- {item.get('rep_name')} | coach_score {_format_score(item.get('coach_score'))} | HIR {_format_score(item.get('hir'))} | RTR {_format_score(item.get('rtr'))}"
+                    for item in top_month_rows
+                )
+
+    summary = (
+        f"[artifact] {path.name}\n"
+        f"- report_title: {_clean_text(data.get('report_title'))}\n"
+        f"- company_key: {_clean_text(payload.get('company'))}\n"
+        f"- quality: {_clean_text(overview.get('quality_status'))} / score {_to_float(overview.get('quality_score'))}\n"
+        f"- activities: {round(_to_float(overview.get('crm_activity_count'))):,}건\n"
+        f"- reps: {round(_to_float(overview.get('unique_reps'))):,}명 / hospitals: {round(_to_float(overview.get('unique_hospitals'))):,}곳 / branches: {round(_to_float(overview.get('unique_branches'))):,}개\n"
+        f"- period: {_clean_text(activity_context.get('date_range_start'))} ~ {_clean_text(activity_context.get('date_range_end'))}\n"
+        f"- mapping_rate: {_format_pct(mapping_quality.get('hospital_mapping_rate'), scale_100=True)} / unmapped_count: {round(_to_float(mapping_quality.get('unmapped_hospital_count'))):,}\n"
+        f"- activity_types: {', '.join([str(item) for item in activity_types[:8]])}\n"
+        f"- sample_products: {', '.join([str(item) for item in products[:8]])}\n"
+        f"- period_filters: {', '.join([label for label in period_labels if label])}\n"
+        f"- team_filters: {', '.join([label for label in team_labels if label])}\n"
+        f"- sample_reps: {', '.join([label for label in rep_labels if label])}\n"
+        f"- unmapped_hospital_samples: {', '.join([str(item) for item in unmapped_names[:5]])}"
+    )
+    if detail_lines:
+        summary += "\n" + "\n".join(detail_lines[:10])
+    return summary
+
+
+def _summarize_prescription_payload(path: Path) -> str:
+    data = _load_json_file(path)
+    if not isinstance(data, dict):
+        return ""
+    payload = data.get("payload", {})
+    if not isinstance(payload, dict):
+        return ""
+    overview = payload.get("overview", {})
+    flow_summary = payload.get("flow_summary", {})
+    flow_series = payload.get("flow_series", []) if isinstance(payload.get("flow_series"), list) else []
+    flow_series_by_territory = (
+        payload.get("flow_series_by_territory", {}) if isinstance(payload.get("flow_series_by_territory"), dict) else {}
+    )
+    pipeline_steps = payload.get("pipeline_steps", []) if isinstance(payload.get("pipeline_steps"), list) else []
+
+    territory_rows: list[dict[str, Any]] = []
+    for territory_name, rows in flow_series_by_territory.items():
+        if not isinstance(rows, list):
+            continue
+        territory_rows.append(
+            {
+                "territory": str(territory_name),
+                "final_amount": sum(_to_float(item.get("final_amount")) for item in rows if isinstance(item, dict)),
+                "tracked_amount": sum(_to_float(item.get("tracked_amount")) for item in rows if isinstance(item, dict)),
+            }
+        )
+    top_territories = sorted(territory_rows, key=lambda item: item["final_amount"], reverse=True)[:5]
+    step_labels = [
+        f"{_clean_text(item.get('step'))} {_clean_text(item.get('title'))}={_clean_text(item.get('status'))}"
+        for item in pipeline_steps[:6]
+        if isinstance(item, dict)
+    ]
+    month_labels = [str(item.get("label", "")).strip() for item in flow_series[:6] if isinstance(item, dict)]
+
+    claim_validation = overview.get("claim_validation_summary", {}) if isinstance(overview.get("claim_validation_summary"), dict) else {}
+    detail_lines: list[str] = []
+    assets_dir = path.parent / "prescription_flow_preview_assets"
+    rep_kpis_path = assets_dir / "rep_kpis__all.js"
+    rep_kpis_data = _load_last_js_assignment_value(rep_kpis_path) if rep_kpis_path.exists() else None
+    if isinstance(rep_kpis_data, list):
+        rep_totals: dict[str, dict[str, Any]] = {}
+        for row in rep_kpis_data:
+            if not isinstance(row, dict):
+                continue
+            rep_id = _clean_text(row.get("rep_id"))
+            rep_name = _clean_text(row.get("rep_name"))
+            key = rep_id or rep_name
+            if not key:
+                continue
+            bucket = rep_totals.setdefault(
+                key,
+                {
+                    "rep_name": rep_name,
+                    "branch_name": _clean_text(row.get("branch_name")),
+                    "total_amount": 0.0,
+                    "flow_count": 0.0,
+                    "gap_amount": 0.0,
+                },
+            )
+            bucket["total_amount"] += _to_float(row.get("total_amount"))
+            bucket["flow_count"] += _to_float(row.get("flow_count"))
+            bucket["gap_amount"] += abs(_to_float(row.get("settlement_gap_amount")))
+        top_rep_totals = sorted(rep_totals.values(), key=lambda item: item["total_amount"], reverse=True)[:5]
+        detail_lines.append("[detail asset] rep_kpis 기준 상위 담당자")
+        detail_lines.extend(
+            f"- {item['rep_name']} | branch {item['branch_name']} | amount {_format_amount(item['total_amount'])} | flow {round(item['flow_count']):,} | gap_abs {_format_amount(item['gap_amount'])}"
+            for item in top_rep_totals
+        )
+
+    claim_asset_paths = sorted([asset for asset in assets_dir.glob("claims__*.js") if asset.name != "claims__all.js"], key=lambda item: item.name)
+    claim_asset = claim_asset_paths[0] if claim_asset_paths else (assets_dir / "claims__all.js")
+    claim_data = _load_last_js_assignment_value(claim_asset) if claim_asset.exists() else None
+    if isinstance(claim_data, list) and claim_data:
+        verdict_counts: dict[str, int] = {}
+        for row in claim_data:
+            if not isinstance(row, dict):
+                continue
+            verdict = _clean_text(row.get("verdict")) or "-"
+            verdict_counts[verdict] = verdict_counts.get(verdict, 0) + 1
+        risky_rows = [
+            row for row in claim_data
+            if isinstance(row, dict) and _clean_text(row.get("verdict")) in {"REVIEW", "SUSPECT"}
+        ]
+        risky_rows = sorted(risky_rows, key=lambda item: abs(_to_float(item.get("variance_amount"))), reverse=True)[:5]
+        period_label = _clean_text(claim_data[0].get("period_label")) if isinstance(claim_data[0], dict) else claim_asset.stem
+        detail_lines.append(f"[detail asset] {period_label} claim 판정")
+        detail_lines.append("- " + " / ".join(f"{key} {value}" for key, value in sorted(verdict_counts.items(), key=lambda item: item[0])))
+        detail_lines.extend(
+            f"- {row.get('rep_name')} | {row.get('territory_name')} | {row.get('product_name')} | verdict {_clean_text(row.get('verdict'))} | variance {_format_amount(row.get('variance_amount'))}"
+            for row in risky_rows
+        )
+
+    summary = (
+        f"[artifact] {path.name}\n"
+        f"- report_title: {_clean_text(data.get('report_title'))}\n"
+        f"- company: {_clean_text(payload.get('company'))}\n"
+        f"- quality: {_clean_text(overview.get('quality_status'))} / score {_to_float(overview.get('quality_score'))}\n"
+        f"- standard_records: {round(_to_float(overview.get('standard_record_count'))):,}건 / connected_hospitals: {round(_to_float(overview.get('connected_hospital_count'))):,}곳\n"
+        f"- flow_completion_rate: {_format_pct(overview.get('flow_completion_rate'), scale_100=True)}\n"
+        f"- claim_validation: total {round(_to_float(claim_validation.get('total_cases'))):,} / pass {round(_to_float(claim_validation.get('pass_count'))):,} / review {round(_to_float(claim_validation.get('review_count'))):,} / suspect {round(_to_float(claim_validation.get('suspect_count'))):,}\n"
+        f"- wholesale_total: {_format_amount(flow_summary.get('total_wholesale_amount'))}\n"
+        f"- tracked_total: {_format_amount(flow_summary.get('tracked_amount'))}\n"
+        f"- final_amount_before_kpi_publish: {_format_amount(flow_summary.get('pre_kpi_final_amount'))}\n"
+        f"- months: {', '.join([label for label in month_labels if label])}\n"
+        "[top territories by final_amount]\n"
+        + "\n".join(
+            f"- {idx+1}. {item['territory']} | final { _format_amount(item['final_amount']) } | tracked { _format_amount(item['tracked_amount']) }"
+            for idx, item in enumerate(top_territories)
+        )
+        + "\n[pipeline_steps]\n"
+        + "\n".join(f"- {label}" for label in step_labels)
+    )
+    if detail_lines:
+        summary += "\n" + "\n".join(detail_lines[:12])
+    return summary
+
+
+def _summarize_territory_payload(path: Path) -> str:
+    data = _load_json_file(path)
+    if not isinstance(data, dict):
+        return ""
+    payload = data.get("payload", {})
+    if not isinstance(payload, dict):
+        return ""
+    overview = payload.get("overview", {})
+    filters = payload.get("filters", {})
+    rep_options = filters.get("rep_options", []) if isinstance(filters, dict) else []
+    month_options = filters.get("month_options", []) if isinstance(filters, dict) else []
+
+    rep_rows = []
+    for item in rep_options:
+        if not isinstance(item, dict):
+            continue
+        rep_rows.append(
+            {
+                "label": _clean_text(item.get("label")),
+                "hospital_count": round(_to_float(item.get("hospital_count"))),
+                "day_count": round(_to_float(item.get("day_count"))),
+                "month_count": round(_to_float(item.get("month_count"))),
+            }
+        )
+    top_hospitals = sorted(rep_rows, key=lambda item: item["hospital_count"], reverse=True)[:5]
+    top_days = sorted(rep_rows, key=lambda item: item["day_count"], reverse=True)[:5]
+    month_labels = [str(item.get("label", "")).strip() for item in month_options[:6] if isinstance(item, dict)]
+    detail_lines: list[str] = []
+    assets_dir = path.parent / "territory_map_preview_assets"
+    for rep in top_hospitals[:2]:
+        rep_label = _clean_text(rep.get("label"))
+        rep_entry = next((item for item in rep_options if isinstance(item, dict) and _clean_text(item.get("label")) == rep_label), None)
+        rep_id = _clean_text(rep_entry.get("value")) if isinstance(rep_entry, dict) else ""
+        if not rep_id:
+            continue
+        catalog_path = assets_dir / f"{rep_id}__catalog.js"
+        catalog_data = _load_last_js_assignment_value(catalog_path) if catalog_path.exists() else None
+        if isinstance(catalog_data, dict):
+            hospital_catalog = catalog_data.get("hospital_catalog", {})
+            if isinstance(hospital_catalog, dict):
+                top_catalog = sorted(
+                    [item for item in hospital_catalog.values() if isinstance(item, dict)],
+                    key=lambda item: _to_float(item.get("sales")),
+                    reverse=True,
+                )[:3]
+                detail_lines.append(f"[detail asset] {rep_label} 대표 병원")
+                detail_lines.extend(
+                    f"- {item.get('hospital')} | sales {_format_amount(item.get('sales'))} | target {_format_amount(item.get('target'))} | visits {round(_to_float(item.get('visits'))):,}"
+                    for item in top_catalog
+                )
+
+        month_asset_paths = sorted([asset for asset in assets_dir.glob(f"{rep_id}__*.js") if not asset.name.endswith('__catalog.js')], key=lambda item: item.name)
+        if not month_asset_paths:
+            continue
+        month_data = _load_last_js_assignment_value(month_asset_paths[0])
+        if isinstance(month_data, dict):
+            views = month_data.get("views", {})
+            if isinstance(views, dict):
+                month_aggregate = next((item for key, item in views.items() if key.endswith("|__ALL__") and isinstance(item, dict)), None)
+                day_rows = [item for key, item in views.items() if not key.endswith("|__ALL__") and isinstance(item, dict)]
+                busiest_day = max(day_rows, key=lambda item: _to_float(item.get("summary", {}).get("distance_km")), default=None)
+                if isinstance(month_aggregate, dict):
+                    summary_row = month_aggregate.get("summary", {})
+                    scope_row = month_aggregate.get("scope", {})
+                    detail_lines.append(
+                        f"[detail asset] {_clean_text(scope_row.get('rep_name'))} {_clean_text(scope_row.get('month_key'))} 월 전체 | stops {round(_to_float(summary_row.get('stop_count'))):,} | distance {round(_to_float(summary_row.get('distance_km')),1)}km | attainment {_format_pct(summary_row.get('attainment_rate'), scale_100=True)}"
+                    )
+                if isinstance(busiest_day, dict):
+                    scope_row = busiest_day.get("scope", {})
+                    summary_row = busiest_day.get("summary", {})
+                    detail_lines.append(
+                        f"- 최장 이동일 {_clean_text(scope_row.get('date_label'))} | distance {round(_to_float(summary_row.get('distance_km')),1)}km | visits {round(_to_float(summary_row.get('visit_count'))):,} | hospitals {round(_to_float(summary_row.get('selected_hospital_count'))):,}"
+                    )
+
+    summary = (
+        f"[artifact] {path.name}\n"
+        f"- report_title: {_clean_text(data.get('report_title'))}\n"
+        f"- map_title: {_clean_text(overview.get('map_title'))}\n"
+        f"- period_label: {_clean_text(overview.get('period_label'))}\n"
+        f"- total_regions: {round(_to_float(overview.get('total_regions'))):,} / total_reps: {round(_to_float(overview.get('total_reps'))):,}\n"
+        f"- territory_hospitals: {round(_to_float(overview.get('territory_hospital_count'))):,} / route_selections: {round(_to_float(overview.get('route_selection_count'))):,}\n"
+        f"- coverage_rate: {_format_pct(overview.get('coverage_rate'), scale_100=True)}\n"
+        f"- month_filters: {', '.join([label for label in month_labels if label])}\n"
+        "[top reps by hospital_count]\n"
+        + "\n".join(
+            f"- {idx+1}. {item['label']} | hospitals {item['hospital_count']} | active_days {item['day_count']} | months {item['month_count']}"
+            for idx, item in enumerate(top_hospitals)
+        )
+        + "\n[top reps by day_count]\n"
+        + "\n".join(
+            f"- {idx+1}. {item['label']} | active_days {item['day_count']} | hospitals {item['hospital_count']}"
+            for idx, item in enumerate(top_days)
+        )
+    )
+    if detail_lines:
+        summary += "\n" + "\n".join(detail_lines[:12])
+    return summary
+
+
 def _summarize_generic_json(path: Path) -> str:
     data = _load_json_file(path)
     if isinstance(data, dict):
@@ -137,6 +476,26 @@ def _summarize_html(path: Path) -> str:
     return f"[artifact] {path.name}\n{text[:2500]}"
 
 
+def _summarize_agent_summary_payload(artifact: dict[str, Any]) -> str:
+    payload = artifact.get("payload")
+    if not isinstance(payload, dict):
+        return ""
+    agent_summary = payload.get("agent_summary")
+    if not isinstance(agent_summary, dict):
+        return ""
+    headline = _clean_text(agent_summary.get("headline"))
+    facts = agent_summary.get("facts", []) if isinstance(agent_summary.get("facts"), list) else []
+    report_key = _clean_text(agent_summary.get("report_key")) or _clean_text(payload.get("report_key"))
+    lines = [f"[artifact-summary] {report_key or _clean_text(artifact.get('artifact_name'))}"]
+    if headline:
+        lines.append(f"- {headline}")
+    for fact in facts[:5]:
+        cleaned = _clean_text(fact)
+        if cleaned:
+            lines.append(f"- {cleaned}")
+    return "\n".join(lines) if len(lines) > 1 else ""
+
+
 def build_artifact_contexts(artifacts: list[dict[str, Any]], max_items: int = 4) -> tuple[str, list[str]]:
     prioritized = sorted(
         artifacts,
@@ -153,12 +512,24 @@ def build_artifact_contexts(artifacts: list[dict[str, Any]], max_items: int = 4)
         path_text = _clean_text(artifact.get("storage_path"))
         if not path_text:
             continue
+        summary = _summarize_agent_summary_payload(artifact)
+        if summary:
+            chunks.append(summary)
+            evidence_refs.append(path_text)
+            if len(chunks) >= max_items:
+                break
         path = Path(path_text)
         if not path.exists():
             continue
         summary = ""
         if path.name == "sandbox_report_preview_payload_standard.json":
             summary = _summarize_sandbox_payload(path)
+        elif path.name == "crm_analysis_preview_payload_standard.json":
+            summary = _summarize_crm_payload(path)
+        elif path.name == "prescription_flow_preview_payload_standard.json":
+            summary = _summarize_prescription_payload(path)
+        elif path.name == "territory_map_preview_payload_standard.json":
+            summary = _summarize_territory_payload(path)
         elif path.suffix.lower() == ".json":
             summary = _summarize_generic_json(path)
         elif path.suffix.lower() in {".html", ".htm"}:

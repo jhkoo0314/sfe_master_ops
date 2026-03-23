@@ -25,8 +25,10 @@ data/ops_validation/{company_key}/
   runs/
     {run_id}/
       run_meta.json
+      pipeline_summary.json
       report_context.full.json
       report_context.prompt.json
+      artifacts.index.json
       artifacts/
         intermediate/
           crm_result_asset.json
@@ -58,8 +60,10 @@ data/ops_validation/{company_key}/
 ## 4. 파일명 규칙
 필수 파일:
 - `run_meta.json`
+- `pipeline_summary.json`
 - `report_context.full.json`
 - `report_context.prompt.json`
+- `artifacts.index.json`
 - `logs/run_steps.json`
 - `artifacts/final/total_valid_preview.html` (통합 실행 또는 builder 실행 시)
 
@@ -99,8 +103,10 @@ data/ops_validation/{company_key}/
       "artifacts/final/total_valid_preview.html"
     ],
     "contexts": [
+      "pipeline_summary.json",
       "report_context.full.json",
-      "report_context.prompt.json"
+      "report_context.prompt.json",
+      "artifacts.index.json"
     ]
   }
 }
@@ -145,8 +151,10 @@ Builder는 render/composition 레이어로서 다음을 생성한다.
 
 필수 생성물:
 - 최종 보고 출력물: `*.html` (향후 `*.pdf`)
+- `pipeline_summary.json`
 - `report_context.full.json`
 - `report_context.prompt.json`
+- `artifacts.index.json`
 - `evidence_index` 및 `linked_artifacts`
 
 정리:
@@ -159,7 +167,7 @@ Builder는 render/composition 레이어로서 다음을 생성한다.
 3. step 실행 후 `artifacts/intermediate`와 `logs/run_steps.json` 갱신
 4. validation 결과 반영 (`validation_status`, `quality_score`)
 5. builder 실행 후 `artifacts/final` 생성
-6. builder 종료 시 `report_context.full.json`, `report_context.prompt.json` 생성
+6. builder 종료 시 `pipeline_summary.json`, `report_context.full.json`, `report_context.prompt.json`, `artifacts.index.json` 생성
 7. `run_meta.json` 완료 상태로 갱신 (`status=success|failed`)
 8. DB 테이블(`runs`, `run_steps`, `run_artifacts`, `run_report_context`) 동기화
 
@@ -175,3 +183,4 @@ Builder는 render/composition 레이어로서 다음을 생성한다.
 - Builder 출력 생성: `scripts/validate_builder_with_ops.py`
 - Builder 결과 스키마: `modules/builder/schemas.py`
 - 현재 회사별 저장 루트: `data/ops_validation/{company_key}/`
+- 현재 Agent는 최신 run bundle(`pipeline_summary.json`, `report_context.*`, `artifacts.index.json`)을 우선 읽고, 없을 때만 legacy 요약으로 fallback 한다.

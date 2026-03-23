@@ -12,6 +12,7 @@
 - CRM Builder preview는 생성 전에 `crm_builder_payload.json`을 최신 결과자산 기준으로 다시 써서 필터/범위가 stale 되지 않게 동작
 - RADAR `Layer 03 : Decision Options`는 현재 판단 규칙 확정 전이라 임시 고정 문구로 운영 중
 - 운영 콘솔은 월별 raw 업로드 후 자동 병합 실행을 지원
+- 패키지 업로드는 파일 업로드 직후가 아니라 `패키지 업로드 저장` 시점에 intake 검증을 시작
 - 분석 인텔리전스 탭은 점수뿐 아니라 판정 해석과 근거 수치까지 표시
 - 코드 기준으로 HTML 보고서 6종과 통합 허브까지 생성 가능
 - 실제 저장된 보고서 수는 회사별 마지막 실행 상태에 따라 다를 수 있음
@@ -200,6 +201,8 @@ run 저장 예:
 - `data/ops_validation/{company_key}/runs/{run_id}/`
 - `report_context.full.json`
 - `report_context.prompt.json`
+- `pipeline_summary.json`
+- `artifacts.index.json`
 - `chat/agent_chat_history.jsonl`
 
 현재 확인된 회사 예시:
@@ -316,8 +319,12 @@ uv run uvicorn ops_core.main:app --reload --host 0.0.0.0 --port 8000
 운영 콘솔:
 
 ```bash
-uv run streamlit run ui/ops_console.py --server.port 8501
+uv run python -m streamlit run ui/ops_console.py --server.port 8501
 ```
+
+참고:
+- 일부 Windows 환경에서는 `.venv\Scripts\streamlit.exe`가 Code Integrity 정책에 걸릴 수 있습니다.
+- 이 경우 `uv run streamlit ...` 대신 `uv run python -m streamlit ...`를 사용합니다.
 
 ## 실행모드
 
@@ -355,6 +362,7 @@ uv run streamlit run ui/ops_console.py --server.port 8501
 - Territory 지도는 기본값이 `담당자 미선택` 상태입니다.
 - Territory 지도는 초기 전체 마커를 한 번에 뿌리지 않고, 담당자를 고른 뒤 해당 담당자의 `catalog asset`과 선택한 `월 asset`만 순차 로딩합니다.
 - Territory Builder 출력에는 `builder/territory_map_preview_assets/*.js`가 같이 생기며, 지도는 이 분리 asset을 필요할 때만 읽습니다.
+- Territory Builder 출력에는 `builder/territory_map_preview_assets/leaflet/*`도 같이 생기며, 지도 라이브러리는 로컬 파일 기준으로 엽니다.
 
 ## 현재 검증된 회사 예시
 

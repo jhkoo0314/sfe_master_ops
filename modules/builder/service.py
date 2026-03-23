@@ -401,6 +401,11 @@ def prepare_territory_chunk_assets(
 
     for existing in target_asset_dir.glob("*.js"):
         existing.unlink()
+    shutil.rmtree(target_asset_dir / "leaflet", ignore_errors=True)
+
+    vendor_leaflet_dir = Path(__file__).resolve().parents[2] / "templates" / "vendor" / "leaflet"
+    if vendor_leaflet_dir.exists():
+        shutil.copytree(vendor_leaflet_dir, target_asset_dir / "leaflet", dirs_exist_ok=True)
 
     payload = builder_payload.payload
     if str(payload.get("data_mode") or "").startswith("chunked_"):

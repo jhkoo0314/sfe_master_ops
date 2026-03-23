@@ -28,6 +28,33 @@ from adapters.crm.adapter_config import HospitalAdapterConfig
 from common.exceptions import AdapterInputError, AdapterMappingError
 
 
+def _normalize_column_name(name: str) -> str:
+    return "".join(ch for ch in str(name).strip().lower() if ch.isalnum())
+
+
+_HOSPITAL_COLUMN_ALIASES = {
+    "hospital_id": ("hospital_id", "account_id", "거래처코드", "병원코드", "accountcode"),
+    "hospital_name": ("hospital_name", "account_name", "거래처명", "병원명", "요양기관명"),
+    "hospital_type": ("hospital_type", "account_type", "기관구분", "종별코드명", "병원종별"),
+    "region_key": ("region_key", "광역시도", "시도", "시도명", "sido"),
+    "sub_region_key": ("sub_region_key", "시군구", "시군구명", "sigungu"),
+    "address": ("address", "주소", "주소원본"),
+    "phone": ("phone", "전화번호", "tel"),
+}
+
+
+def _resolve_column_name(columns: list[str], preferred: str, aliases: tuple[str, ...]) -> str:
+    normalized_map = {
+        _normalize_column_name(column): str(column)
+        for column in columns
+    }
+    for candidate in (preferred, *aliases):
+        matched = normalized_map.get(_normalize_column_name(candidate))
+        if matched:
+            return matched
+    return preferred
+
+
 def load_hospital_master_from_file(
     file_path: str | Path,
     config: HospitalAdapterConfig,
@@ -105,14 +132,23 @@ def _convert_dataframe_to_hospital_master(
     DataFrame + Config → list[HospitalMaster]
     """
     # 필수 컬럼 존재 확인
-    required_cols = {
-        "hospital_id": config.hospital_id_col,
-        "hospital_name": config.hospital_name_col,
-        "hospital_type": config.hospital_type_col,
-        "region_key": config.region_key_col,
-        "sub_region_key": config.sub_region_key_col,
-    }
     columns = list(df.columns)
+    resolved_cols = {
+        "hospital_id": _resolve_column_name(columns, config.hospital_id_col, _HOSPITAL_COLUMN_ALIASES["hospital_id"]),
+        "hospital_name": _resolve_column_name(columns, config.hospital_name_col, _HOSPITAL_COLUMN_ALIASES["hospital_name"]),
+        "hospital_type": _resolve_column_name(columns, config.hospital_type_col, _HOSPITAL_COLUMN_ALIASES["hospital_type"]),
+        "region_key": _resolve_column_name(columns, config.region_key_col, _HOSPITAL_COLUMN_ALIASES["region_key"]),
+        "sub_region_key": _resolve_column_name(columns, config.sub_region_key_col, _HOSPITAL_COLUMN_ALIASES["sub_region_key"]),
+        "address": _resolve_column_name(columns, config.address_col, _HOSPITAL_COLUMN_ALIASES["address"]) if config.address_col else _resolve_column_name(columns, "", _HOSPITAL_COLUMN_ALIASES["address"]),
+        "phone": _resolve_column_name(columns, config.phone_col, _HOSPITAL_COLUMN_ALIASES["phone"]) if config.phone_col else _resolve_column_name(columns, "", _HOSPITAL_COLUMN_ALIASES["phone"]),
+    }
+    required_cols = {
+        "hospital_id": resolved_cols["hospital_id"],
+        "hospital_name": resolved_cols["hospital_name"],
+        "hospital_type": resolved_cols["hospital_type"],
+        "region_key": resolved_cols["region_key"],
+        "sub_region_key": resolved_cols["sub_region_key"],
+    }
     missing = [f"{field}({col})" for field, col in required_cols.items() if col not in columns]
     if missing:
         raise AdapterInputError(
@@ -123,20 +159,20 @@ def _convert_dataframe_to_hospital_master(
     # 병원 종별 필터 적용
     if config.active_type_values:
         if pl is not None and isinstance(df, pl.DataFrame):
-            df = df.filter(pl.col(config.hospital_type_col).is_in(config.active_type_values))
+            df = df.filter(pl.col(resolved_cols["hospital_type"]).is_in(config.active_type_values))
         else:
-            df = df[df[config.hospital_type_col].isin(config.active_type_values)]
+            df = df[df[resolved_cols["hospital_type"]].isin(config.active_type_values)]
 
     # null 행 제거 (ID 없는 행)
     if pl is not None and isinstance(df, pl.DataFrame):
         df = df.filter(
-            pl.col(config.hospital_id_col).is_not_null() &
-            pl.col(config.hospital_id_col).cast(pl.Utf8).str.len_chars().gt(0)
+            pl.col(resolved_cols["hospital_id"]).is_not_null() &
+            pl.col(resolved_cols["hospital_id"]).cast(pl.Utf8).str.len_chars().gt(0)
         )
         rows = df.iter_rows(named=True)
     else:
-        df = df[df[config.hospital_id_col].notna()]
-        df = df[df[config.hospital_id_col].astype(str).str.len() > 0]
+        df = df[df[resolved_cols["hospital_id"]].notna()]
+        df = df[df[resolved_cols["hospital_id"]].astype(str).str.len() > 0]
         rows = df.to_dict(orient="records")
 
     # HospitalMaster로 변환
@@ -144,19 +180,19 @@ def _convert_dataframe_to_hospital_master(
     for row in rows:
         try:
             hospital = HospitalMaster(
-                hospital_id=str(row[config.hospital_id_col]).strip(),
-                hospital_name=str(row[config.hospital_name_col]).strip(),
-                hospital_type=str(row[config.hospital_type_col]).strip(),
-                region_key=str(row[config.region_key_col]).strip(),
-                sub_region_key=str(row[config.sub_region_key_col]).strip(),
+                hospital_id=str(row[resolved_cols["hospital_id"]]).strip(),
+                hospital_name=str(row[resolved_cols["hospital_name"]]).strip(),
+                hospital_type=str(row[resolved_cols["hospital_type"]]).strip(),
+                region_key=str(row[resolved_cols["region_key"]]).strip(),
+                sub_region_key=str(row[resolved_cols["sub_region_key"]]).strip(),
                 address=(
-                    str(row[config.address_col]).strip()
-                    if config.address_col and row.get(config.address_col)
+                    str(row[resolved_cols["address"]]).strip()
+                    if resolved_cols["address"] in row and row.get(resolved_cols["address"])
                     else None
                 ),
                 phone=(
-                    str(row[config.phone_col]).strip()
-                    if config.phone_col and row.get(config.phone_col)
+                    str(row[resolved_cols["phone"]]).strip()
+                    if resolved_cols["phone"] in row and row.get(resolved_cols["phone"])
                     else None
                 ),
                 is_active=(
@@ -169,7 +205,7 @@ def _convert_dataframe_to_hospital_master(
             result.append(hospital)
         except Exception as e:
             raise AdapterMappingError(
-                f"HospitalMaster 변환 실패: {row.get(config.hospital_id_col)}",
+                f"HospitalMaster 변환 실패: {row.get(resolved_cols['hospital_id'])}",
                 detail=str(e)
             )
 

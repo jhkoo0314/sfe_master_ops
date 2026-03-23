@@ -70,6 +70,7 @@ def render_upload_row(
     }
     bg, fg = level_colors.get(required_level, ("rgba(139,148,158,0.16)", "#e6edf3"))
     current = st.session_state.uploaded_data.get(module_key)
+    saved = st.session_state.saved_uploaded_data.get(module_key)
 
     left, mid, right = st.columns([1.2, 2.4, 1.6])
     with left:
@@ -83,7 +84,14 @@ def render_upload_row(
             unsafe_allow_html=True,
         )
     with mid:
-        status_text = f"업로드됨 · {current['name']} · {current['row_count']}건" if current else "업로드 전"
+        if current and saved and current == saved:
+            status_text = f"저장 완료 · {current['name']} · {current['row_count']}건"
+        elif current:
+            status_text = f"임시 업로드 · {current['name']} · {current['row_count']}건"
+        elif saved:
+            status_text = f"저장 완료 · {saved['name']} · {saved['row_count']}건"
+        else:
+            status_text = "업로드 전"
         st.markdown(
             f"""
             <div style="padding-top:6px">

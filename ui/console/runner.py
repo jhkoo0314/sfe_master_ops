@@ -30,6 +30,210 @@ from ui.console.paths import (
 )
 
 
+def _confidence_grade_from_score(score: float) -> str:
+    if score >= 95:
+        return "A"
+    if score >= 85:
+        return "B"
+    return "C"
+
+
+def _build_local_run_artifacts_index(result: dict) -> list[dict]:
+    artifacts: list[dict] = []
+    for step in result.get("steps", []):
+        summary_path = str(step.get("summary_path") or "").strip()
+        if not summary_path:
+            continue
+        artifacts.append(
+            {
+                "artifact_type": f"{step.get('module', 'module')}_validation_summary",
+                "artifact_role": "validation_summary",
+                "artifact_name": Path(summary_path).name,
+                "artifact_class": "intermediate",
+                "storage_path": summary_path,
+                "mime_type": "application/json",
+                "payload": {
+                    "module": step.get("module"),
+                    "reasoning_note": step.get("reasoning_note"),
+                },
+            }
+        )
+
+    builder_stage = (result.get("summary_by_module") or {}).get("builder", {})
+    if isinstance(builder_stage, dict):
+        for report_key, artifact_group in builder_stage.items():
+            if not isinstance(artifact_group, dict):
+                continue
+            for file_role, file_path in artifact_group.items():
+                if not isinstance(file_path, str) or not file_path.strip():
+                    continue
+                artifacts.append(
+                    {
+                        "artifact_type": {
+                            "html": "report_html",
+                            "input_standard": "report_input_standard",
+                            "payload_standard": "report_payload_standard",
+                            "result_asset": "report_result_asset",
+                        }.get(file_role, f"report_{file_role}"),
+                        "artifact_role": report_key,
+                        "artifact_name": Path(file_path).name,
+                        "artifact_class": "final" if file_role == "html" else "evidence",
+                        "storage_path": file_path,
+                        "mime_type": "text/html" if file_role == "html" else "application/json",
+                        "payload": {
+                            "report_key": report_key,
+                            "file_role": file_role,
+                        },
+                    }
+                )
+    return artifacts
+
+
+def _build_local_run_contexts(result: dict) -> tuple[dict, dict]:
+    company_key = str(result.get("company_key") or "").strip() or get_active_company_key()
+    run_id = str(result.get("run_id") or "").strip()
+    overall_status = str(result.get("overall_status", "-")).upper()
+    overall_score = float(result.get("overall_score", 0) or 0)
+    mode = str(result.get("execution_mode", "") or "")
+    generated_at = datetime.now().astimezone().isoformat(timespec="seconds")
+
+    step_map = {
+        str(step.get("module") or ""): (step.get("summary") or {})
+        for step in result.get("steps", [])
+        if isinstance(step, dict)
+    }
+    crm_summary = step_map.get("crm", {})
+    rx_summary = step_map.get("prescription", {})
+    sandbox_summary = step_map.get("sandbox", {})
+    territory_summary = step_map.get("territory", {})
+    radar_summary = step_map.get("radar", {})
+    builder_summary = step_map.get("builder", {})
+
+    evidence_index: list[dict[str, str]] = []
+    linked_artifacts: list[dict[str, str]] = []
+    if isinstance(builder_summary, dict):
+        for report_key in ["crm_analysis", "sandbox_report", "territory_map", "prescription_flow", "radar_report", "total_valid"]:
+            item = builder_summary.get(report_key)
+            if not isinstance(item, dict):
+                continue
+            html_path = str(item.get("html") or "").strip()
+            if html_path:
+                evidence_index.append({"type": report_key, "path": html_path})
+                linked_artifacts.append({"type": report_key, "path": html_path})
+
+    priority_issues: list[str] = []
+    radar_issue = str(radar_summary.get("top_issue") or "").strip()
+    if radar_issue:
+        priority_issues.append(radar_issue)
+    if int(rx_summary.get("connected_hospital_count", 0) or 0) == 0 and int(rx_summary.get("flow_record_count", 0) or 0) > 0:
+        priority_issues.append("Prescription 병원 연결 0건")
+
+    key_findings: list[str] = []
+    if crm_summary:
+        key_findings.append(
+            f"CRM 품질 {crm_summary.get('quality_status', '-')} / unmapped company {crm_summary.get('company_unmapped_count', '-')}"
+        )
+    if rx_summary:
+        key_findings.append(
+            f"Prescription completion {rx_summary.get('flow_completion_rate', '-')} / connected hospitals {rx_summary.get('connected_hospital_count', '-')}"
+        )
+    if sandbox_summary:
+        key_findings.append(
+            f"Sandbox 품질 {sandbox_summary.get('quality_status', '-')} / month count {sandbox_summary.get('metric_month_count', '-')}"
+        )
+    if territory_summary:
+        key_findings.append(
+            f"Territory 품질 {territory_summary.get('quality_status', '-')} / coverage {territory_summary.get('coverage_rate', '-')}"
+        )
+    if radar_issue:
+        key_findings.append(f"RADAR top issue: {radar_issue}")
+
+    executive_summary = (
+        f"{company_key} 최신 run 요약입니다. 전체 상태는 {overall_status}, 점수는 {overall_score:.1f}, "
+        f"Prescription 상태는 {str(rx_summary.get('quality_status', '-')).upper()}, "
+        f"Sandbox 상태는 {str(sandbox_summary.get('quality_status', '-')).upper()} 입니다."
+    )
+
+    full_ctx = {
+        "run_id": run_id,
+        "company_key": company_key,
+        "mode": mode,
+        "generated_at": generated_at,
+        "period": str(radar_summary.get("period_value") or "-"),
+        "comparison_period": "-",
+        "validation_summary": {
+            "overall_status": overall_status,
+            "overall_score": overall_score,
+        },
+        "confidence_grade": _confidence_grade_from_score(overall_score),
+        "executive_summary": executive_summary,
+        "key_findings": key_findings,
+        "priority_issues": priority_issues,
+        "evidence_index": evidence_index,
+        "linked_artifacts": linked_artifacts,
+        "step_status_map": {
+            str(step.get("module") or ""): {
+                "status": step.get("status"),
+                "score": step.get("score"),
+                "reasoning_note": step.get("reasoning_note"),
+            }
+            for step in result.get("steps", [])
+            if isinstance(step, dict)
+        },
+    }
+    prompt_ctx = {
+        "run_id": run_id,
+        "mode": mode,
+        "generated_at": generated_at,
+        "period": full_ctx["period"],
+        "comparison_period": "-",
+        "executive_summary": executive_summary,
+        "top_findings": key_findings[:5],
+        "priority_issues": priority_issues[:5],
+        "answer_scope": "final_report_only",
+        "forbidden_actions": ["recalculate_kpi", "raw_rejoin"],
+    }
+    return full_ctx, prompt_ctx
+
+
+def _write_local_run_bundle(result: dict, uploaded: dict, analysis_markdown: str) -> None:
+    run_id = str(result.get("run_id") or "").strip()
+    if not run_id:
+        return
+
+    root = Path(get_project_root())
+    company_key = str(result.get("company_key") or "").strip() or get_active_company_key()
+    company_name = str(result.get("company_name") or "").strip() or get_active_company_name()
+    run_dir = root / "data" / "ops_validation" / company_key / "runs" / run_id
+    run_dir.mkdir(parents=True, exist_ok=True)
+    (run_dir / "chat").mkdir(parents=True, exist_ok=True)
+
+    full_ctx, prompt_ctx = _build_local_run_contexts(result)
+    artifacts_index = _build_local_run_artifacts_index(result)
+    finished_at = datetime.now().astimezone().isoformat(timespec="seconds")
+    overall_status = str(result.get("overall_status", "-")).upper()
+    overall_score = float(result.get("overall_score", 0) or 0)
+
+    run_meta = {
+        "run_id": run_id,
+        "mode": str(result.get("execution_mode", "") or ""),
+        "finished_at": finished_at,
+        "status": "success",
+        "validation_status": overall_status,
+        "confidence_grade": _confidence_grade_from_score(overall_score),
+        "company_key": company_key,
+        "company_name": company_name,
+        "supabase_run_db_id": str(result.get("supabase_run_db_id") or "").strip(),
+    }
+
+    (run_dir / "run_meta.json").write_text(json.dumps(run_meta, ensure_ascii=False, indent=2), encoding="utf-8")
+    (run_dir / "pipeline_summary.json").write_text(json.dumps(result, ensure_ascii=False, indent=2), encoding="utf-8")
+    (run_dir / "report_context.full.json").write_text(json.dumps(full_ctx, ensure_ascii=False, indent=2), encoding="utf-8")
+    (run_dir / "report_context.prompt.json").write_text(json.dumps(prompt_ctx, ensure_ascii=False, indent=2), encoding="utf-8")
+    (run_dir / "artifacts.index.json").write_text(json.dumps(artifacts_index, ensure_ascii=False, indent=2), encoding="utf-8")
+    (run_dir / "execution_analysis.md").write_text(analysis_markdown, encoding="utf-8")
+
+
 def _build_execution_analysis_markdown(result: dict, uploaded: dict) -> str:
     lines: list[str] = []
     lines.append(f"# Execution Analysis")
@@ -115,11 +319,14 @@ def get_source_target_rows(execution_mode: str, uploaded: dict) -> list[dict]:
         info = uploaded.get(key)
         if key not in required_keys and info is None:
             continue
+        target_name = Path(target_path).name
         rows.append(
             {
-                "항목": label_map.get(key, key),
+                "업로드 슬롯": label_map.get(key, key),
+                "슬롯 key": key,
                 "실행 필요": "필수" if key in required_keys else "선택",
                 "현재 소스": info["name"] if info else "기존 파일 사용",
+                "내부 저장 파일명": target_name,
                 "실제 반영 경로": target_path,
                 "반영 방식": "업로드 파일 덮어쓰기" if info else "기존 source 유지",
             }
@@ -205,10 +412,27 @@ def summarize_intake_result(intake_result: dict | None) -> dict:
             "fix_count": 0,
             "timing_alert_count": 0,
             "analysis_month_count": 0,
+            "prescription_mapping_risk_score": 0,
+            "prescription_mapping_risk_reason": "",
         }
     packages = intake_result.get("packages", [])
     findings = intake_result.get("findings", [])
     suggestions = intake_result.get("suggestions", [])
+    risk_score = 0
+    risk_reason = ""
+    for package in packages:
+        if str(package.get("source_key") or "") != "crm_account_assignment":
+            continue
+        fix_types = {
+            str(item.get("fix_type") or "")
+            for item in package.get("fixes", [])
+        }
+        if "derive_account_assignment_from_crm_activity" in fix_types:
+            risk_score = 85
+            risk_reason = "거래처/병원 배정표를 CRM 활동 기준 임시 생성"
+        elif "hydrate_company_assignment_from_account_mapping" in fix_types:
+            risk_score = max(risk_score, 55)
+            risk_reason = "담당자/조직과 배정표를 조합해 실행용 staging 생성"
     return {
         "status": intake_result.get("status", "unknown"),
         "ready_for_adapter": bool(intake_result.get("ready_for_adapter")),
@@ -224,6 +448,8 @@ def summarize_intake_result(intake_result: dict | None) -> dict:
         "fix_count": len(intake_result.get("fixes", [])),
         "timing_alert_count": len(intake_result.get("timing_alerts", [])),
         "analysis_month_count": int(intake_result.get("analysis_month_count") or 0),
+        "prescription_mapping_risk_score": risk_score,
+        "prescription_mapping_risk_reason": risk_reason,
     }
 
 
@@ -232,10 +458,30 @@ def save_pipeline_run_history(result: dict, uploaded: dict) -> str:
     history_dir = Path(root) / "data" / "ops_validation" / get_active_company_key() / "pipeline"
     history_dir.mkdir(parents=True, exist_ok=True)
     history_path = history_dir / "console_run_history.jsonl"
+    latest_summary_path = history_dir / "pipeline_validation_summary.json"
+
+    analysis_markdown = _build_execution_analysis_markdown(result, uploaded)
+    analysis_latest_path = history_dir / "latest_execution_analysis.md"
+    analysis_latest_path.write_text(analysis_markdown, encoding="utf-8")
+    run_id = str(result.get("run_id", "")).strip()
+    if run_id:
+        (history_dir / f"execution_analysis_{run_id}.md").write_text(analysis_markdown, encoding="utf-8")
+
+    supabase_run_db_id = save_pipeline_run_to_supabase(
+        company_key=get_active_company_key(),
+        company_name=get_active_company_name(),
+        result=result,
+        uploaded=uploaded,
+    )
+    if supabase_run_db_id:
+        result["supabase_run_db_id"] = supabase_run_db_id
+    _write_local_run_bundle(result, uploaded, analysis_markdown)
+    latest_summary_path.write_text(json.dumps(result, ensure_ascii=False, indent=2), encoding="utf-8")
 
     record = {
         "saved_at": datetime.now().isoformat(),
         "run_id": result.get("run_id"),
+        "supabase_run_db_id": result.get("supabase_run_db_id"),
         "execution_mode": result.get("execution_mode"),
         "execution_mode_label": result.get("execution_mode_label"),
         "company_key": get_active_company_key(),
@@ -256,22 +502,6 @@ def save_pipeline_run_history(result: dict, uploaded: dict) -> str:
     }
     with open(history_path, "a", encoding="utf-8") as f:
         f.write(json.dumps(record, ensure_ascii=False) + "\n")
-
-    analysis_markdown = _build_execution_analysis_markdown(result, uploaded)
-    analysis_latest_path = history_dir / "latest_execution_analysis.md"
-    analysis_latest_path.write_text(analysis_markdown, encoding="utf-8")
-    run_id = str(result.get("run_id", "")).strip()
-    if run_id:
-        (history_dir / f"execution_analysis_{run_id}.md").write_text(analysis_markdown, encoding="utf-8")
-
-    supabase_run_db_id = save_pipeline_run_to_supabase(
-        company_key=get_active_company_key(),
-        company_name=get_active_company_name(),
-        result=result,
-        uploaded=uploaded,
-    )
-    if supabase_run_db_id:
-        result["supabase_run_db_id"] = supabase_run_db_id
     return str(history_path)
 
 

@@ -14,6 +14,11 @@ SCRIPT_RUNTIME_MODULE_NAMES = [
     "scripts.validate_radar_with_ops",
     "scripts.validate_sandbox_with_ops",
     "scripts.validate_territory_with_ops",
+    "modules.kpi",
+    "modules.kpi.prescription_engine",
+    "modules.prescription.builder_payload",
+    "modules.prescription.service",
+    "modules.builder.service",
 ]
 
 

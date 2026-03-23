@@ -21,11 +21,21 @@ SOURCE_ROOT = get_company_root(ROOT, "company_source", COMPANY_KEY)
 OUTPUT_ROOT = get_company_root(ROOT, "ops_standard", COMPANY_KEY) / "prescription"
 
 
+def _refresh_runtime_context() -> None:
+    global COMPANY_KEY, COMPANY_NAME, PROFILE, SOURCE_ROOT, OUTPUT_ROOT
+    COMPANY_KEY = get_active_company_key()
+    COMPANY_NAME = get_active_company_name(COMPANY_KEY)
+    PROFILE = get_company_ops_profile(COMPANY_KEY)
+    SOURCE_ROOT = get_company_root(ROOT, "company_source", COMPANY_KEY)
+    OUTPUT_ROOT = get_company_root(ROOT, "ops_standard", COMPANY_KEY) / "prescription"
+
+
 def models_to_frame(models: list) -> pd.DataFrame:
     return pd.DataFrame([m.model_dump(mode="json") for m in models])
 
 
 def main() -> None:
+    _refresh_runtime_context()
     OUTPUT_ROOT.mkdir(parents=True, exist_ok=True)
 
     source_file = PROFILE.source_path(SOURCE_ROOT, "prescription")

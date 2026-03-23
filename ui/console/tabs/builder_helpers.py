@@ -3,6 +3,7 @@ from __future__ import annotations
 import io
 import json
 from pathlib import Path
+import re
 import zipfile
 
 
@@ -55,12 +56,40 @@ def materialize_periodized_report(report_output_path: str, report_period: str, r
     return str(target_path)
 
 
+def _iter_referenced_asset_dirs(report_path: Path) -> list[Path]:
+    asset_dirs: list[Path] = []
+    default_asset_dir = report_path.parent / f"{report_path.stem}_assets"
+    if default_asset_dir.exists():
+        asset_dirs.append(default_asset_dir)
+
+    try:
+        html = report_path.read_text(encoding="utf-8")
+    except OSError:
+        html = ""
+
+    for match in re.finditer(r'"asset_base"\s*:\s*"([^"]+)"', html):
+        asset_name = str(match.group(1) or "").strip()
+        if not asset_name:
+            continue
+        asset_dir = report_path.parent / asset_name
+        if asset_dir.exists():
+            asset_dirs.append(asset_dir)
+
+    unique_dirs: list[Path] = []
+    seen: set[Path] = set()
+    for asset_dir in asset_dirs:
+        if asset_dir in seen:
+            continue
+        seen.add(asset_dir)
+        unique_dirs.append(asset_dir)
+    return unique_dirs
+
+
 def _iter_report_bundle_paths(report_type: str, report_path: Path) -> list[Path]:
     builder_root = report_path.parent
     bundle_paths: list[Path] = [report_path]
 
-    asset_dir = builder_root / f"{report_path.stem}_assets"
-    if asset_dir.exists():
+    for asset_dir in _iter_referenced_asset_dirs(report_path):
         bundle_paths.extend(path for path in asset_dir.rglob("*") if path.is_file())
 
     if report_type == "통합 검증 보고서":
@@ -76,8 +105,7 @@ def _iter_report_bundle_paths(report_type: str, report_path: Path) -> list[Path]
             if not child_path.exists():
                 continue
             bundle_paths.append(child_path)
-            child_asset_dir = builder_root / f"{child_path.stem}_assets"
-            if child_asset_dir.exists():
+            for child_asset_dir in _iter_referenced_asset_dirs(child_path):
                 bundle_paths.extend(path for path in child_asset_dir.rglob("*") if path.is_file())
 
     unique_paths: list[Path] = []
@@ -101,8 +129,7 @@ def build_report_download_artifact(
         raise FileNotFoundError(f"보고서 파일을 찾지 못했습니다: {effective_report_path}")
 
     base_name = effective_report_path.stem
-    ext = effective_report_path.suffix
-    has_asset_dir = (effective_report_path.parent / f"{effective_report_path.stem}_assets").exists()
+    has_asset_dir = bool(_iter_referenced_asset_dirs(effective_report_path))
     needs_bundle = has_asset_dir or report_type == "통합 검증 보고서"
 
     if not needs_bundle:

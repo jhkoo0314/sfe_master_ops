@@ -53,10 +53,12 @@ uv run uvicorn ops_core.main:app --reload --host 0.0.0.0 --port 8000
 운영 콘솔 실행:
 
 ```bash
-uv run streamlit run ui/ops_console.py --server.port 8501
+uv run python -m streamlit run ui/ops_console.py --server.port 8501
 ```
 
 참고:
+- 일부 Windows 환경에서는 `.venv\Scripts\streamlit.exe`가 Code Integrity 정책에 걸릴 수 있습니다.
+- 이 경우 `uv run streamlit ...` 대신 `uv run python -m streamlit ...`를 기본 실행 경로로 사용합니다.
 - 운영 콘솔은 현재 `ui/console/` 패키지 기준으로 동작합니다.
 - 상단 메뉴는 `대시보드 / 데이터 어댑터 / 파이프라인 / 분석 인텔리전스 / 결과물 빌더 / Agent` 6개 화면 중 선택한 화면만 렌더합니다.
 - 회사 목록은 Supabase 등록 목록을 기본으로 읽고, 로컬 registry 항목도 함께 병합해 표시합니다.
@@ -67,11 +69,12 @@ uv run streamlit run ui/ops_console.py --server.port 8501
 2. `실행모드` 선택
 3. 데이터 어댑터 탭에서 raw 파일 업로드
 4. 필요 시 월별 raw 일괄 업로드 영역에 월별 파일들을 저장
-5. 파이프라인 탭에서 `실행 전 반영 파일 확인`
-6. `파이프라인 실행`
-7. 분석 인텔리전스 탭에서 정규화/검증 산출물과 판정 해석 확인
-8. 결과물 빌더 탭에서 HTML 열기/다운로드
-9. Agent 탭에서 run 선택 후 질문/응답/근거/대화이력 확인
+5. 패키지 업로드를 쓴 경우 `패키지 업로드 저장`
+6. 파이프라인 탭에서 `실행 전 반영 파일 확인`
+7. `파이프라인 실행`
+8. 분석 인텔리전스 탭에서 정규화/검증 산출물과 판정 해석 확인
+9. 결과물 빌더 탭에서 HTML 열기/다운로드
+10. Agent 탭에서 run 선택 후 질문/응답/근거/대화이력 확인
 
 ## 4. 실행모드 설명
 
@@ -128,7 +131,7 @@ CRM 패키지:
 
 중요:
 - 같은 파일을 여러 항목에 올려도 허용됩니다.
-- 업로드만 했을 때는 세션에만 있고, 실행 시 실제 회사 폴더에 반영됩니다.
+- 업로드만 했을 때는 세션 임시 상태에만 있고, `패키지 업로드 저장`을 눌러야 실제 회사 폴더 반영 + intake 검증이 시작됩니다.
 - 업로드하지 않았더라도 해당 회사 폴더에 기존 source 파일이 있으면 그 파일을 그대로 사용합니다.
 - 화면에서 `권장`으로 보이는 파일도 회사 폴더에 기존 파일이 없으면 실제 실행에는 필요할 수 있습니다.
 
@@ -230,6 +233,7 @@ Builder 결과:
 - `data/ops_validation/{company_key}/builder/sandbox_report_preview_assets/*.js`
 - `data/ops_validation/{company_key}/builder/territory_map_preview.html`
 - `data/ops_validation/{company_key}/builder/territory_map_preview_assets/*.js`
+- `data/ops_validation/{company_key}/builder/territory_map_preview_assets/leaflet/*`
 - `data/ops_validation/{company_key}/builder/prescription_flow_preview.html`
 - `data/ops_validation/{company_key}/builder/radar_report_preview.html`
 - `data/ops_validation/{company_key}/builder/total_valid_preview.html`
@@ -252,6 +256,7 @@ DB 동기화:
 - 그래서 템플릿이 바뀌면 Builder보다 먼저 `모듈 payload`를 같이 맞춰야 합니다.
 - CRM preview 생성 시에는 Builder가 `crm_result_asset.json`과 `crm_validation_summary.json`을 기준으로 `crm_builder_payload.json`을 먼저 다시 써서, 예전 payload가 남아 있어도 최신 필터/범위가 반영되게 합니다.
 - Territory 보고서도 이제 Builder 안에서 계산하지 않고 `territory_builder_payload.json`을 읽습니다.
+- Territory 보고서는 `leaflet.js`, `leaflet.css`, marker image를 `territory_map_preview_assets/leaflet/`에 함께 복사해 로컬 라이브러리 기준으로 엽니다.
 - Sandbox 보고서는 `sandbox_result_asset.json` 안의 payload를 그대로 쓰되, 무거운 지점 상세는 `manifest + branch asset` 구조로 분리됩니다.
 - Sandbox 보고서는 첫 화면에 요약만 먼저 열고, 지점을 고를 때만 해당 지점 asset을 읽습니다.
 - Sandbox 필터는 `branch_index`를 기준으로 지점 목록을 먼저 보여주고, 지점 선택 시 `branch asset`을 로딩해 담당자 목록을 채웁니다.
@@ -261,6 +266,7 @@ DB 동기화:
 
 - Agent는 KPI를 재계산하지 않습니다.
 - Agent는 `run_report_context`와 `run_artifacts`를 기준으로 답변합니다.
+- 최신 run bundle(`report_context.full.json`, `report_context.prompt.json`, `pipeline_summary.json`, `artifacts.index.json`)이 있으면 이를 먼저 읽습니다.
 - 현재는 `sandbox_report` artifact를 우선 읽는 구조로 동작합니다.
 - Territory payload는 `manifest + 분리 asset` 구조입니다.
 - 기본 화면은 `담당자 미선택` 상태로 시작하고, 담당자를 고른 뒤 해당 담당자 asset과 선택 월 asset만 읽습니다.
