@@ -1,11 +1,11 @@
 # Sales Data OS RUNBOOK
 
-작성일: 2026-03-11
+작성일: 2026-03-23
 
 ## 1. 기본 원칙
 
 ```text
-원천데이터 -> Adapter -> Module -> Result Asset -> OPS -> Builder
+원천데이터 -> Adapter -> Module/Core Engine -> Result Asset -> Validation Layer(OPS) -> Intelligence(RADAR) -> Builder
 ```
 
 운영 점검 단계에서는 `실행모드`를 고르고 필요한 raw만 넣어 검증합니다.
@@ -19,12 +19,17 @@ Validation Layer (OPS) 역할은 이렇게 이해하면 됩니다.
 - 다음 단계 전달 판단
   - 맞음
 
-즉 OPS는 Sales Data OS 안에서 `중앙 운영 통제 레이어`처럼 동작합니다.
+즉 OPS는 Sales Data OS 안에서 `Validation / Orchestration Layer`, 즉 운영 통제 레이어처럼 동작합니다.
 
 현재 운영 범위 한 줄 요약:
 - CRM / Prescription / Sandbox / Territory / RADAR / Builder는 실행 가능
 - Builder는 코드상 보고서 6종 생성 가능
 - 실제 저장된 보고서 수는 회사별 마지막 실행 상태에 따라 다를 수 있음
+
+현재 상태:
+- `Part2 완료`
+- 단일 기준 문서: `docs/architecture/12_part2_status_source_of_truth.md`
+- 완료 선언 문서: `docs/architecture/23_part2_completion_declaration.md`
 
 ## 2. 실행 전 준비
 
@@ -49,6 +54,7 @@ uv run uvicorn ops_core.main:app --reload --host 0.0.0.0 --port 8000
 참고:
 - 현재 권장 진입점은 `modules.validation.main:app`입니다.
 - 기존 `ops_core.main:app`는 호환용으로 계속 동작합니다.
+- `ops_core`는 시스템 전체가 아니라 Validation / Orchestration Layer의 호환 유지 경로입니다.
 
 운영 콘솔 실행:
 
@@ -117,6 +123,11 @@ uv run python -m streamlit run ui/ops_console.py --server.port 8501
 - `CRM -> PDF`는 Sandbox 단계가 없어서 RADAR 자동 생성 대상이 아닙니다.
 
 ## 5. 업로드 파일 기준
+
+중요:
+- 업로드 raw는 바로 OPS로 가는 것이 아니라 intake/onboarding -> adapter -> module 흐름으로 들어갑니다.
+- 패키지 업로드는 `패키지 업로드 저장` 시점에 intake 검증이 시작됩니다.
+- 실제 실행 입력은 원본 raw가 아니라 필요 시 `_intake_staging` 정리본 기준으로 이어집니다.
 
 CRM 패키지:
 - `CRM 활동 원본`
@@ -205,6 +216,11 @@ data/ops_validation/daon_pharma/
 
 ## 7. 주요 산출물
 
+원칙:
+- 다음 단계는 Result Asset과 validation 승인 산출물을 소비합니다.
+- Builder는 render-only이며 KPI를 재계산하지 않습니다.
+- Agent는 `run_report_context`뿐 아니라 `run_artifacts`와 최신 run bundle도 읽습니다.
+
 정규화 결과:
 - `data/ops_standard/{company_key}/...`
 
@@ -248,6 +264,12 @@ DB 동기화:
 - `run_steps`
 - `run_artifacts`
 - `run_report_context`
+
+최신 run bundle 예:
+- `runs/{run_id}/report_context.full.json`
+- `runs/{run_id}/report_context.prompt.json`
+- `runs/{run_id}/pipeline_summary.json`
+- `runs/{run_id}/artifacts.index.json`
 
 ## 8. Builder 운영 메모
 

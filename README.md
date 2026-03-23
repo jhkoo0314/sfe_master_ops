@@ -2,7 +2,7 @@
 
 원천데이터를 넣으면 `정규화 -> 모듈 분석/KPI 계산 -> Validation Layer(OPS) 검증 게이트 -> Intelligence -> Builder HTML 생성`까지 이어지는 Sales Data OS 운영 검증 프로젝트입니다.
 
-지금 상태의 핵심은 이것입니다.
+현재 공식 기준의 핵심은 이것입니다.
 
 - 회사별 raw를 같은 틀로 흡수하고 어디까지 연결되는지 검증
 - CRM, Prescription, Sandbox, Territory, RADAR, Builder를 실제로 실행 가능
@@ -17,35 +17,20 @@
 - 코드 기준으로 HTML 보고서 6종과 통합 허브까지 생성 가능
 - 실제 저장된 보고서 수는 회사별 마지막 실행 상태에 따라 다를 수 있음
 
-## Part 1 상태
+## 현재 단계
 
-2026-03-11 기준으로 이 프로젝트는 `Part 1 완료` 상태로 봅니다.
+2026-03-23 기준으로 현재 단계는 `Part2 완료`입니다.
 
-쉽게 말하면:
+이 말의 뜻은 문서만 정리된 상태가 아니라, 실제 운영 흐름 검증까지 끝났다는 뜻입니다.
 
-- CRM / Prescription / Sandbox / Territory / RADAR / Builder가 한 흐름으로 실제 실행됩니다.
-- 운영 콘솔에서 등록된 회사 선택 기준으로 실행과 산출물 확인이 가능합니다.
-- 월별 raw 파일을 `monthly_raw/YYYYMM` 구조로 저장한 뒤 바로 실행 검증할 수 있습니다.
-- 콘솔 상단 메뉴는 선택한 화면만 렌더하도록 동작해, 한 화면 오류가 전체 화면을 같이 멈추게 하지 않습니다.
-- 핵심 JSON에는 버전이 붙어 있어 파일 규격 추적이 가능합니다.
-- CRM / Prescription / Sandbox / Territory는 무거운 상세를 필요할 때만 읽는 구조로 정리됐습니다.
-- 파일 크기 / 로딩 시간 회귀 테스트가 들어 있어 다시 무거워지는 문제를 빨리 잡을 수 있습니다.
+- KPI 계산 단일 소스가 `modules/kpi/*`로 분리되어 유지됩니다.
+- 월별 raw 업로드 -> 자동 병합 -> intake -> staging -> 파이프라인 -> Builder 흐름이 실제로 검증됐습니다.
+- `company_000001` 기준으로 월별 raw 운영 흐름 실사용 검증이 끝났습니다.
+- `company_000002` 기준으로 지저분한 raw intake 자동보정과 전체 파이프라인 검증이 끝났습니다.
+- Builder 6종 산출물과 다운로드 흐름이 실제 생성본 기준으로 확인됐습니다.
+- 남아 있는 Territory `WARN`은 실행 차단이 아니라 운영 경고로 해석합니다.
 
-즉 지금은 `기초 구조를 만드는 단계`를 넘어서,
-`운영 직전 단계까지 안정성을 확보한 상태`로 판단합니다.
-
-## Part 2 실행 가능성
-
-2026-03-11 기준으로 `Part 2 착수 가능` 상태입니다.
-
-이유는 간단합니다.
-
-- 앞단 구조가 크게 흔들리지 않습니다.
-- 실행 순서와 산출물 규격이 정리돼 있습니다.
-- 콘솔, 모듈, Builder, 문서가 같은 구조를 바라보도록 맞춰졌습니다.
-
-따라서 Part 2는 새 기능을 억지로 많이 붙이는 단계보다,
-`Validation Layer(OPS)를 안정화하고 Intelligence Layer를 확장하는 단계`로 가는 것이 맞습니다.
+즉 현재는 `Part2 착수 가능` 단계가 아니라 `Part2 완료` 단계입니다.
 
 우선순위 기준:
 
@@ -58,7 +43,9 @@ Part2 문서 운영 기준:
 - 앞으로의 새 단계 작업 문서: `docs/workstreams/`
   - `docs/part3` 같은 새 단계 폴더는 만들지 않습니다.
 
-## 2026-03-15 동기화 상태 (CRM KPI 거버넌스)
+## 최근 동기화 핵심
+
+### 2026-03-15 동기화 상태 (CRM KPI 거버넌스)
 
 이번 동기화에서 반영된 핵심:
 
@@ -79,7 +66,7 @@ Part2 문서 운영 기준:
 - `hangyeol_pharma`, `daon_pharma` 기준 Sandbox + Builder 최종 HTML 6종 생성 검증 통과
 - `monthly_merge_pharma`는 6개월 월별 raw 생성/병합 검증과 실행모드별 점검 완료
 
-## 2026-03-16 동기화 상태 (Sandbox Block Renderer Stage 4)
+### 2026-03-16 동기화 상태 (Sandbox Block Renderer Stage 4)
 
 이번 동기화에서 Sandbox 보고서 구조 안정화가 반영되었습니다.
 
@@ -99,6 +86,17 @@ Part2 문서 운영 기준:
 검증 결과:
 - `scripts/validate_sandbox_with_ops.py` 통과
 - `scripts/validate_builder_with_ops.py` 통과
+
+### 2026-03-23 동기화 상태 (Part2 완료 기준 반영)
+
+- Part2 단일 기준 문서 상태는 `completed`입니다.
+- Part2 완료 선언 문서 상태는 `official`입니다.
+- 운영 콘솔은 `ui/console/` 패키지 기준으로 동작합니다.
+- Agent 탭은 `run_report_context`뿐 아니라 `run_artifacts`와 최신 run bundle을 읽는 구조입니다.
+- 패키지 업로드는 파일 업로드 직후가 아니라 `패키지 업로드 저장` 시점부터 intake 검증을 시작합니다.
+- intake는 느슨한 통과가 아니라 Adapter가 실제로 읽을 수 있는 `_intake_staging` 정리본 생성까지 포함합니다.
+- Prescription 월별 필터와 월별 detail asset 로딩은 실제 Builder 생성본 기준으로 정상화됐습니다.
+- Territory 보고서는 `Leaflet` 로컬 번들 기준으로 열리도록 안정화됐습니다.
 
 ## 핵심 원칙
 
