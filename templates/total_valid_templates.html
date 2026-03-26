@@ -343,7 +343,7 @@
         return (manifest.reports || {})[mod] || null;
       }
 
-      function buildTemplatePreviewShell(title, subtitle, badge, src) {
+      function buildTemplatePreviewShell(mod, title, subtitle, badge, src) {
         const openLink = src
           ? `<a class="btn btn-primary" href="${src}" download>⬇️ HTML 다운로드</a>`
           : "";
@@ -361,11 +361,43 @@
               <div style="font-size:11px;color:var(--primary);border:1px solid rgba(88,166,255,.25);background:rgba(88,166,255,.08);padding:6px 10px;border-radius:999px">${badge}</div>
             </div>
             <div class="frame-shell">
-              <iframe src="${src || ""}" title="${title}"></iframe>
+              <iframe src="${src || ""}" title="${title}" data-report-key="${mod}"></iframe>
             </div>
             <p style="font-size:12px;color:var(--muted);margin-top:10px">통합 실행으로 생성된 실제 HTML 결과를 그대로 불러온 화면입니다.</p>
           </div>
         `;
+      }
+
+      function pingEmbeddedTerritoryFrame(frame) {
+        if (!frame || !frame.contentWindow) {
+          return;
+        }
+
+        const notify = function () {
+          try {
+            frame.contentWindow.postMessage({ type: "ops:territory-resize" }, "*");
+          } catch (err) {
+            console.warn("territory frame notify failed", err);
+          }
+        };
+
+        notify();
+        [120, 360, 900].forEach(function (delay) {
+          window.setTimeout(notify, delay);
+        });
+      }
+
+      function bindEmbeddedFrameLifecycle(mod) {
+        const frame = document.querySelector(".frame-shell iframe");
+        if (!frame) {
+          return;
+        }
+
+        frame.addEventListener("load", function () {
+          if (mod === "territory") {
+            pingEmbeddedTerritoryFrame(frame);
+          }
+        });
       }
 
       function renderOpsReport(mod) {
@@ -382,11 +414,13 @@
         }
 
         main.innerHTML = buildTemplatePreviewShell(
+          mod,
           integratedReport.title || `${mod} report`,
           integratedReport.subtitle || "통합 실행 결과로 생성된 보고서입니다.",
           integratedReport.badge || "TOTAL VALID",
           integratedReport.src,
         );
+        bindEmbeddedFrameLifecycle(mod);
       }
 
       function selectModule(mod, el) {

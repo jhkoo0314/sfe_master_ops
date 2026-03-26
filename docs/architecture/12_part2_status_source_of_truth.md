@@ -183,6 +183,12 @@ Part2의 완료/진행/대기 상태는 이 문서를 기준으로 본다.
   - Builder는 `leaflet.js`, `leaflet.css`, marker image를 `territory_map_preview_assets/leaflet/` 아래에 함께 복사한다
   - 따라서 Territory 보고서는 외부 CDN이 아니라 로컬 라이브러리 기준으로 열 수 있다
   - 통합 검증 보고서 zip / 개별 보고서 zip 모두에서 asset 포함 번들 기준으로 연다
+- Total Validation 번들 내 Territory 지도 재렌더 보강 완료 (`2026-03-26`)
+  - 문제 위치는 Streamlit 미리보기가 아니라 다운로드한 `total_valid_preview` 번들 내부였다
+  - 개별 `territory_map_preview.html`에서는 마커가 보였지만, `total_valid_preview.html` 안에서 Territory를 열면 지도 렌더 타이밍이 꼬여 마커가 보이지 않는 문제가 있었다
+  - `templates/total_valid_templates.html`에서 Territory iframe 로드 후 재계산 신호를 보내도록 보강했다
+  - `templates/territory_optimizer_template.html`에서 해당 신호를 받으면 `invalidateSize()`와 현재 선택 다시 그리기를 수행하도록 보강했다
+  - 최종 다운로드 번들 폴더 기준으로 Territory 지도가 정상 렌더링되는 것까지 확인했다
 - Prescription 보고서 월별 필터/월별 asset 로딩 보강 완료 (`2026-03-23`)
   - 템플릿에서 분기/월 필터 충돌을 정리해 월 선택 시 분기 기본값이 우선하지 않도록 수정
   - 월별 detail asset(`claims__2025_04.js` 등) 생성/복사 경로를 Builder까지 연결

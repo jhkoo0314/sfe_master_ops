@@ -556,6 +556,24 @@
       const repLoadPromises = {};
       const monthLoadPromises = {};
 
+      function scheduleMapRefresh() {
+        if (!map) return;
+
+        const refresh = function () {
+          if (!map) return;
+          map.invalidateSize();
+          const currentSelection = getCurrentSelection();
+          if (currentSelection) {
+            renderMapSelection(currentSelection);
+          }
+        };
+
+        refresh();
+        [120, 360, 900].forEach(function (delay) {
+          window.setTimeout(refresh, delay);
+        });
+      }
+
       function setMapStatus(message) {
         mapStatus.textContent = message;
       }
@@ -834,9 +852,7 @@
         }).addTo(map);
         markerLayer = L.layerGroup().addTo(map);
         routeLayer = L.layerGroup().addTo(map);
-        setTimeout(function () {
-          map.invalidateSize();
-        }, 0);
+        scheduleMapRefresh();
       }
 
       function clearMap() {
@@ -981,6 +997,7 @@
         }
 
         setMapStatus(selection.status_line || "선택된 담당자 데이터만 표시 중입니다.");
+        scheduleMapRefresh();
       }
 
       function renderCurrentSelection() {
@@ -1046,7 +1063,13 @@
         initState();
         bindEvents();
         window.addEventListener("resize", function () {
-          if (map) map.invalidateSize();
+          scheduleMapRefresh();
+        });
+        window.addEventListener("message", function (event) {
+          if (!event || !event.data || event.data.type !== "ops:territory-resize") {
+            return;
+          }
+          scheduleMapRefresh();
         });
 
         repSelect.value = state.repId || "";
