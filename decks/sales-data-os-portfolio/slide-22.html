@@ -1,0 +1,141 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Sales Data OS Portfolio - Slide 22</title>
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" as="style" crossorigin href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/static/pretendard.css" />
+    <style>
+        :root {
+            --bg: #050714;
+            --text-primary: #FFFFFF;
+            --text-secondary: rgba(255, 255, 255, 0.7);
+            --accent: #D4A574;
+            --glass: rgba(255, 255, 255, 0.03);
+            --glass-border: rgba(255, 255, 255, 0.1);
+        }
+
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { background-color: var(--bg); color: var(--text-primary); font-family: 'Pretendard', sans-serif; overflow: hidden; width: 100vw; height: 100vh; }
+        h1, h2, h3 { font-family: 'Outfit', sans-serif; }
+
+        .slide { width: 100vw; height: 100vh; padding: 80px 100px; display: flex; flex-direction: column; }
+        .slide-header { margin-bottom: 50px; }
+        .label { display: block; color: var(--accent); font-weight: 700; font-size: 0.9rem; letter-spacing: 0.15em; margin-bottom: 1.5rem; }
+        h2 { font-size: 3.2rem; font-weight: 700; line-height: 1.2; }
+
+        .content-body { display: grid; grid-template-columns: 1fr 1fr; gap: 40px; flex: 1; align-items: stretch; padding-bottom: 40px; }
+        .card { background: var(--glass); border: 1px solid var(--glass-border); border-radius: 24px; padding: 3rem; display: flex; flex-direction: column; justify-content: center; height: 100%; }
+
+        .module-desc p { font-size: 1.25rem; color: var(--text-secondary); line-height: 1.6; margin-bottom: 2.5rem; word-break: keep-all; }
+        .logic-card { background: rgba(255, 255, 255, 0.05); border-radius: 16px; padding: 1.5rem; margin-bottom: 1rem; border-left: 4px solid var(--accent); }
+        .logic-card span { display: block; font-family: 'Outfit', sans-serif; color: var(--accent); font-size: 0.8rem; font-weight: 700; margin-bottom: 0.5rem; }
+        .logic-card strong { font-size: 1.1rem; color: #FFF; font-weight: 600; }
+
+        .visual-container { text-align: center; position: relative; }
+
+        .fade-up { opacity: 0; transform: translateY(30px); animation: fadeUp 0.8s ease-out forwards; }
+        @keyframes fadeUp { to { opacity: 1; transform: translateY(0); } }
+        .delay-1 { animation-delay: 0.2s; }
+
+        /* Monthly Merge Visual */
+        .merge-svg { width: 100%; height: 300px; }
+        .month-rect { fill: rgba(255,255,255,0.05); stroke: rgba(255,255,255,0.1); rx: 4; }
+        .month-text { fill: rgba(255,255,255,0.4); font-size: 10px; font-weight: 700; font-family: 'Outfit', sans-serif; }
+
+        .nav-controls { position: fixed; bottom: 40px; right: 40px; display: flex; gap: 15px; }
+        .nav-btn { width: 50px; height: 50px; border-radius: 50%; border: 1px solid var(--glass-border); background: var(--glass); color: white; cursor: pointer; display: flex; align-items: center; justify-content: center; font-size: 1.2rem; }
+        .nav-btn:hover { background: var(--accent); border-color: var(--accent); color: #000; }
+    </style>
+</head>
+<body>
+
+    <div class="slide">
+        <header class="slide-header fade-up">
+            <span class="label">OPERATIONAL ORCHESTRATION</span>
+            <h2>파편화된 비즈니스 데이터의<br>시계열 통합 및 자동 병합</h2>
+        </header>
+
+        <div class="content-body fade-up delay-1">
+            <div class="card module-desc">
+                <p>매월 발생하는 비정형 매출 및 활동 데이터를 시스템이 스스로 수집하고 병합하여, 끊김 없는 전사적 시계열 분석 환경을 구축합니다.</p>
+                
+                <div class="logic-card">
+                    <span>Continuous Timeline</span>
+                    <strong>데이터 단절성 해결을 통한 장기 시계열 분석 구현</strong>
+                </div>
+                <div class="logic-card">
+                    <span>Multi-dimensional Merge</span>
+                    <strong>월별/연간 데이터의 지능형 오케스트레이션 자동화</strong>
+                </div>
+                <div class="logic-card">
+                    <span>Decision Continuity</span>
+                    <strong>과거-현재-미래를 연결하는 의사결정 연속성 확보</strong>
+                </div>
+            </div>
+
+            <div class="card visual-container">
+                <svg class="merge-svg" viewBox="0 0 400 300">
+                    <!-- Scatter months -->
+                    <g opacity="0.6">
+                        <rect x="50" y="50" width="30" height="30" class="month-rect">
+                            <animate attributeName="x" values="50;100" dur="2s" fill="freeze" />
+                            <animate attributeName="y" values="50;135" dur="2s" fill="freeze" />
+                            <animate attributeName="opacity" values="0.6;1" dur="2s" fill="freeze" />
+                        </rect>
+                        <text x="65" y="70" text-anchor="middle" class="month-text">01</text>
+                        
+                        <rect x="50" y="100" width="30" height="30" class="month-rect">
+                            <animate attributeName="x" values="50;140" dur="2s" fill="freeze" />
+                            <animate attributeName="y" values="100;135" dur="2s" fill="freeze" />
+                        </rect>
+                        <text x="65" y="120" text-anchor="middle" class="month-text">02</text>
+                        
+                        <rect x="50" y="150" width="30" height="30" class="month-rect">
+                            <animate attributeName="x" values="50;180" dur="2s" fill="freeze" />
+                            <animate attributeName="y" values="150;135" dur="2s" fill="freeze" />
+                        </rect>
+                        <text x="65" y="170" text-anchor="middle" class="month-text">03</text>
+                        
+                        <!-- More months -->
+                        <rect x="50" y="200" width="30" height="30" class="month-rect">
+                            <animate attributeName="x" values="50;220" dur="2s" fill="freeze" />
+                            <animate attributeName="y" values="200;135" dur="2s" fill="freeze" />
+                        </rect>
+                        <text x="65" y="220" text-anchor="middle" class="month-text">04</text>
+                    </g>
+
+                    <!-- Continuous Arrow Line -->
+                    <path d="M 100 150 L 350 150" stroke="var(--accent)" stroke-width="2" stroke-dasharray="5 5" opacity="0.3" />
+                    <rect x="100" y="135" width="220" height="30" rx="4" fill="rgba(212, 165, 116, 0.1)" stroke="var(--accent)" stroke-width="2" />
+                    <text x="210" y="155" text-anchor="middle" fill="var(--accent)" font-family="Outfit" font-size="12" font-weight="900" opacity="0">
+                        TIME-SERIES INTEGRATION
+                        <animate attributeName="opacity" from="0" to="1" dur="0.5s" begin="2s" fill="freeze" />
+                    </text>
+                    
+                    <!-- Pulsing End Mark -->
+                    <circle cx="340" cy="150" r="8" fill="var(--accent)" opacity="0">
+                        <animate attributeName="opacity" values="0;1;0" dur="2s" repeatCount="indefinite" begin="2.5s" />
+                    </circle>
+                </svg>
+                <p style="color: var(--text-secondary); font-size: 0.95rem; line-height: 1.6;">"파편화된 월별 데이터가 실시간으로 수집되어<br><strong>끊김 없는 시계열 성과 지표</strong>로 자동 대전환됩니다."</p>
+            </div>
+        </div>
+    </div>
+
+    <!-- Navigation -->
+    <div class="nav-controls">
+        <a href="index.html" class="nav-btn" title="Back to Index">☗</a>
+        <button class="nav-btn" onclick="location.href='slide-21.html'" title="Previous Slide">←</button>
+        <button class="nav-btn" onclick="location.href='slide-23.html'" title="Next Slide">→</button>
+    </div>
+
+    <script>
+        document.addEventListener('keydown', (e) => {
+            if (e.key === 'ArrowRight' || e.key === ' ') location.href = 'slide-23.html';
+            if (e.key === 'ArrowLeft') location.href = 'slide-21.html';
+        });
+    </script>
+</body>
+</html>

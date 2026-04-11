@@ -7,21 +7,22 @@
 ## 기본 실행 순서
 
 1. raw 입력 구조 확인
-2. adapter 확인 또는 수정
-3. module 로직 확인 또는 수정
-4. KPI/Core Engine 결과 확인
-5. Result Asset 확인
-6. OPS 연결 확인
-7. Intelligence(RADAR) 연결 확인
-8. Builder payload 연결
-9. UI 반영
-10. 문서 갱신
+2. intake/onboarding 및 `_intake_staging` 확인 또는 수정
+3. adapter 확인 또는 수정
+4. module 로직 확인 또는 수정
+5. KPI/Core Engine 결과 확인
+6. Result Asset 확인
+7. OPS 연결 확인
+8. Intelligence(RADAR) 연결 확인
+9. Builder payload 연결
+10. UI 반영
+11. 문서 갱신
 
 앞단이 정리되지 않았는데 뒷단부터 만들지 않는다.
 
 ## 시스템 공식 흐름
 
-`원천데이터 -> Adapter -> Module/Core Engine -> Result Asset -> Validation Layer(OPS) -> Intelligence(RADAR) -> Builder`
+`원천데이터 -> Intake/Onboarding -> _intake_staging -> Adapter -> Module/Core Engine -> Result Asset -> Validation Layer(OPS) -> Intelligence(RADAR) -> Builder`
 
 ## 운영 콘솔 역할
 
@@ -80,4 +81,4 @@
 
 ## 결론
 
-모든 구현은 adapter-first와 Result Asset 중심 흐름을 지키고, OPS는 검증 게이트로, Builder는 최종 표현 단계로 유지한다.
+모든 구현은 intake/onboarding -> adapter -> Result Asset 중심 흐름을 지키고, OPS는 검증 게이트로, Builder는 최종 표현 단계로 유지한다.

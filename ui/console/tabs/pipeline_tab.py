@@ -10,7 +10,7 @@ from ui.console.display import render_block_card, render_page_hero, render_panel
 from ui.console.paths import get_active_company_name, get_source_target_map
 from ui.console.state import add_log
 from ui.console.runner import (
-    ensure_intake_result,
+    get_cached_intake_result,
     get_crm_package_status,
     get_monthly_raw_status,
     has_session_intake_inputs,
@@ -81,7 +81,7 @@ def render_pipeline_tab() -> None:
     crm_status = get_crm_package_status(uploaded)
     monthly_status = get_monthly_raw_status()
     intake_inputs_ready = has_session_intake_inputs(uploaded)
-    intake_result = ensure_intake_result(current_mode, uploaded)
+    intake_result = get_cached_intake_result(current_mode, uploaded)
     intake_summary = summarize_intake_result(intake_result)
     ready = [k for k, v in uploaded.items() if v is not None]
     st.markdown(
@@ -113,7 +113,9 @@ def render_pipeline_tab() -> None:
 
     render_panel_header("Onboarding Ready 상태", "파이프라인 실행 전, intake가 정리한 입력이 Adapter로 넘어갈 준비가 되었는지 먼저 확인합니다.")
     if not intake_inputs_ready:
-        st.info("아직 이번 세션에서 업로드하거나 월별 raw 저장을 하지 않았습니다. 업로드 후 Intake Gate가 실행되고, 그 다음 파이프라인을 진행할 수 있습니다.")
+        st.info("아직 이번 세션에서 저장한 업로드 또는 월별 raw가 없습니다. 업로드 탭에서 파일 선택 후 `패키지 업로드 저장`을 먼저 진행하세요.")
+    elif intake_result is None:
+        st.warning("저장된 입력은 있지만 Intake Gate가 아직 실행되지 않았습니다. 업로드 탭에서 `Intake Gate 실행`을 먼저 눌러 주세요.")
     elif intake_summary["blocked_count"]:
         st.error(f"필수 입력 부족으로 막힌 intake 항목이 {intake_summary['blocked_count']}개 있습니다.")
     elif intake_summary["review_count"]:
@@ -225,7 +227,10 @@ def render_pipeline_tab() -> None:
 
     if run_btn:
         if not intake_inputs_ready:
-            st.warning("먼저 이번 세션에서 파일을 업로드하거나 월별 raw 저장을 진행해야 합니다.")
+            st.warning("먼저 업로드 탭에서 파일 선택 후 `패키지 업로드 저장`을 진행해야 합니다.")
+            return
+        if intake_result is None:
+            st.warning("먼저 업로드 탭에서 `Intake Gate 실행`을 눌러 입력 점검을 완료해야 합니다.")
             return
         if not timing_acknowledged:
             st.warning("기간 차이 확인 체크를 먼저 해야 실행을 계속할 수 있습니다.")

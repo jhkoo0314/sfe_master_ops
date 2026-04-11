@@ -1,0 +1,117 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Sales Data OS Portfolio - Slide 20</title>
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" as="style" crossorigin href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/static/pretendard.css" />
+    <style>
+        :root {
+            --bg: #050714;
+            --accent: #D4A574;
+            --text-primary: #FFFFFF;
+            --text-secondary: rgba(255, 255, 255, 0.5);
+            --glass-border: rgba(255, 255, 255, 0.1);
+        }
+
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { 
+            background-color: var(--bg); color: var(--text-primary); 
+            font-family: 'Pretendard', sans-serif; overflow: hidden; 
+            width: 100vw; height: 100vh;
+        }
+
+        .slide { 
+            width: 100vw; height: 100vh;
+            display: flex; flex-direction: column; justify-content: center; align-items: center;
+            position: relative;
+        }
+
+        .bg-text {
+            position: absolute;
+            font-family: 'Outfit', sans-serif;
+            font-size: 15vw;
+            font-weight: 900;
+            color: rgba(255, 255, 255, 0.02);
+            letter-spacing: 0.1em;
+            z-index: 0;
+            pointer-events: none;
+        }
+
+        .content {
+            position: relative;
+            z-index: 10;
+            text-align: center;
+        }
+
+        .label {
+            display: inline-block;
+            font-family: 'Outfit', sans-serif;
+            font-weight: 700;
+            font-size: 1rem;
+            letter-spacing: 0.3em;
+            color: var(--accent);
+            margin-bottom: 2rem;
+            text-transform: uppercase;
+        }
+
+        h2 {
+            font-family: 'Outfit', sans-serif;
+            font-size: 5rem;
+            font-weight: 700;
+            margin-bottom: 1.5rem;
+            letter-spacing: -0.02em;
+        }
+
+        .divider {
+            width: 100px;
+            height: 4px;
+            background: var(--accent);
+            margin: 2rem auto;
+        }
+
+        p {
+            font-size: 1.4rem;
+            color: var(--text-secondary);
+            font-weight: 400;
+            letter-spacing: 0.05em;
+        }
+
+        .fade-up { opacity: 0; transform: translateY(30px); animation: fadeUp 1s cubic-bezier(0.2, 0.8, 0.2, 1) forwards; }
+        @keyframes fadeUp { to { opacity: 1; transform: translateY(0); } }
+
+        /* Nav Controls */
+        .nav-controls { position: fixed; bottom: 40px; right: 40px; display: flex; gap: 15px; }
+        .nav-btn { width: 50px; height: 50px; border-radius: 50%; border: 1px solid var(--glass-border); background: rgba(255,255,255,0.03); color: white; cursor: pointer; display: flex; align-items: center; justify-content: center; font-size: 1.2rem; }
+        .nav-btn:hover { background: var(--accent); border-color: var(--accent); color: #000; }
+    </style>
+</head>
+<body>
+
+    <div class="bg-text">APPENDIX</div>
+
+    <div class="slide">
+        <div class="content fade-up">
+            <span class="label">Strategic Deep-Dive</span>
+            <h2>APPENDIX</h2>
+            <div class="divider"></div>
+            <p>프로세스 운영 무결성 및 시스템 상세 성과</p>
+        </div>
+    </div>
+
+    <!-- Navigation -->
+    <div class="nav-controls">
+        <a href="index.html" class="nav-btn" title="Back to Index">☗</a>
+        <button class="nav-btn" onclick="location.href='slide-19.html'" title="Previous Slide">←</button>
+        <button class="nav-btn" onclick="location.href='slide-21.html'" title="Next Slide">→</button>
+    </div>
+
+    <script>
+        document.addEventListener('keydown', (e) => {
+            if (e.key === 'ArrowRight' || e.key === ' ') location.href = 'slide-21.html';
+            if (e.key === 'ArrowLeft') location.href = 'slide-19.html';
+        });
+    </script>
+</body>
+</html>

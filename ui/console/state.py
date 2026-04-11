@@ -112,6 +112,72 @@ def load_file_once(module_key: str, uploaded_file, label: str) -> dict:
     return info
 
 
+def load_existing_source_file(module_key: str, source_path: str | Path, label: str) -> dict:
+    path = Path(source_path)
+    file_bytes = path.read_bytes()
+    df = load_uploaded_dataframe(path.name, file_bytes)
+    info = {
+        "name": path.name,
+        "row_count": int(len(df)),
+        "columns": list(df.columns),
+        "preview": df.head(3).to_dict("records"),
+        "file_bytes": file_bytes,
+        "file_ext": path.suffix.lower(),
+        "source_path": str(path),
+        "source_kind": "existing_company_source",
+    }
+    st.session_state.uploaded_data[module_key] = info
+    st.session_state.uploaded_tokens[module_key] = f"existing:{path}:{path.stat().st_mtime_ns}:{path.stat().st_size}"
+    add_log(f"{label} 기존 source 파일 자동 선택 ({path.name}, {len(df)}건)")
+    return info
+
+
+def select_existing_source_files(
+    source_targets: dict[str, tuple[str, str]],
+    *,
+    overwrite: bool = False,
+) -> dict:
+    selected: list[str] = []
+    missing: list[str] = []
+    skipped: list[str] = []
+    errors: list[str] = []
+    rows = 0
+
+    for key in UPLOADED_DATA_KEYS:
+        target = source_targets.get(key)
+        if target is None:
+            continue
+        if not overwrite and (
+            st.session_state.uploaded_data.get(key) is not None
+            or st.session_state.saved_uploaded_data.get(key) is not None
+        ):
+            skipped.append(key)
+            continue
+        target_path = Path(target[0])
+        if not target_path.exists():
+            missing.append(key)
+            continue
+        try:
+            info = load_existing_source_file(key, target_path, key)
+        except Exception as exc:
+            errors.append(f"{key}: {exc}")
+            continue
+        selected.append(key)
+        rows += int(info.get("row_count") or 0)
+
+    if selected:
+        add_log(f"data 폴더 기존 source 자동 선택 {len(selected)}건 임시 선택 ({', '.join(selected)})")
+
+    return {
+        "selected_count": len(selected),
+        "rows": rows,
+        "selected": selected,
+        "missing": missing,
+        "skipped": skipped,
+        "errors": errors,
+    }
+
+
 def save_uploaded_batch() -> dict:
     saved_count = 0
     saved_rows = 0

@@ -10,7 +10,7 @@ from modules.validation.workflow.execution_registry import (
 from ui.console.analysis_explainer import explain_module_result
 from ui.console.artifacts import collect_artifact_files, get_execution_analysis_doc_path, load_artifact_preview
 from ui.console.display import render_page_hero, render_panel_header, render_stage_badge
-from ui.console.runner import ensure_intake_result, has_session_intake_inputs
+from ui.console.runner import get_cached_intake_result, has_session_intake_inputs
 
 
 def render_artifacts_tab() -> None:
@@ -21,7 +21,7 @@ def render_artifacts_tab() -> None:
         return
 
     execution_mode = st.session_state.get("execution_mode", "crm_to_sandbox")
-    intake_result = ensure_intake_result(execution_mode, st.session_state.saved_uploaded_data)
+    intake_result = get_cached_intake_result(execution_mode, st.session_state.saved_uploaded_data)
     intake_inputs_ready = has_session_intake_inputs(st.session_state.saved_uploaded_data)
     artifacts = collect_artifact_files(execution_mode)
     analysis_doc_path = get_execution_analysis_doc_path()

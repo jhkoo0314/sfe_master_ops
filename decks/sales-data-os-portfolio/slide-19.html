@@ -1,0 +1,141 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Sales Data OS Portfolio - Slide 19</title>
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" as="style" crossorigin href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/static/pretendard.css" />
+    <style>
+        :root {
+            --bg: #050714;
+            --text-primary: #FFFFFF;
+            --text-secondary: rgba(255, 255, 255, 0.7);
+            --accent: #D4A574;
+            --glass: rgba(255, 255, 255, 0.03);
+            --glass-border: rgba(255, 255, 255, 0.1);
+        }
+
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { 
+            background-color: var(--bg); color: var(--text-primary); 
+            font-family: 'Pretendard', sans-serif; overflow: hidden; 
+            width: 100vw; height: 100vh;
+        }
+
+        .slide { 
+            width: 100vw; height: 100vh; padding: 80px; 
+            display: flex; flex-direction: column; justify-content: center; align-items: center;
+            position: relative;
+        }
+
+        /* Ambient Glow */
+        .ambient-glow {
+            position: absolute;
+            width: 600px; height: 600px;
+            background: radial-gradient(circle, rgba(212, 165, 116, 0.15) 0%, transparent 70%);
+            filter: blur(100px);
+            z-index: 0;
+            animation: pulse 10s infinite alternate;
+        }
+        @keyframes pulse { from { opacity: 0.5; transform: scale(0.8); } to { opacity: 1; transform: scale(1.2); } }
+
+        .final-quote {
+            position: relative;
+            z-index: 10;
+            text-align: center;
+            max-width: 1100px;
+        }
+
+        .final-quote h2 {
+            font-size: 3.8rem;
+            line-height: 1.4;
+            font-weight: 700;
+            color: #FFFFFF;
+            word-break: keep-all;
+            margin-bottom: 4rem;
+        }
+
+        .final-quote h2 strong {
+            color: var(--accent);
+            position: relative;
+        }
+        .final-quote h2 strong::after {
+            content: '';
+            position: absolute;
+            bottom: -5px; left: 0; width: 100%; height: 3px;
+            background: var(--accent);
+            transform: scaleX(0); transform-origin: left;
+            animation: lineDraw 1s 1s ease-out forwards;
+        }
+        @keyframes lineDraw { to { transform: scaleX(1); } }
+
+        .closing-box {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 30px;
+            width: 100%;
+        }
+
+        .closing-item {
+            background: var(--glass);
+            border: 1px solid var(--glass-border);
+            padding: 2.5rem 2rem;
+            border-radius: 20px;
+            backdrop-filter: blur(10px);
+        }
+        .closing-item span { display: block; font-family: 'Outfit', sans-serif; font-weight: 700; color: var(--accent); margin-bottom: 1rem; font-size: 0.8rem; letter-spacing: 0.1em; }
+        .closing-item p { font-size: 1.1rem; color: var(--text-secondary); line-height: 1.6; }
+
+        /* Animations */
+        .fade-up { opacity: 0; transform: translateY(30px); animation: fadeUp 1s cubic-bezier(0.2, 0.8, 0.2, 1) forwards; }
+        @keyframes fadeUp { to { opacity: 1; transform: translateY(0); } }
+        .delay-1 { animation-delay: 0.2s; }
+        .delay-2 { animation-delay: 0.4s; }
+
+        /* Nav Controls */
+        .nav-controls { position: fixed; bottom: 40px; right: 40px; display: flex; gap: 15px; }
+        .nav-btn { width: 50px; height: 50px; border-radius: 50%; border: 1px solid var(--glass-border); background: var(--glass); color: white; cursor: pointer; display: flex; align-items: center; justify-content: center; font-size: 1.2rem; }
+        .nav-btn:hover { background: var(--accent); border-color: var(--accent); color: #000; }
+    </style>
+</head>
+<body>
+
+    <div class="ambient-glow"></div>
+
+    <div class="slide">
+        <div class="final-quote fade-up">
+            <h2>현장을 이해하는 시선으로,<br>영업 성과를 <strong>관리 가능한 과정</strong>으로 바꾸겠습니다.</h2>
+            
+            <div class="closing-box fade-up delay-2">
+                <div class="closing-item">
+                    <span>COMMITMENT 01</span>
+                    <p>현장의 복잡성을 조직의<br>상위 운영 관리 언어로 전환</p>
+                </div>
+                <div class="closing-item">
+                    <span>COMMITMENT 02</span>
+                    <p>활동과 성과를 연결하는<br>통합 운영 프레임워크 구축</p>
+                </div>
+                <div class="closing-item">
+                    <span>COMMITMENT 03</span>
+                    <p>데이터가 실질적인<br>코칭과 조치로 이어지는 문화</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Navigation -->
+    <div class="nav-controls">
+        <a href="index.html" class="nav-btn" title="Back to Index">☗</a>
+        <button class="nav-btn" onclick="location.href='slide-18.html'" title="Previous Slide">←</button>
+        <button class="nav-btn" onclick="location.href='slide-20.html'" title="Next Slide">→</button>
+    </div>
+
+    <script>
+        document.addEventListener('keydown', (e) => {
+            if (e.key === 'ArrowRight' || e.key === ' ') location.href = 'slide-20.html';
+            if (e.key === 'ArrowLeft') location.href = 'slide-18.html';
+        });
+    </script>
+</body>
+</html>

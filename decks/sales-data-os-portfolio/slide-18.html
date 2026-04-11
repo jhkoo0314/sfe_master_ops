@@ -1,0 +1,133 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Sales Data OS Portfolio - Slide 18</title>
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" as="style" crossorigin href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/static/pretendard.css" />
+    <style>
+        :root {
+            --bg: #050714;
+            --text-primary: #FFFFFF;
+            --text-secondary: rgba(255, 255, 255, 0.7);
+            --accent: #D4A574;
+            --glass: rgba(255, 255, 255, 0.03);
+            --glass-border: rgba(255, 255, 255, 0.1);
+        }
+
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { background-color: var(--bg); color: var(--text-primary); font-family: 'Pretendard', sans-serif; overflow: hidden; width: 100vw; height: 100vh; }
+        h1, h2, h3 { font-family: 'Outfit', sans-serif; }
+
+        .slide { width: 100vw; height: 100vh; padding: 80px; display: flex; flex-direction: column; justify-content: center; align-items: center; position: relative; }
+        
+        .label { color: var(--accent); font-weight: 700; font-size: 0.9rem; letter-spacing: 0.15em; margin-bottom: 2rem; }
+        h2 { font-size: 3.2rem; font-weight: 700; line-height: 1.3; margin-bottom: 5rem; text-align: center; }
+
+        .intersection-box {
+            display: flex;
+            align-items: center; justify-content: center;
+            width: 100%; height: 400px;
+            position: relative;
+        }
+
+        .cap-circle {
+            width: 350px; height: 350px;
+            border-radius: 50%;
+            background: rgba(255, 255, 255, 0.02);
+            border: 1px solid var(--glass-border);
+            display: flex; flex-direction: column; align-items: center; justify-content: center;
+            text-align: center;
+            position: absolute;
+            transition: all 0.5s ease;
+        }
+
+        .c1 { left: 20%; background: linear-gradient(135deg, rgba(27, 73, 101, 0.1), transparent); }
+        .c2 { right: 20%; background: linear-gradient(-135deg, rgba(212, 165, 116, 0.1), transparent); }
+
+        .c-inner { padding: 30px; }
+        .c-inner h3 { font-size: 1.8rem; margin-bottom: 1.5rem; color: #FFFFFF; }
+        .c-inner p { font-size: 1rem; color: var(--text-secondary); line-height: 1.6; }
+
+        .center-point {
+            width: 250px; height: 250px;
+            background: var(--bg);
+            border: 2px solid var(--accent);
+            border-radius: 50%;
+            display: flex; flex-direction: column; align-items: center; justify-content: center;
+            text-align: center;
+            z-index: 10;
+            box-shadow: 0 0 50px rgba(212, 165, 116, 0.3);
+            padding: 30px;
+        }
+        .center-point span { font-family: 'Outfit', sans-serif; font-size: 0.8rem; color: var(--accent); margin-bottom: 10px; font-weight: 700; letter-spacing: 0.1em; }
+        .center-point strong { font-size: 1.5rem; color: #FFFFFF; line-height: 1.3; word-break: keep-all; }
+
+        .sub-banner {
+            margin-top: 5rem;
+            font-size: 1.6rem;
+            font-weight: 700;
+            text-align: center;
+            color: var(--text-secondary);
+        }
+        .sub-banner strong { color: #FFFFFF; border-bottom: 2px solid var(--accent); }
+
+        /* Animations */
+        .fade-up { opacity: 0; transform: translateY(30px); animation: fadeUp 0.8s ease-out forwards; }
+        @keyframes fadeUp { to { opacity: 1; transform: translateY(0); } }
+        .delay-1 { animation-delay: 0.2s; }
+        .delay-2 { animation-delay: 0.4s; }
+
+        /* Nav Controls */
+        .nav-controls { position: fixed; bottom: 40px; right: 40px; display: flex; gap: 15px; }
+        .nav-btn { width: 50px; height: 50px; border-radius: 50%; border: 1px solid var(--glass-border); background: var(--glass); color: white; cursor: pointer; display: flex; align-items: center; justify-content: center; font-size: 1.2rem; }
+        .nav-btn:hover { background: var(--accent); border-color: var(--accent); color: #000; }
+    </style>
+</head>
+<body>
+
+    <div class="slide">
+        <span class="label fade-up">THE VALUE PROPOSITION</span>
+        <h2 class="fade-up delay-1">영업 기획 직무에 준비된 전문가</h2>
+        
+        <div class="intersection-box fade-up delay-2">
+            <div class="cap-circle c1">
+                <div class="c-inner">
+                    <h3>FIELD DEPTH</h3>
+                    <p>14년 제약 영업 현장의<br>경험 지성과 실질적인<br>데이터 맥락에 대한 이해</p>
+                </div>
+            </div>
+
+            <div class="center-point">
+                <span>Core Fit</span>
+                <strong>Sales Planning<br>& SFE Specialist</strong>
+            </div>
+
+            <div class="cap-circle c2">
+                <div class="c-inner">
+                    <h3>SYSTEM LOGIC</h3>
+                    <p>현장의 언어를 상위<br>운영 관리 체계로<br>전환하고 설계하는 능력</p>
+                </div>
+            </div>
+        </div>
+
+        <p class="sub-banner fade-up delay-2">
+            둘의 <strong>교집합</strong>에 있는 사람이 현장에서 작동하는 기획을 할 수 있습니다.
+        </p>
+    </div>
+
+    <!-- Navigation -->
+    <div class="nav-controls">
+        <button class="nav-btn" onclick="location.href='slide-17.html'" title="Previous Slide">←</button>
+        <button class="nav-btn" onclick="location.href='slide-19.html'" title="Next Slide">→</button>
+    </div>
+
+    <script>
+        document.addEventListener('keydown', (e) => {
+            if (e.key === 'ArrowRight' || e.key === ' ') location.href = 'slide-19.html';
+            if (e.key === 'ArrowLeft') location.href = 'slide-17.html';
+        });
+    </script>
+</body>
+</html>

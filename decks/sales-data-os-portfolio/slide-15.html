@@ -1,0 +1,135 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Sales Data OS Portfolio - Slide 15</title>
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" as="style" crossorigin href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/static/pretendard.css" />
+    <style>
+        :root {
+            --bg: #050714;
+            --text-primary: #FFFFFF;
+            --text-secondary: rgba(255, 255, 255, 0.7);
+            --accent: #D4A574;
+            --glass: rgba(255, 255, 255, 0.03);
+            --glass-border: rgba(255, 255, 255, 0.1);
+        }
+
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { background-color: var(--bg); color: var(--text-primary); font-family: 'Pretendard', sans-serif; overflow: hidden; width: 100vw; height: 100vh; }
+        h1, h2, h3 { font-family: 'Outfit', sans-serif; }
+
+        .slide { 
+            width: 100vw; height: 100vh; padding: 80px 100px;
+            display: flex; flex-direction: column;
+        }
+        
+        .slide-header { margin-bottom: 50px; }
+        .label { display: block; color: var(--accent); font-weight: 700; font-size: 0.9rem; letter-spacing: 0.15em; margin-bottom: 1.5rem; }
+        h2 { font-size: 3.2rem; font-weight: 700; line-height: 1.2; }
+
+        .content-body {
+            display: grid; grid-template-columns: 1fr 1fr; gap: 40px; flex: 1; align-items: stretch; padding-bottom: 40px;
+        }
+
+        .card {
+            background: var(--glass); border: 1px solid var(--glass-border); border-radius: 24px; padding: 3rem; display: flex; flex-direction: column; justify-content: center; height: 100%;
+        }
+
+        .module-desc p { font-size: 1.25rem; color: var(--text-secondary); line-height: 1.6; margin-bottom: 2.5rem; word-break: keep-all; }
+        .logic-card {
+            background: rgba(255, 255, 255, 0.05); padding: 1.5rem; border-radius: 12px; margin-bottom: 1rem; border-left: 4px solid var(--accent);
+        }
+        .logic-card span { display: block; font-family: 'Outfit', sans-serif; font-size: 0.8rem; font-weight: 700; color: var(--accent); margin-bottom: 0.5rem; text-transform: uppercase; }
+        .logic-card strong { font-size: 1.15rem; color: #FFFFFF; }
+
+        /* Efficiency Visual */
+        .visual-container { text-align: center; position: relative; }
+        .efficiency-svg { width: 100%; height: 260px; }
+        
+        .speed-badge { display: inline-block; padding: 6px 12px; border-radius: 4px; font-size: 0.8rem; font-weight: 700; background: rgba(212, 165, 116, 0.2); color: var(--accent); margin-bottom: 1.5rem; font-family: 'Outfit'; }
+
+        .fade-up { opacity: 0; transform: translateY(30px); animation: fadeUp 0.8s ease-out forwards; }
+        @keyframes fadeUp { to { opacity: 1; transform: translateY(0); } }
+        .delay-1 { animation-delay: 0.2s; }
+
+        .nav-controls { position: fixed; bottom: 40px; right: 40px; display: flex; gap: 15px; }
+        .nav-btn { width: 50px; height: 50px; border-radius: 50%; border: 1px solid var(--glass-border); background: var(--glass); color: white; cursor: pointer; display: flex; align-items: center; justify-content: center; font-size: 1.2rem; }
+        .nav-btn:hover { background: var(--accent); border-color: var(--accent); color: #000; }
+    </style>
+</head>
+<body>
+
+    <div class="slide">
+        <header class="slide-header fade-up">
+            <span class="label">STRATEGIC EFFICIENCY</span>
+            <h2>단순 가공을 넘어 전략과 기획에<br>집중하는 업무 효율화</h2>
+        </header>
+
+        <div class="content-body fade-up delay-1">
+            <div class="card module-desc">
+                <p>리포트는 '작성하는 물리적 소모'가 아닌 '판단하는 가치'를 제공해야 합니다. 단순 데이터 가공 시간을 줄여 성과를 위한 전략 수립 시간을 확보합니다.</p>
+                <div class="logic-card">
+                    <span>Process Optimization</span>
+                    <strong>불필요한 데이터 가공 및 수작업 통합 공정의 자동화</strong>
+                </div>
+                <div class="logic-card">
+                    <span>Strategy Readiness</span>
+                    <strong>단순 현황 나열을 탈피하여 즉각적인 기획 업무로의 전환</strong>
+                </div>
+            </div>
+
+            <div class="card visual-container">
+                <div class="speed-badge">TIME ALLOCATION SHIFT</div>
+                <svg class="efficiency-svg" viewBox="0 0 400 220" preserveAspectRatio="xMidYMid meet">
+                    <!-- Legend -->
+                    <g transform="translate(140, 10)">
+                        <rect width="10" height="10" fill="rgba(255,255,255,0.2)" rx="2" />
+                        <text x="15" y="9" fill="rgba(255,255,255,0.5)" font-size="10">Processing</text>
+                        <rect x="75" width="10" height="10" fill="var(--accent)" rx="2" />
+                        <text x="90" y="9" fill="var(--accent)" font-size="10">Strategy</text>
+                    </g>
+
+                    <!-- AS-IS Bar -->
+                    <text x="100" y="50" text-anchor="middle" fill="rgba(255,255,255,0.4)" font-size="12" font-weight="700">AS-IS</text>
+                    <rect x="75" y="60" width="50" height="110" rx="6" fill="rgba(255,255,255,0.1)" stroke="rgba(255,255,255,0.1)" />
+                    <rect x="75" y="175" width="50" height="20" rx="6" fill="var(--accent)" opacity="0.4" />
+                    
+                    <!-- Arrow -->
+                    <path d="M 160 115 L 240 115" stroke="var(--accent)" stroke-width="2" stroke-dasharray="4 4" marker-end="url(#arrowhead)" />
+                    <defs>
+                        <marker id="arrowhead" markerWidth="10" markerHeight="7" refX="0" refY="3.5" orient="auto">
+                            <polygon points="0 0, 10 3.5, 0 7" fill="var(--accent)" />
+                        </marker>
+                    </defs>
+
+                    <!-- TO-BE Bar -->
+                    <text x="300" y="50" text-anchor="middle" fill="var(--accent)" font-size="12" font-weight="700">TO-BE</text>
+                    <rect x="275" y="165" width="50" height="30" rx="6" fill="rgba(255,255,255,0.1)" stroke="rgba(255,255,255,0.1)" />
+                    <rect x="275" y="60" width="50" height="100" rx="6" fill="var(--accent)">
+                        <animate attributeName="height" from="0" to="100" dur="1s" fill="freeze" />
+                        <animate attributeName="y" from="160" to="60" dur="1s" fill="freeze" />
+                    </rect>
+                    <text x="300" y="115" text-anchor="middle" fill="#000" font-family="Outfit" font-size="10" font-weight="900">VALUE</text>
+                </svg>
+                <p style="color: var(--text-secondary); font-size: 0.95rem; line-height: 1.6; text-align: center;">"데이터 추출과 가공이라는 소모적 시간을 확보하여,<br>실질적인 <strong>전략 수립과 기획 역량 발휘</strong>를 극대화합니다."</p>
+            </div>
+        </div>
+    </div>
+
+    <!-- Navigation -->
+    <div class="nav-controls">
+        <a href="index.html" class="nav-btn" title="Back to Index">☗</a>
+        <button class="nav-btn" onclick="location.href='slide-14.html'" title="Previous Slide">←</button>
+        <button class="nav-btn" onclick="location.href='slide-16.html'" title="Next Slide">→</button>
+    </div>
+
+    <script>
+        document.addEventListener('keydown', (e) => {
+            if (e.key === 'ArrowRight' || e.key === ' ') location.href = 'slide-16.html';
+            if (e.key === 'ArrowLeft') location.href = 'slide-14.html';
+        });
+    </script>
+</body>
+</html>

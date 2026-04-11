@@ -5,7 +5,7 @@
 ## 핵심 흐름
 
 ```text
-원천데이터 -> Adapter -> Module/Core Engine -> Result Asset -> Validation Layer(OPS) -> Intelligence(RADAR) -> Builder
+원천데이터 -> Intake/Onboarding -> _intake_staging -> Adapter -> Module/Core Engine -> Result Asset -> Validation Layer(OPS) -> Intelligence(RADAR) -> Builder
 ```
 
 이 프로젝트는 `완전 무설정 범용 제품`보다는  
@@ -47,7 +47,7 @@ sfe_master_ops/
 
 ### `adapters/`
 
-회사 raw를 공통 구조로 바꾸는 층입니다.
+intake/onboarding이 만든 `_intake_staging` 정리본을 공통 구조로 바꾸는 층입니다.
 
 - CRM
 - Prescription
@@ -243,7 +243,7 @@ sfe_master_ops/
 - 현재 테스트용 raw generator는 `config -> engine -> template -> writer` 구조로 정리되기 시작한 상태입니다.
 - 현재 템플릿은 `daon_like`, `hangyeol_like` 2개이고, `monthly_merge_pharma`는 `daon_like + monthly_and_merged` 옵션으로 처리됩니다.
 - 기존 회사별 생성 함수 본체는 template helper로 이동했고, 공통 진입점은 wrapper 없이 config를 직접 읽습니다.
-- 실제 운영에서 더 중요한 공통 입구는 이미 `raw -> intake/onboarding -> adapter` 구조로 정리돼 있습니다.
+- 실제 운영에서 더 중요한 공통 입구는 이미 `raw -> intake/onboarding -> _intake_staging -> adapter` 구조로 정리돼 있습니다.
 - 그래서 테스트용 생성기 정리 설계는 `docs/architecture/17_raw_generator_refactor_plan.md`, 실제 운영용 공통 입력 설계는 `docs/architecture/18_real_company_raw_input_flow.md`, `docs/architecture/19_intake_gate_and_onboarding_plan.md`, `docs/architecture/20_common_intake_engine_implementation_plan.md`를 함께 봅니다.
 
 현재 중요한 점:

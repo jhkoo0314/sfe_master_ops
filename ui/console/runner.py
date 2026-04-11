@@ -320,6 +320,12 @@ def get_source_target_rows(execution_mode: str, uploaded: dict) -> list[dict]:
         if key not in required_keys and info is None:
             continue
         target_name = Path(target_path).name
+        if info and info.get("source_kind") == "existing_company_source":
+            apply_mode = "data 폴더 자동 선택"
+        elif info:
+            apply_mode = "업로드 파일 덮어쓰기"
+        else:
+            apply_mode = "기존 source 유지"
         rows.append(
             {
                 "업로드 슬롯": label_map.get(key, key),
@@ -328,7 +334,7 @@ def get_source_target_rows(execution_mode: str, uploaded: dict) -> list[dict]:
                 "현재 소스": info["name"] if info else "기존 파일 사용",
                 "내부 저장 파일명": target_name,
                 "실제 반영 경로": target_path,
-                "반영 방식": "업로드 파일 덮어쓰기" if info else "기존 source 유지",
+                "반영 방식": apply_mode,
             }
         )
     return rows
@@ -383,6 +389,28 @@ def run_intake_inspection(execution_mode: str, uploaded: dict) -> dict:
         uploaded=uploaded,
         cache_signature=signature,
     ).to_dict()
+
+
+def get_cached_intake_result(execution_mode: str, uploaded: dict) -> dict | None:
+    if not has_session_intake_inputs(uploaded):
+        st.session_state.intake_signature = ""
+        st.session_state.intake_result = None
+        return None
+    signature = _build_intake_signature(execution_mode, uploaded)
+    if st.session_state.get("intake_signature", "") != signature:
+        return None
+    return st.session_state.get("intake_result")
+
+
+def run_intake_and_cache(execution_mode: str, uploaded: dict) -> dict | None:
+    if not has_session_intake_inputs(uploaded):
+        st.session_state.intake_signature = ""
+        st.session_state.intake_result = None
+        return None
+    result = run_intake_inspection(execution_mode, uploaded)
+    st.session_state.intake_signature = _build_intake_signature(execution_mode, uploaded)
+    st.session_state.intake_result = result
+    return result
 
 
 def ensure_intake_result(execution_mode: str, uploaded: dict) -> dict | None:

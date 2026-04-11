@@ -1,0 +1,117 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Sales Data OS Portfolio - Slide 25</title>
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" as="style" crossorigin href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/static/pretendard.css" />
+    <style>
+        :root {
+            --bg: #050714;
+            --text-primary: #FFFFFF;
+            --text-secondary: rgba(255, 255, 255, 0.7);
+            --accent: #D4A574;
+            --glass: rgba(255, 255, 255, 0.03);
+            --glass-border: rgba(255, 255, 255, 0.1);
+        }
+
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { background-color: var(--bg); color: var(--text-primary); font-family: 'Pretendard', sans-serif; overflow: hidden; width: 100vw; height: 100vh; }
+        h1, h2, h3 { font-family: 'Outfit', sans-serif; }
+
+        .slide { width: 100vw; height: 100vh; padding: 80px 100px; display: flex; flex-direction: column; }
+        .slide-header { margin-bottom: 50px; }
+        .label { display: block; color: var(--accent); font-weight: 700; font-size: 0.9rem; letter-spacing: 0.15em; margin-bottom: 1.5rem; }
+        h2 { font-size: 3.2rem; font-weight: 700; line-height: 1.2; }
+
+        .content-body { display: grid; grid-template-columns: 1fr 1fr; gap: 40px; flex: 1; align-items: stretch; padding-bottom: 40px; }
+        .card { background: var(--glass); border: 1px solid var(--glass-border); border-radius: 24px; padding: 3rem; display: flex; flex-direction: column; justify-content: center; height: 100%; }
+
+        .module-desc p { font-size: 1.25rem; color: var(--text-secondary); line-height: 1.6; margin-bottom: 2.5rem; word-break: keep-all; }
+        .logic-card { background: rgba(255, 255, 255, 0.05); border-radius: 16px; padding: 1.5rem; margin-bottom: 1rem; border-left: 4px solid var(--accent); }
+        .logic-card span { display: block; font-family: 'Outfit', sans-serif; color: var(--accent); font-size: 0.8rem; font-weight: 700; margin-bottom: 0.5rem; }
+        .logic-card strong { font-size: 1.1rem; color: #FFF; font-weight: 600; }
+
+        .visual-container { text-align: center; position: relative; }
+        .verification-svg { width: 100%; height: 320px; }
+
+        .fade-up { opacity: 0; transform: translateY(30px); animation: fadeUp 0.8s ease-out forwards; }
+        @keyframes fadeUp { to { opacity: 1; transform: translateY(0); } }
+        .delay-1 { animation-delay: 0.2s; }
+
+        .nav-controls { position: fixed; bottom: 40px; right: 40px; display: flex; gap: 15px; }
+        .nav-btn { width: 50px; height: 50px; border-radius: 50%; border: 1px solid var(--glass-border); background: var(--glass); color: white; cursor: pointer; display: flex; align-items: center; justify-content: center; font-size: 1.2rem; }
+        .nav-btn:hover { background: var(--accent); border-color: var(--accent); color: #000; }
+    </style>
+</head>
+<body>
+
+    <div class="slide">
+        <header class="slide-header fade-up">
+            <span class="label">OPERATIONAL VERIFICATION</span>
+            <h2>사업 실증 데이터를 통한<br>프로세스 운영 무결성 증명</h2>
+        </header>
+
+        <div class="content-body fade-up delay-1">
+            <div class="card module-desc">
+                <p>단순 아이디어가 아닌 실제 제약사 운영 데이터를 활용하여, 입수-정제-분석-결과 도출에 이르는 모든 과정(Full-Cycle)을 완벽하게 검증하였습니다.</p>
+                
+                <div class="logic-card">
+                    <span>Evidence-Based Success</span>
+                    <strong>실제 기업 데이터(메가제약 등) 활용 PoC 결과 입증</strong>
+                </div>
+                <div class="logic-card">
+                    <span>Process Integrity</span>
+                    <strong>운영 파이프라인 전 과정에서의 정합성 100% 확보</strong>
+                </div>
+                <div class="logic-card">
+                    <span>Market-Ready Maturity</span>
+                    <strong>즉시 현장 투입 가능한 수준의 안정성과 확장성 확보</strong>
+                </div>
+            </div>
+
+            <div class="card visual-container">
+                <svg class="verification-svg" viewBox="0 0 300 250">
+                    <line x1="50" y1="125" x2="250" y2="125" stroke="var(--accent)" stroke-width="2" stroke-dasharray="5 5" opacity="0.3" />
+                    
+                    <g opacity="0.6">
+                        <circle cx="50" cy="125" r="30" fill="rgba(212, 165, 116, 0.05)" stroke="var(--accent)" stroke-width="1" />
+                        <text x="50" y="165" text-anchor="middle" fill="#FFF" font-size="8">RAW DATA</text>
+                        
+                        <circle cx="150" cy="125" r="30" fill="rgba(212, 165, 116, 0.05)" stroke="var(--accent)" stroke-width="1" />
+                        <text x="150" y="165" text-anchor="middle" fill="#FFF" font-size="8">AGENT CALC</text>
+                        
+                        <circle cx="250" cy="125" r="30" fill="rgba(212, 165, 116, 0.05)" stroke="var(--accent)" stroke-width="1" />
+                        <text x="250" y="165" text-anchor="middle" fill="#FFF" font-size="8">REPORT READY</text>
+                    </g>
+                    
+                    <g opacity="0" transform="translate(150, 100)">
+                        <animate attributeName="opacity" from="0" to="1" dur="0.5s" begin="1s" fill="freeze" />
+                        <circle r="60" fill="rgba(212, 165, 116, 0.1)" stroke="var(--accent)" stroke-width="2" stroke-dasharray="300 0" />
+                        <text x="0" y="8" text-anchor="middle" fill="var(--accent)" font-family="Outfit" font-size="24" font-weight="900" transform="rotate(-15)">VERIFIED</text>
+                    </g>
+                </svg>
+                <div style="background: rgba(212, 165, 116, 0.1); border: 1px solid var(--accent); padding: 1.5rem; border-radius: 12px; margin-top: 2rem;">
+                    <p style="color: var(--accent); font-weight: 900; letter-spacing: 0.1em; font-size: 0.9rem;">CASE STUDY: FULL-CYCLE POC</p>
+                    <p style="color: var(--text-secondary); font-size: 0.85rem; margin-top: 0.5rem;">"이론상의 설계를 넘어, 실제 데이터 기반의<br><strong>운영 신뢰도</strong>를 완벽하게 입증하였습니다."</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Navigation -->
+    <div class="nav-controls">
+        <a href="index.html" class="nav-btn" title="Back to Index">☗</a>
+        <button class="nav-btn" onclick="location.href='slide-24.html'" title="Previous Slide">←</button>
+        <button class="nav-btn" onclick="location.href='slide-01.html'" title="Back to Top">⟳</button>
+    </div>
+
+    <script>
+        document.addEventListener('keydown', (e) => {
+            if (e.key === 'ArrowRight' || e.key === ' ') location.href = 'slide-01.html';
+            if (e.key === 'ArrowLeft') location.href = 'slide-24.html';
+        });
+    </script>
+</body>
+</html>

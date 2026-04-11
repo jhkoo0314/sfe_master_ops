@@ -1,0 +1,126 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Sales Data OS Portfolio - Slide 21</title>
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" as="style" crossorigin href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/static/pretendard.css" />
+    <style>
+        :root {
+            --bg: #050714;
+            --text-primary: #FFFFFF;
+            --text-secondary: rgba(255, 255, 255, 0.7);
+            --accent: #D4A574;
+            --glass: rgba(255, 255, 255, 0.03);
+            --glass-border: rgba(255, 255, 255, 0.1);
+        }
+
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { background-color: var(--bg); color: var(--text-primary); font-family: 'Pretendard', sans-serif; overflow: hidden; width: 100vw; height: 100vh; }
+        h1, h2, h3 { font-family: 'Outfit', sans-serif; }
+
+        .slide { width: 100vw; height: 100vh; padding: 80px 100px; display: flex; flex-direction: column; }
+        .slide-header { margin-bottom: 50px; }
+        .label { display: block; color: var(--accent); font-weight: 700; font-size: 0.9rem; letter-spacing: 0.15em; margin-bottom: 1.5rem; }
+        h2 { font-size: 3.2rem; font-weight: 700; line-height: 1.2; }
+
+        .content-body { display: grid; grid-template-columns: 1fr 1fr; gap: 40px; flex: 1; align-items: stretch; padding-bottom: 40px; }
+        .card { background: var(--glass); border: 1px solid var(--glass-border); border-radius: 24px; padding: 3rem; display: flex; flex-direction: column; justify-content: center; height: 100%; }
+
+        .module-desc p { font-size: 1.25rem; color: var(--text-secondary); line-height: 1.6; margin-bottom: 2.5rem; word-break: keep-all; }
+        .logic-card { background: rgba(255, 255, 255, 0.05); border-radius: 16px; padding: 1.5rem; margin-bottom: 1rem; border-left: 4px solid var(--accent); }
+        .logic-card span { display: block; font-family: 'Outfit', sans-serif; color: var(--accent); font-size: 0.8rem; font-weight: 700; margin-bottom: 0.5rem; }
+        .logic-card strong { font-size: 1.1rem; color: #FFF; font-weight: 600; }
+
+        .visual-container { text-align: center; position: relative; }
+        .integrity-svg { width: 100%; height: 280px; }
+
+        .fade-up { opacity: 0; transform: translateY(30px); animation: fadeUp 0.8s ease-out forwards; }
+        @keyframes fadeUp { to { opacity: 1; transform: translateY(0); } }
+        .delay-1 { animation-delay: 0.2s; }
+
+        .nav-controls { position: fixed; bottom: 40px; right: 40px; display: flex; gap: 15px; }
+        .nav-btn { width: 50px; height: 50px; border-radius: 50%; border: 1px solid var(--glass-border); background: var(--glass); color: white; cursor: pointer; display: flex; align-items: center; justify-content: center; font-size: 1.2rem; }
+        .nav-btn:hover { background: var(--accent); border-color: var(--accent); color: #000; }
+    </style>
+</head>
+<body>
+
+    <div class="slide">
+        <header class="slide-header fade-up">
+            <span class="label">DATA INTEGRITY & AUTOMATION</span>
+            <h2>원천 데이터의 무결성 확보와<br>가공 공수의 완전 자동화</h2>
+        </header>
+
+        <div class="content-body fade-up delay-1">
+            <div class="card module-desc">
+                <p>현장의 파편화된 원천 데이터를 분석 가능한 표준 데이터로 자동 변환하여, 데이터 정제에 소요되는 실무자의 물리적 부하를 제거합니다.</p>
+                
+                <div class="logic-card">
+                    <span>Quality Assurance</span>
+                    <strong>불완전한 원천 데이터 품질의 자동 교정 및 보정</strong>
+                </div>
+                <div class="logic-card">
+                    <span>Standard Modeling</span>
+                    <strong>어떠한 데이터 양식도 표준 분석 자산으로 수렴</strong>
+                </div>
+                <div class="logic-card">
+                    <span>Governance Control</span>
+                    <strong>실시간 데이터 정합성 검증 및 리스크 사전 감지</strong>
+                </div>
+            </div>
+
+            <div class="card visual-container">
+                <svg class="integrity-svg" viewBox="0 0 400 300">
+                    <!-- Messy Data Nodes -->
+                    <g opacity="0.4">
+                        <circle cx="50" cy="50" r="4" fill="#FFF">
+                            <animate attributeName="cx" values="50;150" dur="2s" repeatCount="indefinite" />
+                            <animate attributeName="opacity" values="0.4;0" dur="2s" repeatCount="indefinite" />
+                        </circle>
+                        <circle cx="40" cy="150" r="3" fill="#FFF">
+                            <animate attributeName="cx" values="40;150" dur="1.5s" repeatCount="indefinite" />
+                            <animate attributeName="opacity" values="0.4;0" dur="1.5s" repeatCount="indefinite" />
+                        </circle>
+                        <circle cx="60" cy="250" r="5" fill="#FFF">
+                            <animate attributeName="cx" values="60;150" dur="2.5s" repeatCount="indefinite" />
+                            <animate attributeName="opacity" values="0.4;0" dur="2.5s" repeatCount="indefinite" />
+                        </circle>
+                    </g>
+                    
+                    <!-- Filtration Prism -->
+                    <path d="M 160 50 L 220 50 L 220 250 L 160 250 Z" fill="rgba(212, 165, 116, 0.1)" stroke="var(--accent)" stroke-width="2" stroke-dasharray="5 5" />
+                    <text x="190" y="155" text-anchor="middle" fill="var(--accent)" font-family="Outfit" font-size="10" font-weight="900" transform="rotate(90 190 155)">CLEANSING ENGINE</text>
+
+                    <!-- Pure Data Beam -->
+                    <rect x="220" y="145" width="100" height="10" fill="var(--accent)">
+                        <animate attributeName="width" from="0" to="100" dur="1s" repeatCount="indefinite" />
+                    </rect>
+                    
+                    <!-- Result Pillar -->
+                    <rect x="320" y="40" width="40" height="220" rx="4" fill="var(--accent)" opacity="0.2" stroke="var(--accent)" />
+                    <text x="340" y="155" text-anchor="middle" fill="var(--accent)" font-family="Outfit" font-size="12" font-weight="900" transform="rotate(90 340 155)">INTEGRITY ASSET</text>
+                </svg>
+                <div style="background: rgba(212, 165, 116, 0.1); padding: 1rem; border-radius: 12px; border: 1px solid var(--accent);">
+                    <p style="color: var(--accent); font-size: 0.9rem; font-weight: 700;">RAW DATA → STANDARDIZED ASSET</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Navigation -->
+    <div class="nav-controls">
+        <a href="index.html" class="nav-btn" title="Back to Index">☗</a>
+        <button class="nav-btn" onclick="location.href='slide-20.html'" title="Previous Slide">←</button>
+        <button class="nav-btn" onclick="location.href='slide-22.html'" title="Next Slide">→</button>
+    </div>
+
+    <script>
+        document.addEventListener('keydown', (e) => {
+            if (e.key === 'ArrowRight' || e.key === ' ') location.href = 'slide-22.html';
+            if (e.key === 'ArrowLeft') location.href = 'slide-20.html';
+        });
+    </script>
+</body>
+</html>

@@ -1,0 +1,111 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Sales Data OS Portfolio - Slide 14</title>
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" as="style" crossorigin href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/static/pretendard.css" />
+    <style>
+        :root {
+            --bg: #050714;
+            --text-primary: #FFFFFF;
+            --text-secondary: rgba(255, 255, 255, 0.7);
+            --accent: #F43F5E; /* Rose / Territory */
+            --glass: rgba(255, 255, 255, 0.03);
+            --glass-border: rgba(255, 255, 255, 0.1);
+        }
+
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { background-color: var(--bg); color: var(--text-primary); font-family: 'Pretendard', sans-serif; overflow: hidden; width: 100vw; height: 100vh; }
+        h1, h2, h3 { font-family: 'Outfit', sans-serif; }
+
+        .slide { 
+            width: 100vw; height: 100vh; padding: 80px 100px;
+            display: flex; flex-direction: column;
+        }
+        
+        .slide-header { margin-bottom: 50px; }
+        .label { display: block; color: var(--accent); font-weight: 700; font-size: 0.9rem; letter-spacing: 0.15em; margin-bottom: 1.5rem; }
+        h2 { font-size: 3.2rem; font-weight: 700; line-height: 1.2; }
+
+        .content-body {
+            display: grid; grid-template-columns: 1fr 1fr; gap: 40px; flex: 1; align-items: stretch; padding-bottom: 40px;
+        }
+
+        .card {
+            background: var(--glass); border: 1px solid var(--glass-border); border-radius: 24px; padding: 3rem; display: flex; flex-direction: column; justify-content: center; height: 100%;
+        }
+
+        .module-desc p { font-size: 1.25rem; color: var(--text-secondary); line-height: 1.6; margin-bottom: 2.5rem; word-break: keep-all; }
+        .logic-card {
+            background: rgba(255, 255, 255, 0.05); padding: 1.5rem; border-radius: 12px; margin-bottom: 1rem; border-left: 4px solid var(--accent);
+        }
+        .logic-card span { display: block; font-family: 'Outfit', sans-serif; font-size: 0.8rem; font-weight: 700; color: var(--accent); margin-bottom: 0.5rem; text-transform: uppercase; }
+        .logic-card strong { font-size: 1.15rem; color: #FFFFFF; }
+
+        .visual-container { text-align: center; }
+        .hex-grid { display: grid; grid-template-columns: repeat(4, 50px); gap: 15px; margin: 2rem auto; opacity: 0.8; justify-content: center; }
+        .hex { width: 50px; height: 50px; background: rgba(244, 63, 94, 0.1); border: 1px solid var(--accent); border-radius: 8px; transform: rotate(45deg); display: flex; align-items: center; justify-content: center; }
+        .hex.fill { background: var(--accent); color: #FFF; box-shadow: 0 0 20px rgba(244, 63, 94, 0.4); }
+        .hex span { transform: rotate(-45deg); font-family: 'Outfit', sans-serif; font-weight: 900; font-size: 1.1rem; }
+
+        .visual-container p { margin-top: 1.5rem; color: var(--text-secondary); font-size: 0.95rem; line-height: 1.6; }
+
+        .fade-up { opacity: 0; transform: translateY(30px); animation: fadeUp 0.8s ease-out forwards; }
+        @keyframes fadeUp { to { opacity: 1; transform: translateY(0); } }
+        .delay-1 { animation-delay: 0.2s; }
+
+        .nav-controls { position: fixed; bottom: 40px; right: 40px; display: flex; gap: 15px; }
+        .nav-btn { width: 50px; height: 50px; border-radius: 50%; border: 1px solid var(--glass-border); background: var(--glass); color: white; cursor: pointer; display: flex; align-items: center; justify-content: center; font-size: 1.2rem; }
+        .nav-btn:hover { background: var(--accent); border-color: var(--accent); color: #FFF; }
+    </style>
+</head>
+<body>
+
+    <div class="slide">
+        <header class="slide-header fade-up">
+            <span class="label">TERRITORY INTEGRATION</span>
+            <h2>입체적인 지리 정보와<br>처방 가치 사슬의 결합</h2>
+        </header>
+
+        <div class="content-body fade-up delay-1">
+            <div class="card module-desc">
+                <p>단순한 병원 리스트를 넘어, 해당 지역의 처방 흐름과 담당자의 물리적 커버리지 최적점을 동시에 분석합니다.</p>
+                <div class="logic-card">
+                    <span>Diagnostic Question</span>
+                    <strong>거점 병원의 영향력이 주변 지점으로 어떻게 전이되고 있는가?</strong>
+                </div>
+                <div class="logic-card">
+                    <span>Management Action</span>
+                    <strong>우수 성공 활동 모델 전파 및 권역 최적화 시뮬레이션</strong>
+                </div>
+            </div>
+
+            <div class="card visual-container">
+                <h3 style="font-size: 1.4rem; color: #FFFFFF; font-weight: 700; margin-bottom: 1.5rem;">권역별 커버리지 밀도 분석</h3>
+                <div class="hex-grid">
+                    <div class="hex"></div><div class="hex fill"><span>H</span></div><div class="hex"></div><div class="hex"></div>
+                    <div class="hex fill"><span>P</span></div><div class="hex fill"><span>P</span></div><div class="hex"></div><div class="hex fill"><span>H</span></div>
+                    <div class="hex"></div><div class="hex"></div><div class="hex fill"><span>P</span></div><div class="hex"></div>
+                </div>
+                <p><strong>H (Hospital) - P (Pharmacy)</strong> 간의 유동 처방 데이터를 연동하여<br>한 눈에 들어오는 직관적 운영 지표를 모델링합니다.</p>
+            </div>
+        </div>
+    </div>
+
+    <!-- Navigation -->
+    <div class="nav-controls">
+        <a href="index.html" class="nav-btn" title="Back to Index">☗</a>
+        <button class="nav-btn" onclick="location.href='slide-13.html'" title="Previous Slide">←</button>
+        <button class="nav-btn" onclick="location.href='slide-15.html'" title="Next Slide">→</button>
+    </div>
+
+    <script>
+        document.addEventListener('keydown', (e) => {
+            if (e.key === 'ArrowRight' || e.key === ' ') location.href = 'slide-15.html';
+            if (e.key === 'ArrowLeft') location.href = 'slide-13.html';
+        });
+    </script>
+</body>
+</html>

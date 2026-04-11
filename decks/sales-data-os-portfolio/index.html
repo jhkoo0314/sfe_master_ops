@@ -1,0 +1,323 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Sales Data OS - Strategic Navigator</title>
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" as="style" crossorigin href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/static/pretendard.css" />
+    <style>
+        :root {
+            --bg: #050714;
+            --accent: #D4A574;
+            --text-primary: #FFFFFF;
+            --text-secondary: rgba(255, 255, 255, 0.4);
+            --glass: rgba(255, 255, 255, 0.03);
+            --glass-border: rgba(255, 255, 255, 0.1);
+            --sidebar-width: 320px;
+        }
+
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { 
+            background-color: var(--bg); color: var(--text-primary); 
+            font-family: 'Pretendard', sans-serif; overflow: hidden;
+            display: flex; height: 100vh;
+        }
+
+        /* Sidebar Navigation */
+        .sidebar {
+            width: var(--sidebar-width);
+            height: 100%;
+            background: rgba(0, 0, 0, 0.3);
+            border-right: 1px solid var(--glass-border);
+            padding: 60px 30px;
+            display: flex; flex-direction: column;
+            gap: 10px;
+            z-index: 20;
+        }
+
+        .nav-logo {
+            font-family: 'Outfit', sans-serif; font-size: 1.5rem; font-weight: 700;
+            color: var(--accent); margin-bottom: 50px; display: flex; align-items: center; gap: 10px;
+        }
+        .nav-logo svg { width: 30px; height: 30px; stroke: var(--accent); fill: none; stroke-width: 2; }
+
+        .cat-btn {
+            background: transparent; border: 1px solid transparent; width: 100%;
+            padding: 1.2rem 1.5rem; border-radius: 12px;
+            text-align: left; color: var(--text-secondary); cursor: pointer;
+            font-family: 'Outfit', sans-serif; font-weight: 600; font-size: 1rem;
+            transition: all 0.3s ease;
+            display: flex; justify-content: space-between; align-items: center;
+        }
+        .cat-btn:hover { color: #FFF; background: rgba(255,255,255,0.05); }
+        .cat-btn.active { color: #FFF; background: var(--glass); border-color: var(--accent); box-shadow: 0 0 20px rgba(212,165,116,0.1); }
+        .cat-btn span.count { font-size: 0.75rem; opacity: 0.5; }
+
+        /* Detail View (Drill-down) */
+        .main-view {
+            flex: 1; height: 100%;
+            padding: 100px 80px;
+            overflow-y: auto;
+            position: relative;
+        }
+
+        .view-header { margin-bottom: 60px; }
+        .view-header h2 { font-family: 'Outfit', sans-serif; font-size: 3rem; font-weight: 700; margin-bottom: 10px; }
+        .view-header p { color: var(--text-secondary); font-size: 1.2rem; }
+
+        .slide-list {
+            display: flex; flex-direction: column; gap: 15px;
+            max-width: 800px;
+        }
+
+        .slide-item {
+            display: flex; align-items: center;
+            background: var(--glass); border: 1px solid var(--glass-border);
+            border-radius: 16px; padding: 25px 30px;
+            text-decoration: none; color: inherit;
+            transition: all 0.3s ease;
+            position: relative; overflow: hidden;
+            animation: slideFade 0.5s ease backwards;
+        }
+        @keyframes slideFade { from { opacity: 0; transform: translateX(20px); } to { opacity: 1; transform: translateX(0); } }
+
+        .slide-item:hover { transform: scale(1.02); border-color: var(--accent); background: rgba(212,165,116,0.05); }
+
+        .slide-num { font-family: 'Outfit', sans-serif; font-size: 1.2rem; font-weight: 700; color: var(--accent); margin-right: 30px; opacity: 0.7; }
+        .slide-content h3 { font-size: 1.5rem; font-weight: 700; margin-bottom: 5px; }
+        .slide-content p { color: var(--text-secondary); font-size: 0.95rem; }
+
+        .go-btn { margin-left: auto; width: 44px; height: 44px; border-radius: 50%; background: var(--glass-border); display: flex; align-items: center; justify-content: center; transition: 0.3s; }
+        .slide-item:hover .go-btn { background: var(--accent); color: #000; }
+
+        /* Hide sections by default */
+        .category-content { display: none; }
+        .category-content.active { display: block; }
+    </style>
+</head>
+<body>
+
+    <aside class="sidebar">
+        <div class="nav-logo">
+            <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><path d="M12 6v6l4 2"/></svg>
+            SALES DATA OS
+        </div>
+        
+        <button class="cat-btn active" onclick="showCategory('intro', this)">
+            INTRODUCTION <span class="count">01 ― 06</span>
+        </button>
+        <button class="cat-btn" onclick="showCategory('logic', this)">
+            LOGIC & ENGINE <span class="count">07 ― 11</span>
+        </button>
+        <button class="cat-btn" onclick="showCategory('showcase', this)">
+            MODULES <span class="count">12 ― 15</span>
+        </button>
+        <button class="cat-btn" onclick="showCategory('conclusion', this)">
+            VERIFICATION <span class="count">16 ― 19</span>
+        </button>
+        <button class="cat-btn" onclick="showCategory('appendix', this)">
+            APPENDIX <span class="count">20 ― 25</span>
+        </button>
+    </aside>
+
+    <main class="main-view">
+        <!-- Introduction Section -->
+        <div id="intro" class="category-content active">
+            <div class="view-header">
+                <h2>Introduction</h2>
+                <p>영업 기획과 운영의 정점에 서기 위한 첫 걸음</p>
+            </div>
+            <div class="slide-list">
+                <a href="slide-01.html" class="slide-item" style="animation-delay: 0.1s;">
+                    <span class="slide-num">01</span>
+                    <div class="slide-content"><h3>Portfolio Entrance</h3><p>전체 운영 철학의 핵심 메시지</p></div>
+                    <div class="go-btn">→</div>
+                </a>
+                <a href="slide-02.html" class="slide-item" style="animation-delay: 0.2s;">
+                    <span class="slide-num">02</span>
+                    <div class="slide-content"><h3>Professional Identity</h3><p>현장 인사이트와 데이터 로직의 결합</p></div>
+                    <div class="go-btn">→</div>
+                </a>
+                <a href="slide-03.html" class="slide-item" style="animation-delay: 0.3s;">
+                    <span class="slide-num">03</span>
+                    <div class="slide-content"><h3>Diagnostic Pyramid</h3><p>영업 관리 영역의 본질적 결핍 진단</p></div>
+                    <div class="go-btn">→</div>
+                </a>
+                <a href="slide-04.html" class="slide-item" style="animation-delay: 0.4s;">
+                    <span class="slide-num">04</span>
+                    <div class="slide-content"><h3>Operational Insight</h3><p>수동 관리의 한계와 시스템화의 필연성</p></div>
+                    <div class="go-btn">→</div>
+                </a>
+                <a href="slide-05.html" class="slide-item" style="animation-delay: 0.5s;">
+                    <span class="slide-num">05</span>
+                    <div class="slide-content"><h3>Strategic Transition</h3><p>기획 전문가를 향한 커리어 로드맵</p></div>
+                    <div class="go-btn">→</div>
+                </a>
+                <a href="slide-06.html" class="slide-item" style="animation-delay: 0.6s;">
+                    <span class="slide-num">06</span>
+                    <div class="slide-content"><h3>Project Positioning</h3><p>Sales Data OS 프로젝트의 의미 정의</p></div>
+                    <div class="go-btn">→</div>
+                </a>
+            </div>
+        </div>
+
+        <!-- Logic Section -->
+        <div id="logic" class="category-content">
+            <div class="view-header">
+                <h2>Logic & Engine</h2>
+                <p>파편화된 데이터를 관리 가능한 언어로 재구성</p>
+            </div>
+            <div class="slide-list">
+                <a href="slide-07.html" class="slide-item">
+                    <span class="slide-num">07</span>
+                    <div class="slide-content"><h3>The Data Silo</h3><p>분절된 정보가 만드는 영업의 한계</p></div>
+                    <div class="go-btn">→</div>
+                </a>
+                <a href="slide-08.html" class="slide-item">
+                    <span class="slide-num">08</span>
+                    <div class="slide-content"><h3>The Missing Logic</h3><p>단순 BI와 운영 OS의 결정적 차이</p></div>
+                    <div class="go-btn">→</div>
+                </a>
+                <a href="slide-09.html" class="slide-item">
+                    <span class="slide-num">09</span>
+                    <div class="slide-content"><h3>Core Engine</h3><p>표준화된 KPI 산출 로직 설계</p></div>
+                    <div class="go-btn">→</div>
+                </a>
+                <a href="slide-10.html" class="slide-item">
+                    <span class="slide-num">10</span>
+                    <div class="slide-content"><h3>Data Pipeline</h3><p>Raw 데이터에서 판단 지원까지의 흐름</p></div>
+                    <div class="go-btn">→</div>
+                </a>
+                <a href="slide-11.html" class="slide-item">
+                    <span class="slide-num">11</span>
+                    <div class="slide-content"><h3>KPI Philosophy</h3><p>결과가 아닌 행동을 관리하는 지표(Diagnostic)</p></div>
+                    <div class="go-btn">→</div>
+                </a>
+            </div>
+        </div>
+
+        <!-- Showcase Section -->
+        <div id="showcase" class="category-content">
+            <div class="view-header">
+                <h2>Modules</h2>
+                <p>실제 현장의 페인 포인트를 해결하는 진단 도구들</p>
+            </div>
+            <div class="slide-list">
+                <a href="slide-12.html" class="slide-item">
+                    <span class="slide-num">12</span>
+                    <div class="slide-content"><h3>Quality Index Meter</h3><p>CRM 활동의 양보다 질을 측정</p></div>
+                    <div class="go-btn">→</div>
+                </a>
+                <a href="slide-13.html" class="slide-item">
+                    <span class="slide-num">13</span>
+                    <div class="slide-content"><h3>Sandbox Analysis</h3><p>평균에 가려진 성장 패턴의 발견</p></div>
+                    <div class="go-btn">→</div>
+                </a>
+                <a href="slide-14.html" class="slide-item">
+                    <span class="slide-num">14</span>
+                    <div class="slide-content"><h3>Territory Map</h3><p>지리 정보와 처방 가치 사슬의 결합</p></div>
+                    <div class="go-btn">→</div>
+                </a>
+                <a href="slide-15.html" class="slide-item">
+                    <span class="slide-num">15</span>
+                    <div class="slide-content"><h3>Decision Funnel</h3><p>우선순위 기반의 행동 조치 보고서</p></div>
+                    <div class="go-btn">→</div>
+                </a>
+            </div>
+        </div>
+
+        <!-- Conclusion Section -->
+        <div id="conclusion" class="category-content">
+            <div class="view-header">
+                <h2>Conclusion</h2>
+                <p>입증된 성공과 기획에 대한 준비된 확신</p>
+            </div>
+            <div class="slide-list">
+                <a href="slide-16.html" class="slide-item">
+                    <span class="slide-num">16</span>
+                    <div class="slide-content"><h3>Hierarchy</h3><p>OS를 지탱하는 3계층 아키텍처</p></div>
+                    <div class="go-btn">→</div>
+                </a>
+                <a href="slide-17.html" class="slide-item">
+                    <span class="slide-num">17</span>
+                    <div class="slide-content"><h3>PoC Success</h3><p>풀-사이클 검증을 통한 실무 적용 가능성 입증</p></div>
+                    <div class="go-btn">→</div>
+                </a>
+                <a href="slide-18.html" class="slide-item">
+                    <span class="slide-num">18</span>
+                    <div class="slide-content"><h3>Strategic Intersection</h3><p>영업 기획 전문가로서의 완성된 핏(Fit)</p></div>
+                    <div class="go-btn">→</div>
+                </a>
+                <a href="slide-19.html" class="slide-item">
+                    <span class="slide-num">19</span>
+                    <div class="slide-content"><h3>Final Signature</h3><p>현장 중심의 기획을 향한 약속</p></div>
+                    <div class="go-btn">→</div>
+                </a>
+            </div>
+        </div>
+
+        <!-- Appendix Section -->
+        <div id="appendix" class="category-content">
+            <div class="view-header">
+                <h2>Appendix</h2>
+                <p>시스템 운영의 기술적 성숙도와 무결성 증명</p>
+            </div>
+            <div class="slide-list">
+                <a href="slide-20.html" class="slide-item">
+                    <span class="slide-num">20</span>
+                    <div class="slide-content"><h3>Appendix Divider</h3><p>운영 상세 및 기술적 실증 섹션 시작</p></div>
+                    <div class="go-btn">→</div>
+                </a>
+                <a href="slide-21.html" class="slide-item">
+                    <span class="slide-num">21</span>
+                    <div class="slide-content"><h3>Data Integrity</h3><p>원천 데이터 수집 및 자동 정제 공정 상세</p></div>
+                    <div class="go-btn">→</div>
+                </a>
+                <a href="slide-22.html" class="slide-item">
+                    <span class="slide-num">22</span>
+                    <div class="slide-content"><h3>Monthly Merge</h3><p>월별 데이터의 시계열 오케스트레이션 자동화</p></div>
+                    <div class="go-btn">→</div>
+                </a>
+                <a href="slide-23.html" class="slide-item">
+                    <span class="slide-num">23</span>
+                    <div class="slide-content"><h3>Strategic Agent</h3><p>지능형 성과 계산 에이전트(KPI Engine) 상세</p></div>
+                    <div class="go-btn">→</div>
+                </a>
+                <a href="slide-24.html" class="slide-item">
+                    <span class="slide-num">24</span>
+                    <div class="slide-content"><h3>Validated Artifacts</h3><p>검증된 표준 성과 자산(Result Asset) 상세</p></div>
+                    <div class="go-btn">→</div>
+                </a>
+                <a href="slide-25.html" class="slide-item">
+                    <span class="slide-num">25</span>
+                    <div class="slide-content"><h3>PoC Case Study</h3><p>실제 제약사 데이터를 통한 전 공정 무결성 증명</p></div>
+                    <div class="go-btn">→</div>
+                </a>
+            </div>
+        </div>
+    </main>
+
+    <script>
+        function showCategory(id, btn) {
+            // Update Sidebar
+            document.querySelectorAll('.cat-btn').forEach(b => b.classList.remove('active'));
+            btn.classList.add('active');
+
+            // Update View
+            document.querySelectorAll('.category-content').forEach(c => c.classList.remove('active'));
+            const activeSection = document.getElementById(id);
+            activeSection.classList.add('active');
+            
+            // Re-trigger animations
+            const items = activeSection.querySelectorAll('.slide-item');
+            items.forEach((item, index) => {
+                item.style.animation = 'none';
+                item.offsetHeight; // force reflow
+                item.style.animation = `slideFade 0.5s ease backwards ${index * 0.1}s`;
+            });
+        }
+    </script>
+
+</body>
+</html>

@@ -1,0 +1,112 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Sales Data OS Portfolio - Slide 13</title>
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" as="style" crossorigin href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/static/pretendard.css" />
+    <style>
+        :root {
+            --bg: #050714;
+            --text-primary: #FFFFFF;
+            --text-secondary: rgba(255, 255, 255, 0.7);
+            --accent: #D4A574;
+            --point: #6366F1; /* Indigo / Analysis */
+            --glass: rgba(255, 255, 255, 0.03);
+            --glass-border: rgba(255, 255, 255, 0.1);
+        }
+
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { background-color: var(--bg); color: var(--text-primary); font-family: 'Pretendard', sans-serif; overflow: hidden; width: 100vw; height: 100vh; }
+        h1, h2, h3 { font-family: 'Outfit', sans-serif; }
+
+        .slide { 
+            width: 100vw; height: 100vh; padding: 80px 100px;
+            display: flex; flex-direction: column;
+        }
+        
+        .slide-header { margin-bottom: 50px; }
+        .label { display: block; color: var(--point); font-weight: 700; font-size: 0.9rem; letter-spacing: 0.15em; margin-bottom: 1.5rem; }
+        h2 { font-size: 3.2rem; font-weight: 700; line-height: 1.2; }
+
+        .content-body {
+            display: grid; grid-template-columns: 1fr 1fr; gap: 40px; flex: 1; align-items: stretch; padding-bottom: 40px;
+        }
+
+        .card {
+            background: var(--glass); border: 1px solid var(--glass-border); border-radius: 24px; padding: 3rem; display: flex; flex-direction: column; justify-content: center; height: 100%;
+        }
+
+        .module-desc p { font-size: 1.25rem; color: var(--text-secondary); line-height: 1.6; margin-bottom: 2.5rem; word-break: keep-all; }
+        .logic-card {
+            background: rgba(255, 255, 255, 0.05); padding: 1.5rem; border-radius: 12px; margin-bottom: 1rem; border-left: 4px solid var(--point);
+        }
+        .logic-card span { display: block; font-family: 'Outfit', sans-serif; font-size: 0.8rem; font-weight: 700; color: var(--point); margin-bottom: 0.5rem; text-transform: uppercase; }
+        .logic-card strong { font-size: 1.15rem; color: #FFFFFF; }
+
+        .pattern-badge { display: inline-block; padding: 6px 12px; border-radius: 4px; font-size: 0.85rem; font-weight: 700; background: rgba(99, 102, 241, 0.2); color: #A5B4FC; margin-bottom: 1rem; }
+        .chart-svg { width: 100%; height: 200px; margin-top: 2rem; }
+
+        .visual-container { text-align: center; }
+        .visual-container p { margin-top: 2rem; color: var(--text-secondary); font-size: 0.95rem; line-height: 1.6; }
+
+        .fade-up { opacity: 0; transform: translateY(30px); animation: fadeUp 0.8s ease-out forwards; }
+        @keyframes fadeUp { to { opacity: 1; transform: translateY(0); } }
+        .delay-1 { animation-delay: 0.2s; }
+
+        .nav-controls { position: fixed; bottom: 40px; right: 40px; display: flex; gap: 15px; }
+        .nav-btn { width: 50px; height: 50px; border-radius: 50%; border: 1px solid var(--glass-border); background: var(--glass); color: white; cursor: pointer; display: flex; align-items: center; justify-content: center; font-size: 1.2rem; }
+        .nav-btn:hover { background: var(--point); border-color: var(--point); color: #FFF; }
+    </style>
+</head>
+<body>
+
+    <div class="slide">
+        <header class="slide-header fade-up">
+            <span class="label">SANDBOX PERSPECTIVE</span>
+            <h2>줄 세우는 순위가 아닌<br>다르게 성장하는 패턴 분석</h2>
+        </header>
+
+        <div class="content-body fade-up delay-1">
+            <div class="card module-desc">
+                <p>전체 목표 달성률이라는 평균의 함정에서 벗어나, 각 지역이 보여주는 독특한 성장 패턴을 데이터로 발견합니다.</p>
+                <div class="logic-card">
+                    <span>Diagnostic Question</span>
+                    <strong>성장형 지점에서 나타나는 활동의 특성은 무엇인가?</strong>
+                </div>
+                <div class="logic-card">
+                    <span>Management Action</span>
+                    <strong>지점별 맞춤형 전략 수립 및 우수 사례의 정량화</strong>
+                </div>
+            </div>
+
+            <div class="card visual-container">
+                <div class="pattern-badge">GROWTH PATTERN ANALYSIS</div>
+                <h3 style="font-size: 1.5rem; color: #FFFFFF; font-weight: 700;">추세 및 변곡점 감지</h3>
+                <svg class="chart-svg" viewBox="0 0 400 150">
+                    <path d="M0,120 Q50,110 100,80 T200,60 T300,30 T400,10" fill="none" stroke="var(--point)" stroke-width="4" stroke-linecap="round" />
+                    <line x1="0" y1="140" x2="400" y2="140" stroke="rgba(255,255,255,0.1)" stroke-width="1" />
+                    <circle cx="200" cy="60" r="6" fill="#FFF" />
+                    <text x="210" y="55" fill="#FFF" font-size="10" font-weight="700">Inflection Point</text>
+                </svg>
+                <p>"단순 합산을 넘어 <strong>상승 변곡점과 정체 구간</strong>을<br>전문화된 통계 로직으로 자동 감지하여 제공합니다."</p>
+            </div>
+        </div>
+    </div>
+
+    <!-- Navigation -->
+    <div class="nav-controls">
+        <a href="index.html" class="nav-btn" title="Back to Index">☗</a>
+        <button class="nav-btn" onclick="location.href='slide-12.html'" title="Previous Slide">←</button>
+        <button class="nav-btn" onclick="location.href='slide-14.html'" title="Next Slide">→</button>
+    </div>
+
+    <script>
+        document.addEventListener('keydown', (e) => {
+            if (e.key === 'ArrowRight' || e.key === ' ') location.href = 'slide-14.html';
+            if (e.key === 'ArrowLeft') location.href = 'slide-12.html';
+        });
+    </script>
+</body>
+</html>

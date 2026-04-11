@@ -1,0 +1,144 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Sales Data OS Portfolio - Slide 07</title>
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" as="style" crossorigin href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/static/pretendard.css" />
+    <style>
+        :root {
+            --bg: #050714;
+            --text-primary: #FFFFFF;
+            --text-secondary: rgba(255, 255, 255, 0.7);
+            --accent: #E11D48; /* Warning / Problem */
+            --glass: rgba(255, 255, 255, 0.03);
+            --glass-border: rgba(255, 255, 255, 0.1);
+        }
+
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { background-color: var(--bg); color: var(--text-primary); font-family: 'Pretendard', sans-serif; overflow: hidden; width: 100vw; height: 100vh; }
+        h1, h2, h3 { font-family: 'Outfit', sans-serif; }
+
+        .slide { width: 100vw; height: 100vh; padding: 80px; display: flex; flex-direction: column; justify-content: center; position: relative; }
+        
+        .label { color: var(--accent); font-weight: 700; font-size: 0.9rem; letter-spacing: 0.15em; margin-bottom: 2rem; }
+        h2 { font-size: 3.2rem; font-weight: 700; line-height: 1.3; margin-bottom: 5rem; max-width: 900px; }
+
+        .problem-visual {
+            display: flex;
+            align-items: center;
+            justify-content: flex-start;
+            gap: 100px;
+        }
+
+        /* Silo Visual with SVG dots representing data scattered */
+        .silo-container {
+            position: relative;
+            display: flex;
+            gap: 20px;
+        }
+
+        .silo {
+            width: 120px;
+            height: 250px;
+            background: var(--glass);
+            border: 1px dashed var(--glass-border);
+            border-radius: 60px 60px 10px 10px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: flex-end;
+            padding-bottom: 30px;
+            position: relative;
+        }
+
+        .silo::before {
+            content: '';
+            position: absolute;
+            top: 10%; width: 40px; height: 40px;
+            background: rgba(225, 29, 72, 0.2);
+            filter: blur(10px);
+            border-radius: 50%;
+        }
+
+        .silo.s1 { border-color: rgba(225, 29, 72, 0.4); }
+        .silo span { font-family: 'Outfit', sans-serif; font-size: 0.8rem; font-weight: 700; opacity: 0.5; transform: rotate(-90deg); margin-bottom: 50px; white-space: nowrap; }
+
+        .scatter-dots {
+            position: absolute;
+            top: 0; left: 0; width: 100%; height: 100%;
+            pointer-events: none;
+        }
+
+        .explanation {
+            flex: 1;
+            max-width: 600px;
+        }
+
+        .prob-item {
+            margin-bottom: 2.5rem;
+            position: relative;
+            padding-left: 2rem;
+            border-left: 1px solid rgba(225, 29, 72, 0.3);
+        }
+        .prob-item h3 { font-size: 1.5rem; margin-bottom: 0.8rem; color: #FFFFFF; }
+        .prob-item p { font-size: 1.1rem; color: var(--text-secondary); line-height: 1.6; }
+
+        /* Animations */
+        .fade-up { opacity: 0; transform: translateY(30px); animation: fadeUp 0.8s ease-out forwards; }
+        @keyframes fadeUp { to { opacity: 1; transform: translateY(0); } }
+        .delay-1 { animation-delay: 0.2s; }
+        .delay-2 { animation-delay: 0.4s; }
+
+        /* Nav Controls */
+        .nav-controls { position: fixed; bottom: 40px; right: 40px; display: flex; gap: 15px; }
+        .nav-btn { width: 50px; height: 50px; border-radius: 50%; border: 1px solid var(--glass-border); background: var(--glass); color: white; cursor: pointer; display: flex; align-items: center; justify-content: center; font-size: 1.2rem; }
+        .nav-btn:hover { background: var(--accent); border-color: var(--accent); }
+    </style>
+</head>
+<body>
+
+    <div class="slide">
+        <span class="label fade-up">REAL PROBLEM</span>
+        <h2 class="fade-up delay-1">영업 현장에서 발견한 고질적 구조의 문제</h2>
+        
+        <div class="problem-visual fade-up delay-2">
+            <div class="silo-container">
+                <div class="silo s1"><span>ACTIVITY DATA</span></div>
+                <div class="silo s2"><span>TARGET DATA</span></div>
+                <div class="silo s3"><span>RESULT DATA</span></div>
+                <div class="silo s4"><span>MASTER DATA</span></div>
+            </div>
+
+            <div class="explanation">
+                <div class="prob-item">
+                    <h3>데이터의 파편화 (Silo)</h3>
+                    <p>활동, 실적, 담당, 제품 데이터가 각기 다른 문서와 시스템에 흩어져 있어 유기적인 연결이 불가능합니다.</p>
+                </div>
+                <div class="prob-item">
+                    <h3>관리 언어의 부재</h3>
+                    <p>현장의 언어(활동)와 본사의 언어(숫자)를 브릿지해주는 관리 표준이 없습니다.</p>
+                </div>
+                <div class="prob-item">
+                    <h3>사후적 대응의 반복</h3>
+                    <p>실적이 안 나온 원인을 활동에서 찾지 못하고, 결과만 보고 질책하는 악순환이 반복됩니다.</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Navigation -->
+    <div class="nav-controls">
+        <button class="nav-btn" onclick="location.href='slide-06.html'" title="Previous Slide">←</button>
+        <button class="nav-btn" onclick="location.href='slide-08.html'" title="Next Slide">→</button>
+    </div>
+
+    <script>
+        document.addEventListener('keydown', (e) => {
+            if (e.key === 'ArrowRight' || e.key === ' ') location.href = 'slide-08.html';
+            if (e.key === 'ArrowLeft') location.href = 'slide-06.html';
+        });
+    </script>
+</body>
+</html>

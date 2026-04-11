@@ -1,0 +1,139 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Sales Data OS Portfolio - Slide 04</title>
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" as="style" crossorigin href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/static/pretendard.css" />
+    <style>
+        :root {
+            --bg: #050714;
+            --text-primary: #FFFFFF;
+            --text-secondary: rgba(255, 255, 255, 0.7);
+            --point: #10B981; /* Forest Green / Growth */
+            --glass: rgba(255, 255, 255, 0.03);
+            --glass-border: rgba(255, 255, 255, 0.1);
+        }
+
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { 
+            background-color: var(--bg); color: var(--text-primary); 
+            font-family: 'Pretendard', sans-serif; overflow: hidden; 
+            width: 100vw; height: 100vh;
+        }
+
+        .slide { 
+            width: 100vw; height: 100vh; padding: 80px; 
+            display: flex; flex-direction: column; justify-content: center;
+            position: relative;
+        }
+
+        .label {
+            color: var(--point); font-family: 'Outfit', sans-serif; font-weight: 700;
+            font-size: 0.9rem; letter-spacing: 0.15em; margin-bottom: 2rem;
+        }
+
+        h2 {
+            font-size: 3.2rem; font-weight: 700; line-height: 1.3; margin-bottom: 4rem;
+            word-break: keep-all; max-width: 900px;
+        }
+
+        .comparison-layout {
+            display: grid;
+            grid-template-columns: 1fr 1.2fr;
+            gap: 60px;
+            align-items: center;
+        }
+
+        .side-box {
+            background: var(--glass);
+            border: 1px solid var(--glass-border);
+            padding: 3rem;
+            border-radius: 24px;
+            height: 100%;
+        }
+
+        .manual-side { 
+            opacity: 0.6; 
+            border-left: 4px solid #4B5563;
+        }
+
+        .system-side {
+            background: rgba(16, 185, 129, 0.05);
+            border-color: rgba(16, 185, 129, 0.3);
+            border-left: 4px solid var(--point);
+            box-shadow: 0 0 40px rgba(16, 185, 129, 0.1);
+        }
+
+        .side-box h3 {
+            font-family: 'Outfit', sans-serif;
+            font-size: 1.8rem; margin-bottom: 2rem;
+            display: flex; align-items: center; gap: 10px;
+        }
+        .side-box h3 span { font-size: 0.9rem; color: var(--point); text-transform: uppercase; letter-spacing: 0.1em; }
+
+        .side-box ul { list-style: none; }
+        .side-box li { 
+            font-size: 1.15rem; color: var(--text-secondary); margin-bottom: 1.2rem;
+            display: flex; gap: 10px; line-height: 1.6;
+        }
+        .side-box li::before { content: '•'; color: var(--point); }
+
+        .manual-side li::before { color: #4B5563; }
+
+        /* Animations */
+        .fade-up { opacity: 0; transform: translateY(20px); animation: fadeUp 0.6s ease-out forwards; }
+        @keyframes fadeUp { to { opacity: 1; transform: translateY(0); } }
+        .delay-1 { animation-delay: 0.2s; }
+        .delay-2 { animation-delay: 0.4s; }
+
+        /* Nav Controls */
+        .nav-controls { position: fixed; bottom: 40px; right: 40px; display: flex; gap: 15px; }
+        .nav-btn { width: 50px; height: 50px; border-radius: 50%; border: 1px solid var(--glass-border); background: var(--glass); color: white; cursor: pointer; display: flex; align-items: center; justify-content: center; font-size: 1.2rem; }
+        .nav-btn:hover { background: var(--point); border-color: var(--point); }
+    </style>
+</head>
+<body>
+
+    <div class="slide">
+        <span class="label fade-up">PRACTICAL OPERATIONS</span>
+        <h2 class="fade-up delay-1">현장 감각을 시스템으로 구현한 실전 경험</h2>
+        
+        <div class="comparison-layout fade-up delay-2">
+            <div class="side-box manual-side">
+                <h3>MANUAL <span>Before</span></h3>
+                <ul>
+                    <li>비정형 데이터로 인한 수작업 분석 한계</li>
+                    <li>고객 정보와 실적의 분리로 인한 관리 공백</li>
+                    <li>운영자의 감각과 직관에 전적으로 의존</li>
+                    <li>지속 가능한 데이터 히스토리 부재</li>
+                </ul>
+            </div>
+
+            <div class="side-box system-side">
+                <h3>SYSTEMIZED <span>After</span></h3>
+                <ul>
+                    <li>데이터 수집 단계부터 표준화된 운영 로직 설계</li>
+                    <li>고객 관계와 거래 실적을 통합한 관리 프레임</li>
+                    <li>'누가 보더라도 같은 해석'이 가능한 대시보드 구축</li>
+                    <li>지표 변화를 감지하고 조치하는 업무 프로세스 정립</li>
+                </ul>
+            </div>
+        </div>
+    </div>
+
+    <!-- Navigation -->
+    <div class="nav-controls">
+        <button class="nav-btn" onclick="location.href='slide-03.html'" title="Previous Slide">←</button>
+        <button class="nav-btn" onclick="location.href='slide-05.html'" title="Next Slide">→</button>
+    </div>
+
+    <script>
+        document.addEventListener('keydown', (e) => {
+            if (e.key === 'ArrowRight' || e.key === ' ') location.href = 'slide-05.html';
+            if (e.key === 'ArrowLeft') location.href = 'slide-03.html';
+        });
+    </script>
+</body>
+</html>

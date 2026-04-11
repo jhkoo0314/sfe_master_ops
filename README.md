@@ -1,6 +1,6 @@
 # Sales Data OS
 
-원천데이터를 넣으면 `정규화 -> 모듈 분석/KPI 계산 -> Validation Layer(OPS) 검증 게이트 -> Intelligence -> Builder HTML 생성`까지 이어지는 Sales Data OS 운영 검증 프로젝트입니다.
+원천데이터를 넣으면 `intake/onboarding -> _intake_staging -> 정규화 -> 모듈 분석/KPI 계산 -> Validation Layer(OPS) 검증 게이트 -> Intelligence -> Builder HTML 생성`까지 이어지는 Sales Data OS 운영 검증 프로젝트입니다.
 
 현재 공식 기준의 핵심은 이것입니다.
 
@@ -101,11 +101,11 @@ Part2 문서 운영 기준:
 ## 핵심 원칙
 
 ```text
-원천데이터 -> Adapter -> Module -> Result Asset -> Validation Layer (OPS) -> Intelligence (RADAR) -> Builder
+원천데이터 -> Intake/Onboarding -> _intake_staging -> Adapter -> Module -> Result Asset -> Validation Layer (OPS) -> Intelligence (RADAR) -> Builder
 ```
 
 - OPS는 raw를 직접 읽지 않습니다.
-- Adapter가 먼저 회사별 차이를 정리합니다.
+- Intake/Onboarding이 raw를 먼저 점검/보정하고, Adapter는 `_intake_staging` 정리본을 표준 구조로 변환합니다.
 - 모듈은 자기 Result Asset과 Builder용 payload를 만듭니다.
 - OPS는 시스템 전체가 아니라 `Validation / Orchestration Layer` 역할에 가깝습니다.
 - RADAR는 Validation 승인 결과를 받아 해석/우선순위 판단을 돕는 Intelligence 단계입니다.
@@ -246,7 +246,7 @@ run 저장 예:
 - 현재 테스트용 raw generator는 `config -> engine -> template -> writer` 구조로 정리되기 시작한 상태입니다.
 - 현재 템플릿은 `daon_like`, `hangyeol_like` 2개이고, `monthly_merge_pharma`는 `daon_like + monthly_and_merged` 옵션으로 처리됩니다.
 - 기존 회사별 생성 함수 본체는 template helper로 이동했고, 공통 진입점은 wrapper 없이 config를 직접 읽습니다.
-- 실제 운영/테스트 공통 입구는 이미 `raw -> intake/onboarding -> adapter -> 기존 파이프라인` 기준으로 정리되어 있습니다.
+- 실제 운영/테스트 공통 입구는 이미 `raw -> intake/onboarding -> _intake_staging -> adapter -> 기존 파이프라인` 기준으로 정리되어 있습니다.
 - 테스트용 raw generator 정리 설계 문서는 [17_raw_generator_refactor_plan.md](/C:/sfe_master_ops/docs/architecture/17_raw_generator_refactor_plan.md)입니다.
 - 실제 운영용 공통 입력 기준은 [18_real_company_raw_input_flow.md](/C:/sfe_master_ops/docs/architecture/18_real_company_raw_input_flow.md), [19_intake_gate_and_onboarding_plan.md](/C:/sfe_master_ops/docs/architecture/19_intake_gate_and_onboarding_plan.md), [20_common_intake_engine_implementation_plan.md](/C:/sfe_master_ops/docs/architecture/20_common_intake_engine_implementation_plan.md)입니다.
 

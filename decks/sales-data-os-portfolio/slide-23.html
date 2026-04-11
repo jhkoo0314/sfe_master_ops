@@ -1,0 +1,131 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Sales Data OS Portfolio - Slide 23</title>
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" as="style" crossorigin href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/static/pretendard.css" />
+    <style>
+        :root {
+            --bg: #050714;
+            --text-primary: #FFFFFF;
+            --text-secondary: rgba(255, 255, 255, 0.7);
+            --accent: #D4A574;
+            --glass: rgba(255, 255, 255, 0.03);
+            --glass-border: rgba(255, 255, 255, 0.1);
+        }
+
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { background-color: var(--bg); color: var(--text-primary); font-family: 'Pretendard', sans-serif; overflow: hidden; width: 100vw; height: 100vh; }
+        h1, h2, h3 { font-family: 'Outfit', sans-serif; }
+
+        .slide { width: 100vw; height: 100vh; padding: 80px 100px; display: flex; flex-direction: column; }
+        .slide-header { margin-bottom: 50px; }
+        .label { display: block; color: var(--accent); font-weight: 700; font-size: 0.9rem; letter-spacing: 0.15em; margin-bottom: 1.5rem; }
+        h2 { font-size: 3.2rem; font-weight: 700; line-height: 1.2; }
+
+        .content-body { display: grid; grid-template-columns: 1fr 1fr; gap: 40px; flex: 1; align-items: stretch; padding-bottom: 40px; }
+        .card { background: var(--glass); border: 1px solid var(--glass-border); border-radius: 24px; padding: 3rem; display: flex; flex-direction: column; justify-content: center; height: 100%; }
+
+        .module-desc p { font-size: 1.25rem; color: var(--text-secondary); line-height: 1.6; margin-bottom: 2.5rem; word-break: keep-all; }
+        .logic-card { background: rgba(255, 255, 255, 0.05); border-radius: 16px; padding: 1.5rem; margin-bottom: 1rem; border-left: 4px solid var(--accent); }
+        .logic-card span { display: block; font-family: 'Outfit', sans-serif; color: var(--accent); font-size: 0.8rem; font-weight: 700; margin-bottom: 0.5rem; }
+        .logic-card strong { font-size: 1.1rem; color: #FFF; font-weight: 600; }
+
+        .visual-container { text-align: center; position: relative; }
+        .agent-svg { width: 100%; height: 320px; }
+
+        .fade-up { opacity: 0; transform: translateY(30px); animation: fadeUp 0.8s ease-out forwards; }
+        @keyframes fadeUp { to { opacity: 1; transform: translateY(0); } }
+        .delay-1 { animation-delay: 0.2s; }
+
+        .nav-controls { position: fixed; bottom: 40px; right: 40px; display: flex; gap: 15px; }
+        .nav-btn { width: 50px; height: 50px; border-radius: 50%; border: 1px solid var(--glass-border); background: var(--glass); color: white; cursor: pointer; display: flex; align-items: center; justify-content: center; font-size: 1.2rem; }
+        .nav-btn:hover { background: var(--accent); border-color: var(--accent); color: #000; }
+    </style>
+</head>
+<body>
+
+    <div class="slide">
+        <header class="slide-header fade-up">
+            <span class="label">STRATEGIC COMPUTING AGENT</span>
+            <h2>비즈니스 로직을 자율 집행하는<br>지능형 성과 계산 에이전트</h2>
+        </header>
+
+        <div class="content-body fade-up delay-1">
+            <div class="card module-desc">
+                <p>모든 KPI 공식은 에이전트 내부에 격리되어 관리되며, 외부 환경의 변화에도 흔들리지 않는 단일 판단 기준(Single Source of Truth)을 제공합니다.</p>
+                
+                <div class="logic-card">
+                    <span>Isolated Logic Engine</span>
+                    <strong>UI와 완전 분리된 순수 비즈니스 계산 로직 격리</strong>
+                </div>
+                <div class="logic-card">
+                    <span>Dynamic Parameter Control</span>
+                    <strong>조직별/기간별 변수를 스스로 판단하여 최적의 지표 산출</strong>
+                </div>
+                <div class="logic-card">
+                    <span>Truth Governance</span>
+                    <strong>재계산 오류를 원천 차단하는 전사 통합 로직 거버넌스</strong>
+                </div>
+            </div>
+
+            <div class="card visual-container">
+                <svg class="agent-svg" viewBox="0 0 400 320">
+                    <!-- Brain Core -->
+                    <circle cx="200" cy="160" r="60" fill="rgba(212, 165, 116, 0.1)" stroke="var(--accent)" stroke-width="2" stroke-dasharray="8 4">
+                        <animate attributeName="r" values="60;65;60" dur="3s" repeatCount="indefinite" />
+                    </circle>
+                    <g transform="translate(200, 160)">
+                        <path d="M-20,-20 L20,20 M20,-20 L-20,20" stroke="var(--accent)" stroke-width="4" />
+                        <text y="45" text-anchor="middle" fill="var(--accent)" font-family="Outfit" font-size="14" font-weight="900">STRATEGIC BRAIN</text>
+                    </g>
+                    
+                    <!-- Peripheral Modules -->
+                    <g opacity="0.6">
+                        <rect x="50" y="60" width="80" height="40" rx="8" fill="rgba(255,255,255,0.05)" stroke="var(--accent)" />
+                        <text x="90" y="85" text-anchor="middle" fill="#FFF" font-size="10">CRM Logic</text>
+                        <line x1="130" y1="80" x2="160" y2="120" stroke="var(--accent)" stroke-dasharray="2 2" />
+
+                        <rect x="270" y="60" width="80" height="40" rx="8" fill="rgba(255,255,255,0.05)" stroke="var(--accent)" />
+                        <text x="310" y="85" text-anchor="middle" fill="#FFF" font-size="10">Sales Logic</text>
+                        <line x1="270" y1="80" x2="240" y2="120" stroke="var(--accent)" stroke-dasharray="2 2" />
+
+                        <rect x="50" y="240" width="80" height="40" rx="8" fill="rgba(255,255,255,0.05)" stroke="var(--accent)" />
+                        <text x="90" y="265" text-anchor="middle" fill="#FFF" font-size="10">Target Logic</text>
+                        <line x1="130" y1="260" x2="160" y2="200" stroke="var(--accent)" stroke-dasharray="2 2" />
+
+                        <rect x="270" y="240" width="80" height="40" rx="8" fill="rgba(255,255,255,0.05)" stroke="var(--accent)" />
+                        <text x="310" y="265" text-anchor="middle" fill="#FFF" font-size="10">Market Logic</text>
+                        <line x1="270" y1="260" x2="240" y2="200" stroke="var(--accent)" stroke-dasharray="2 2" />
+                    </g>
+                    
+                    <!-- Pulsing center -->
+                    <circle cx="200" cy="160" r="10" fill="var(--accent)">
+                        <animate attributeName="opacity" values="0.4;1;0.4" dur="1s" repeatCount="indefinite" />
+                    </circle>
+                </svg>
+                <div style="background: rgba(212, 165, 116, 0.1); padding: 1.5rem; border-radius: 12px; border: 1px solid var(--accent);">
+                    <p style="color: var(--accent); font-size: 1rem; font-weight: 700;">AGENT = BUSINESS KNOWLEDGE</p>
+                    <p style="color: #FFF; font-size: 0.8rem; margin-top: 0.5rem;">"모듈은 표현할 뿐, 모든 본질적 정의는 에이전트가 결정합니다."</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Navigation -->
+    <div class="nav-controls">
+        <a href="index.html" class="nav-btn" title="Back to Index">☗</a>
+        <button class="nav-btn" onclick="location.href='slide-22.html'" title="Previous Slide">←</button>
+        <button class="nav-btn" onclick="location.href='slide-24.html'" title="Next Slide">→</button>
+    </div>
+
+    <script>
+        document.addEventListener('keydown', (e) => {
+            if (e.key === 'ArrowRight' || e.key === ' ') location.href = 'slide-24.html';
+            if (e.key === 'ArrowLeft') location.href = 'slide-22.html';
+        });
+    </script>
+</body>
+</html>

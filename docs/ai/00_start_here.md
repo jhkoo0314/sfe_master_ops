@@ -32,7 +32,7 @@
 
 공식 흐름:
 
-`raw -> adapter -> module/core engine -> Result Asset -> Validation Layer(OPS) -> Intelligence(RADAR) -> Builder`
+`raw -> intake/onboarding -> _intake_staging -> adapter -> module/core engine -> Result Asset -> Validation Layer(OPS) -> Intelligence(RADAR) -> Builder`
 
 Part2 우선순위/진행 상태 단일 기준:
 

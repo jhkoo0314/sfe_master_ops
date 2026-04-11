@@ -1,0 +1,164 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Sales Data OS Portfolio - Slide 17</title>
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" as="style" crossorigin href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/static/pretendard.css" />
+    <style>
+        :root {
+            --bg: #050714;
+            --text-primary: #FFFFFF;
+            --text-secondary: rgba(255, 255, 255, 0.7);
+            --accent: #20B2AA; /* Teal / Verification */
+            --glass: rgba(255, 255, 255, 0.03);
+            --glass-border: rgba(255, 255, 255, 0.1);
+        }
+
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { background-color: var(--bg); color: var(--text-primary); font-family: 'Pretendard', sans-serif; overflow: hidden; width: 100vw; height: 100vh; }
+        h1, h2, h3 { font-family: 'Outfit', sans-serif; }
+
+        .slide { 
+            width: 100vw; height: 100vh; padding: 80px 100px;
+            display: flex; flex-direction: column;
+        }
+        
+        .slide-header { margin-bottom: 50px; }
+        .label { display: block; color: var(--accent); font-weight: 700; font-size: 0.9rem; letter-spacing: 0.15em; margin-bottom: 1.5rem; }
+        h2 { font-size: 3.2rem; font-weight: 700; line-height: 1.2; }
+
+        .content-body {
+            display: grid; grid-template-columns: 1fr 1fr; gap: 40px; flex: 1; align-items: stretch; padding-bottom: 40px;
+        }
+
+        .card {
+            background: var(--glass); border: 1px solid var(--glass-border); border-radius: 24px; padding: 3rem; display: flex; flex-direction: column; justify-content: center; height: 100%;
+        }
+
+        .module-desc p { font-size: 1.25rem; color: var(--text-secondary); line-height: 1.6; margin-bottom: 2.5rem; word-break: keep-all; }
+        
+        /* Verification Checklist style */
+        .check-item { display: flex; align-items: flex-start; gap: 1rem; margin-bottom: 1.5rem; opacity: 0; transform: translateX(-20px); animation: slideIn 0.5s forwards; }
+        @keyframes slideIn { to { opacity: 1; transform: translateX(0); } }
+        
+        .check-circle { width: 24px; height: 24px; border-radius: 50%; border: 2px solid var(--accent); display: flex; align-items: center; justify-content: center; flex-shrink: 0; margin-top: 4px; }
+        .check-circle::after { content: '✓'; color: var(--accent); font-size: 0.8rem; font-weight: 900; }
+        
+        .check-text h4 { font-size: 1.15rem; color: #FFFFFF; margin-bottom: 0.3rem; }
+        .check-text p { font-size: 0.9rem; color: var(--text-secondary); margin-bottom: 0; line-height: 1.5; }
+
+        /* Diagnostic Visual */
+        .visual-container { text-align: center; position: relative; }
+        .scanner-svg { width: 100%; height: 280px; }
+        
+        .status-badge { display: inline-block; padding: 6px 16px; border-radius: 100px; background: rgba(32, 178, 170, 0.15); color: var(--accent); font-family: 'Outfit', sans-serif; font-weight: 700; font-size: 0.8rem; margin-top: 2rem; border: 1px solid var(--accent); }
+
+        .fade-up { opacity: 0; transform: translateY(30px); animation: fadeUp 0.8s ease-out forwards; }
+        @keyframes fadeUp { to { opacity: 1; transform: translateY(0); } }
+        .delay-1 { animation-delay: 0.2s; }
+
+        .nav-controls { position: fixed; bottom: 40px; right: 40px; display: flex; gap: 15px; }
+        .nav-btn { width: 50px; height: 50px; border-radius: 50%; border: 1px solid var(--glass-border); background: var(--glass); color: white; cursor: pointer; display: flex; align-items: center; justify-content: center; font-size: 1.2rem; }
+        .nav-btn:hover { background: var(--accent); border-color: var(--accent); color: #000; }
+    </style>
+</head>
+<body>
+
+    <div class="slide">
+        <header class="slide-header fade-up">
+            <span class="label">FULL-CYCLE VERIFICATION</span>
+            <h2>단순 아이디어를 넘어<br>데이터 전술을 실전 검증하다</h2>
+        </header>
+
+        <div class="content-body fade-up delay-1">
+            <div class="card module-desc">
+                <p>로직의 현실성을 증명하기 위해 데이터의 입수부터 최종 리포트 출력까지의 전 과정을 시뮬레이션했습니다.</p>
+                
+                <div class="check-item" style="animation-delay: 0.4s;">
+                    <div class="check-circle"></div>
+                    <div class="check-text">
+                        <h4>운영 데이터 통합 표준 수립</h4>
+                        <p>로컬 원본 자료의 표준화 및 마스터 전환 공정 확인</p>
+                    </div>
+                </div>
+                
+                <div class="check-item" style="animation-delay: 0.6s;">
+                    <div class="check-circle"></div>
+                    <div class="check-text">
+                        <h4>실전적 KPI 로직의 정합성</h4>
+                        <p>인과관계가 입증된 HIR, RTR 등 핵심 지표 산출 논리</p>
+                    </div>
+                </div>
+                
+                <div class="check-item" style="animation-delay: 0.8s;">
+                    <div class="check-circle"></div>
+                    <div class="check-text">
+                        <h4>의사결정 보고서 최종 구현</h4>
+                        <p>관리 조치(Management Action)와 연결된 리포트 출력</p>
+                    </div>
+                </div>
+            </div>
+
+            <div class="card visual-container">
+                <svg class="scanner-svg" viewBox="0 0 300 250" preserveAspectRatio="xMidYMid meet">
+                    <!-- Path Background -->
+                    <path d="M 150 40 L 250 160 L 50 160 Z" fill="none" stroke="rgba(32, 178, 170, 0.1)" stroke-width="2" stroke-dasharray="10 10" />
+                    
+                    <!-- Pulsing Path Pulse -->
+                    <circle r="5" fill="var(--accent)">
+                        <animateMotion path="M 150 40 L 250 160 L 50 160 Z" dur="6s" repeatCount="indefinite" />
+                    </circle>
+
+                    <!-- Node 1: Data Integration -->
+                    <g transform="translate(150, 40)">
+                        <circle r="28" fill="rgba(32, 178, 170, 0.2)" stroke="var(--accent)" stroke-width="2" />
+                        <text y="4" text-anchor="middle" fill="#FFF" font-family="Outfit" font-size="9" font-weight="700">DATA</text>
+                        <circle cx="18" cy="-18" r="8" fill="var(--accent)" />
+                        <text x="18" y="-15" text-anchor="middle" fill="#000" font-size="8" font-weight="900">✓</text>
+                    </g>
+
+                    <!-- Node 2: KPI Logic -->
+                    <g transform="translate(250, 160)">
+                        <circle r="28" fill="rgba(32, 178, 170, 0.2)" stroke="var(--accent)" stroke-width="2" />
+                        <text y="4" text-anchor="middle" fill="#FFF" font-family="Outfit" font-size="9" font-weight="700">LOGIC</text>
+                        <circle cx="18" cy="-18" r="8" fill="var(--accent)" />
+                        <text x="18" y="-15" text-anchor="middle" fill="#000" font-size="8" font-weight="900">✓</text>
+                    </g>
+
+                    <!-- Node 3: Report Gen -->
+                    <g transform="translate(50, 160)">
+                        <circle r="28" fill="rgba(32, 178, 170, 0.2)" stroke="var(--accent)" stroke-width="2" />
+                        <text y="4" text-anchor="middle" fill="#FFF" font-family="Outfit" font-size="8" font-weight="700">REPORT</text>
+                        <circle cx="18" cy="-18" r="8" fill="var(--accent)" />
+                        <text x="18" y="-15" text-anchor="middle" fill="#000" font-size="8" font-weight="900">✓</text>
+                    </g>
+
+                    <!-- Center Seal -->
+                    <g transform="translate(150, 130)">
+                        <rect x="-30" y="-12" width="60" height="24" rx="4" fill="var(--accent)" />
+                        <text text-anchor="middle" y="4" fill="#000" font-family="Outfit" font-size="9" font-weight="900" letter-spacing="0.1em">VALIDATED</text>
+                    </g>
+                </svg>
+                <div class="status-badge">READY FOR DEPLOYMENT</div>
+                <p style="margin-top: 1.5rem; color: var(--text-secondary); font-size: 0.95rem;">"아이디어가 아닌 <strong>입증된 프로세스</strong>임을<br>Full-cycle POC를 통해 최종 확정했습니다."</p>
+            </div>
+        </div>
+    </div>
+
+    <!-- Navigation -->
+    <div class="nav-controls">
+        <a href="index.html" class="nav-btn" title="Back to Index">☗</a>
+        <button class="nav-btn" onclick="location.href='slide-16.html'" title="Previous Slide">←</button>
+        <button class="nav-btn" onclick="location.href='slide-18.html'" title="Next Slide">→</button>
+    </div>
+
+    <script>
+        document.addEventListener('keydown', (e) => {
+            if (e.key === 'ArrowRight' || e.key === ' ') location.href = 'slide-18.html';
+            if (e.key === 'ArrowLeft') location.href = 'slide-16.html';
+        });
+    </script>
+</body>
+</html>

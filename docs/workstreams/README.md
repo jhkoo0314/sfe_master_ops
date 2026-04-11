@@ -26,6 +26,7 @@
 - `docs/workstreams/part3_open_items.md`
 - `docs/workstreams/part3_builder_followups.md`
 
+
 ## 금지 원칙
 
 - `docs/part3/`

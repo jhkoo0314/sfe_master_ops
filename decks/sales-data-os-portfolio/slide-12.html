@@ -1,0 +1,134 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Sales Data OS Portfolio - Slide 12</title>
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" as="style" crossorigin href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/static/pretendard.css" />
+    <style>
+        :root {
+            --bg: #050714;
+            --text-primary: #FFFFFF;
+            --text-secondary: rgba(255, 255, 255, 0.7);
+            --accent: #D4A574;
+            --glass: rgba(255, 255, 255, 0.03);
+            --glass-border: rgba(255, 255, 255, 0.1);
+        }
+
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { background-color: var(--bg); color: var(--text-primary); font-family: 'Pretendard', sans-serif; overflow: hidden; width: 100vw; height: 100vh; }
+        h1, h2, h3 { font-family: 'Outfit', sans-serif; }
+
+        .slide { 
+            width: 100vw; height: 100vh; 
+            padding: 80px 100px;
+            display: flex; flex-direction: column;
+        }
+        
+        /* Shared Header */
+        .slide-header { margin-bottom: 50px; }
+        .label { display: block; color: var(--accent); font-weight: 700; font-size: 0.9rem; letter-spacing: 0.15em; margin-bottom: 1.5rem; }
+        h2 { font-size: 3.2rem; font-weight: 700; line-height: 1.2; }
+
+        /* Content Body Grid */
+        .content-body {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 40px;
+            flex: 1;
+            align-items: stretch;
+            padding-bottom: 40px;
+        }
+
+        .card {
+            background: var(--glass);
+            border: 1px solid var(--glass-border);
+            border-radius: 24px;
+            padding: 3rem;
+            display: flex; flex-direction: column; justify-content: center;
+            height: 100%;
+        }
+
+        /* Left Card Styles */
+        .module-desc p { font-size: 1.25rem; color: var(--text-secondary); line-height: 1.6; margin-bottom: 2.5rem; word-break: keep-all; }
+        .logic-card {
+            background: rgba(255, 255, 255, 0.05); padding: 1.5rem; border-radius: 12px; margin-bottom: 1rem; border-left: 4px solid var(--accent);
+        }
+        .logic-card span { display: block; font-family: 'Outfit', sans-serif; font-size: 0.8rem; font-weight: 700; color: var(--accent); margin-bottom: 0.5rem; text-transform: uppercase; }
+        .logic-card strong { font-size: 1.15rem; color: #FFFFFF; }
+
+        /* Right Card Styles (Visual) */
+        .visual-container { text-align: center; }
+        .meter-subtitle { font-size: 1.1rem; color: var(--accent); font-weight: 600; margin-bottom: 1rem; }
+        .meter-title { font-size: 3rem; font-family: 'Outfit', sans-serif; font-weight: 700; color: #FFFFFF; }
+        
+        .meter-wrap { width: 100%; height: 10px; background: #4B5563; border-radius: 10px; margin: 3rem 0; position: relative; }
+        .meter-fill { width: 72%; height: 100%; background: linear-gradient(90deg, var(--accent), #FCD34D); border-radius: 10px; box-shadow: 0 0 20px rgba(212, 165, 116, 0.5); }
+        .meter-labels { display: flex; justify-content: space-between; font-family: 'Outfit', sans-serif; font-size: 0.85rem; color: var(--text-secondary); }
+
+        .visual-container p { margin-top: 2rem; color: var(--text-secondary); font-size: 0.95rem; line-height: 1.6; }
+
+        /* Animations */
+        .fade-up { opacity: 0; transform: translateY(30px); animation: fadeUp 0.8s ease-out forwards; }
+        @keyframes fadeUp { to { opacity: 1; transform: translateY(0); } }
+        .delay-1 { animation-delay: 0.2s; }
+        .delay-2 { animation-delay: 0.4s; }
+
+        /* Nav Controls */
+        .nav-controls { position: fixed; bottom: 40px; right: 40px; display: flex; gap: 15px; }
+        .nav-btn { width: 50px; height: 50px; border-radius: 50%; border: 1px solid var(--glass-border); background: var(--glass); color: white; cursor: pointer; display: flex; align-items: center; justify-content: center; font-size: 1.2rem; }
+        .nav-btn:hover { background: var(--accent); border-color: var(--accent); color: #000; }
+    </style>
+</head>
+<body>
+
+    <div class="slide">
+        <header class="slide-header fade-up">
+            <span class="label">CRM PERSPECTIVE</span>
+            <h2>활동의 '양'이 아닌<br>'질'을 측정하는 가늠자</h2>
+        </header>
+
+        <div class="content-body fade-up delay-1">
+            <!-- Left Card -->
+            <div class="card module-desc">
+                <p>기존 CRM이 단순히 '누구'를 얼마나 만났는지 기록했다면, Sales Data OS는 그 만남이 '성과'로 이어지는 농도를 측정합니다.</p>
+                <div class="logic-card">
+                    <span>Diagnostic Question</span>
+                    <strong>핵심 타겟 고객에게 핵심 메시지가 충분히 전달되었는가?</strong>
+                </div>
+                <div class="logic-card">
+                    <span>Management Action</span>
+                    <strong>불확실한 관성적 영업 탈피, 활동 방향성 재조정</strong>
+                </div>
+            </div>
+
+            <!-- Right Card -->
+            <div class="card visual-container">
+                <div class="meter-subtitle">QUALITY INDEX</div>
+                <div class="meter-title">72/100</div>
+                <div class="meter-wrap"><div class="meter-fill"></div></div>
+                <div class="meter-labels">
+                    <span>Activity Focus</span>
+                    <span>Result Focus</span>
+                </div>
+                <p>"단순 콜 수가 아닌, <strong>타겟 집중도와 메시지 도달율</strong>을<br>성과와 연동하여 입체적으로 분석합니다."</p>
+            </div>
+        </div>
+    </div>
+
+    <!-- Navigation -->
+    <div class="nav-controls">
+        <a href="index.html" class="nav-btn" title="Back to Index">☗</a>
+        <button class="nav-btn" onclick="location.href='slide-11.html'" title="Previous Slide">←</button>
+        <button class="nav-btn" onclick="location.href='slide-13.html'" title="Next Slide">→</button>
+    </div>
+
+    <script>
+        document.addEventListener('keydown', (e) => {
+            if (e.key === 'ArrowRight' || e.key === ' ') location.href = 'slide-13.html';
+            if (e.key === 'ArrowLeft') location.href = 'slide-11.html';
+        });
+    </script>
+</body>
+</html>

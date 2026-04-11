@@ -5,14 +5,16 @@ from pathlib import Path
 from ui.console.display import render_page_hero, render_panel_header, render_upload_row
 from ui.console.paths import get_active_company_name, get_source_target_display_path, get_source_target_map
 from ui.console.runner import (
-    ensure_intake_result,
+    get_cached_intake_result,
     get_crm_package_status,
     get_monthly_raw_status,
     has_session_intake_inputs,
+    run_intake_and_cache,
     summarize_intake_result,
 )
 from ui.console.state import save_monthly_upload_batch
 from ui.console.state import save_uploaded_batch
+from ui.console.state import select_existing_source_files
 from modules.intake import get_monthly_raw_root
 
 
@@ -38,7 +40,7 @@ def render_upload_tab() -> None:
     staged_uploaded = st.session_state.uploaded_data
     saved_uploaded = st.session_state.saved_uploaded_data
     intake_inputs_ready = has_session_intake_inputs(saved_uploaded)
-    intake_result = ensure_intake_result(current_mode, saved_uploaded)
+    intake_result = get_cached_intake_result(current_mode, saved_uploaded)
     intake_summary = summarize_intake_result(intake_result)
     render_page_hero(
         "RAW 데이터 투입",
@@ -63,6 +65,56 @@ def render_upload_tab() -> None:
     )
     st.markdown('<div class="action-note">원본 추출 파일 우선 · 중복 업로드 허용 · 자세한 설명은 각 항목의 예시에서 확인</div>', unsafe_allow_html=True)
 
+    source_target_map = get_source_target_map()
+    existing_source_rows = []
+    for key, (target_path, _file_format) in source_target_map.items():
+        if key not in saved_uploaded:
+            continue
+        path = Path(target_path)
+        if not path.exists():
+            continue
+        existing_source_rows.append(
+            {
+                "입력 묶음": key,
+                "파일명": path.name,
+                "크기(KB)": round(path.stat().st_size / 1024, 1),
+                "경로": str(path),
+            }
+        )
+
+    render_panel_header(
+        "data 폴더 자동 선택",
+        "현재 회사의 company_source 폴더에 이미 들어 있는 파일을 찾아 업로드 파일처럼 선택합니다.",
+    )
+    c_auto_1, c_auto_2 = st.columns([1, 2])
+    with c_auto_1:
+        overwrite_existing = st.checkbox("선택된 항목도 다시 덮어쓰기", value=False)
+        auto_select_btn = st.button("data 폴더 파일 자동 선택", use_container_width=True, type="secondary")
+    with c_auto_2:
+        if existing_source_rows:
+            st.caption(f"감지된 기존 source 파일: {len(existing_source_rows)}개")
+            with st.expander("감지 파일 보기", expanded=False):
+                st.dataframe(pd.DataFrame(existing_source_rows), use_container_width=True, hide_index=True)
+        else:
+            st.info("현재 회사의 company_source 표준 경로에서 감지된 파일이 없습니다.")
+    if auto_select_btn:
+        select_result = select_existing_source_files(source_target_map, overwrite=overwrite_existing)
+        if select_result["errors"]:
+            st.error("일부 파일을 읽지 못했습니다: " + " / ".join(select_result["errors"][:3]))
+        if select_result["selected_count"] <= 0:
+            if select_result["skipped"]:
+                st.warning("새로 선택한 파일이 없습니다. 이미 선택된 항목은 건너뛰었습니다.")
+            else:
+                st.warning("자동 선택할 기존 source 파일이 없습니다.")
+        else:
+            st.success(
+                f"data 폴더 파일 선택 완료: {select_result['selected_count']}개 파일 / {select_result['rows']}건"
+            )
+            if select_result["skipped"]:
+                st.caption(f"이미 선택되어 건너뛴 항목: {', '.join(select_result['skipped'])}")
+            st.caption("아직 Intake는 실행하지 않았습니다. 필요한 항목을 확인한 뒤 `패키지 업로드 저장`을 누르세요.")
+            st.rerun()
+
     pending_package_count = sum(
         1
         for key, value in staged_uploaded.items()
@@ -85,10 +137,25 @@ def render_upload_tab() -> None:
             st.success(f"패키지 업로드 저장 완료: {save_result['saved_count']}개 파일 / {save_result['rows']}건")
             st.rerun()
 
-    render_panel_header("Intake Gate 결과", "패키지 업로드 저장 또는 월별 raw 저장이 끝난 뒤 공통 intake engine이 시작됩니다.")
+    render_panel_header("Intake Gate 실행", "패키지 업로드 저장 또는 월별 raw 저장을 마친 뒤 사용자가 직접 실행합니다.")
     if not intake_inputs_ready:
-        st.info("아직 패키지 업로드 저장 또는 월별 raw 저장을 하지 않았습니다. 파일을 모두 올린 뒤 저장하면 Intake Gate가 시작됩니다.")
+        st.info("아직 패키지 업로드 저장 또는 월별 raw 저장을 하지 않았습니다. 파일을 모두 선택한 뒤 먼저 저장하세요.")
     else:
+        c_intake_1, c_intake_2 = st.columns([1, 2])
+        with c_intake_1:
+            run_intake_btn = st.button("Intake Gate 실행", use_container_width=True, type="secondary")
+        with c_intake_2:
+            if intake_result:
+                st.caption("저장된 입력 기준 Intake 결과가 있습니다. 파일을 바꾸면 다시 실행해야 합니다.")
+            else:
+                st.caption("저장된 입력은 있지만 Intake는 아직 실행하지 않았습니다.")
+        if run_intake_btn:
+            with st.spinner("Intake Gate 실행 중..."):
+                intake_result = run_intake_and_cache(current_mode, saved_uploaded)
+                intake_summary = summarize_intake_result(intake_result)
+            st.success(f"Intake Gate 완료: {str(intake_summary['status']).upper()}")
+            st.rerun()
+    if intake_inputs_ready and intake_result:
         st.markdown(
             f"""
             <div class="stat-strip">
@@ -130,7 +197,6 @@ def render_upload_tab() -> None:
             st.caption(f"- {alert.get('message')}")
 
         package_rows = []
-        source_target_map = get_source_target_map()
         for package in intake_result.get("packages", []):
             if package.get("source_key") == "rep_master":
                 continue

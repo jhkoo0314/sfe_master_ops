@@ -1,0 +1,131 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Sales Data OS Portfolio - Slide 10</title>
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" as="style" crossorigin href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/static/pretendard.css" />
+    <style>
+        :root {
+            --bg: #050714;
+            --text-primary: #FFFFFF;
+            --text-secondary: rgba(255, 255, 255, 0.7);
+            --accent: #20B2AA; /* Teal / Pipeline */
+            --glass: rgba(255, 255, 255, 0.03);
+            --glass-border: rgba(255, 255, 255, 0.1);
+        }
+
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { background-color: var(--bg); color: var(--text-primary); font-family: 'Pretendard', sans-serif; overflow: hidden; width: 100vw; height: 100vh; }
+        h1, h2, h3 { font-family: 'Outfit', sans-serif; }
+
+        .slide { width: 100vw; height: 100vh; padding: 80px; display: flex; flex-direction: column; justify-content: center; position: relative; }
+        
+        .label { color: var(--accent); font-weight: 700; font-size: 0.9rem; letter-spacing: 0.15em; margin-bottom: 2rem; }
+        h2 { font-size: 3.2rem; font-weight: 700; line-height: 1.3; margin-bottom: 5rem; max-width: 900px; }
+
+        .pipeline-flow {
+            display: flex;
+            align-items: flex-start;
+            justify-content: space-between;
+            width: 100%;
+            position: relative;
+        }
+
+        .flow-node {
+            flex: 1;
+            padding: 2.5rem 1.5rem;
+            background: var(--glass);
+            border: 1px solid var(--glass-border);
+            border-radius: 20px;
+            text-align: center;
+            position: relative;
+            z-index: 10;
+        }
+        .flow-node:hover { border-color: var(--accent); background: rgba(32, 178, 170, 0.05); }
+
+        .node-num {
+            display: block; font-family: 'Outfit', sans-serif; font-size: 0.8rem; color: var(--accent); font-weight: 700; margin-bottom: 1rem;
+        }
+
+        .flow-node h3 { font-size: 1.3rem; margin-bottom: 1.2rem; color: #FFFFFF; font-weight: 700; }
+        .flow-node p { font-size: 1rem; color: var(--text-secondary); line-height: 1.6; word-break: keep-all; }
+
+        /* Pipeline Connector Line */
+        .pipeline-flow::after {
+            content: '';
+            position: absolute;
+            top: 60px; left: 10%; right: 10%; height: 1px;
+            background: linear-gradient(90deg, transparent, var(--accent), transparent);
+            z-index: 0;
+            opacity: 0.2;
+        }
+
+        .connector { font-size: 2rem; color: var(--accent); align-self: center; margin: 0 10px; opacity: 0.5; }
+
+        /* Animations */
+        .fade-up { opacity: 0; transform: translateY(30px); animation: fadeUp 0.8s ease-out forwards; }
+        @keyframes fadeUp { to { opacity: 1; transform: translateY(0); } }
+        .delay-1 { animation-delay: 0.2s; }
+        .delay-2 { animation-delay: 0.4s; }
+
+        /* Nav Controls */
+        .nav-controls { position: fixed; bottom: 40px; right: 40px; display: flex; gap: 15px; }
+        .nav-btn { width: 50px; height: 50px; border-radius: 50%; border: 1px solid var(--glass-border); background: var(--glass); color: white; cursor: pointer; display: flex; align-items: center; justify-content: center; font-size: 1.2rem; }
+        .nav-btn:hover { background: var(--accent); border-color: var(--accent); color: #000; }
+    </style>
+</head>
+<body>
+
+    <div class="slide">
+        <span class="label fade-up">OPERATIONAL LOGIC</span>
+        <h2 class="fade-up delay-1">데이터가 의사결정으로 전환되는 흐름</h2>
+        
+        <div class="pipeline-flow fade-up delay-2">
+            <div class="flow-node">
+                <span class="node-num">01 DATA LAYER</span>
+                <h3>무질서한 데이터의 수집</h3>
+                <p>로컬 원본, CRM 보고, 처방 원천 데이터 등 흩어진 정보들을 하나로 모으는 단계입니다.</p>
+            </div>
+            
+            <div class="connector">→</div>
+
+            <div class="flow-node">
+                <span class="node-num">02 STANDARD LAYER</span>
+                <h3>동일 기준의 표준화</h3>
+                <p>각기 다른 관리 단위를 하나의 '영업 마스터' 기준으로 통일하여 분석 가능한 형태로 가공합니다.</p>
+            </div>
+
+            <div class="connector">→</div>
+
+            <div class="flow-node">
+                <span class="node-num">03 KPI ENGINE</span>
+                <h3>선행행동 지표로의 해석</h3>
+                <p>단순 실적이 아닌 행동의 질(Quality)을 측정하는 KPI 로직을 통해 성과의 원인을 진단합니다.</p>
+            </div>
+
+            <div class="connector">→</div>
+
+            <div class="flow-node">
+                <span class="node-num">04 DECISION LAYER</span>
+                <h3>실행을 위한 보고</h3>
+                <p>가장 먼저 조치가 필요한 영역을 선별하여 관리자에게 의사결정 시나리오를 제공합니다.</p>
+            </div>
+        </div>
+    </div>
+
+    <!-- Navigation -->
+    <div class="nav-controls">
+        <button class="nav-btn" onclick="location.href='slide-09.html'" title="Previous Slide">←</button>
+        <button class="nav-btn" onclick="location.href='slide-11.html'" title="Next Slide">→</button>
+    </div>
+
+    <script>
+        document.addEventListener('keydown', (e) => {
+            if (e.key === 'ArrowRight' || e.key === ' ') location.href = 'slide-11.html';
+            if (e.key === 'ArrowLeft') location.href = 'slide-09.html';
+        });
+    </script>
+</body>
+</html>
